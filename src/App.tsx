@@ -9,6 +9,7 @@ import { NotificationBanner } from '@/components/ui/NotificationBanner'
 import { OfflineBanner } from '@/components/ui/OfflineBanner'
 import { useGameDataStore } from '@/stores/gameDataStore'
 import { useOnlineStatus } from '@/hooks/useOnlineStatus'
+import { useColorVision } from '@/hooks/useColorVision'
 
 const CollectionPage = lazy(() => import('./pages/Collection/CollectionPage').then(m => ({ default: m.CollectionPage })))
 const ListsPage = lazy(() => import('./pages/Lists/ListsPage').then(m => ({ default: m.ListsPage })))
@@ -101,6 +102,8 @@ function OfflineIndicator() {
 }
 
 export function App() {
+  useColorVision()
+
   return (
     <ErrorBoundary>
       <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>

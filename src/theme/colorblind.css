@@ -1,0 +1,28 @@
+/* Colorblind-friendly overrides */
+
+/* Deuteranopia (red-green, ~6% of men) — most common */
+[data-color-vision="deuteranopia"] {
+  --color-success: #4fc3f7;   /* green → light blue */
+  --color-error: #ff8a65;     /* red → orange */
+  --color-warning: #ffd54f;   /* stays yellow */
+  --color-card-epic: #7c4dff; /* purple stays ok */
+  --color-card-battleline: #0288d1; /* blue stays ok */
+}
+
+/* Protanopia (red-green, ~2% of men) */
+[data-color-vision="protanopia"] {
+  --color-success: #4fc3f7;   /* green → light blue */
+  --color-error: #ffb74d;     /* red → amber */
+  --color-warning: #fff176;   /* yellow stays */
+  --color-card-epic: #7c4dff;
+  --color-card-battleline: #0288d1;
+}
+
+/* Tritanopia (blue-yellow, ~0.01%) */
+[data-color-vision="tritanopia"] {
+  --color-success: #e57373;   /* green → soft red */
+  --color-error: #f06292;     /* red → pink */
+  --color-warning: #ff8a65;   /* yellow/orange → coral */
+  --color-card-epic: #ce93d8; /* lighter purple */
+  --color-card-battleline: #e57373; /* blue → red */
+}

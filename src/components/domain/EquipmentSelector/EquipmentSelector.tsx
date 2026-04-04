@@ -20,6 +20,41 @@ function weaponKey(w: Weapon): string {
   return `${isMelee(w) ? 'melee' : 'ranged'}:${w.name}`
 }
 
+const statBadgeStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '2px',
+  padding: '1px 5px',
+  borderRadius: '4px',
+  fontSize: '10px',
+  lineHeight: '16px',
+  backgroundColor: 'rgba(255,255,255,0.06)',
+}
+
+function WeaponStats({ w, showRange }: { w: Weapon; showRange?: boolean }) {
+  return (
+    <span className="flex items-center gap-1 shrink-0">
+      {showRange && (
+        <span style={{ ...statBadgeStyle, color: 'var(--color-accent)' }}>
+          {w.range}
+        </span>
+      )}
+      <span style={statBadgeStyle}>
+        <span style={{ color: 'var(--color-text-muted)' }}>F</span>
+        <span style={{ color: 'var(--color-text)' }}>{w.S}</span>
+      </span>
+      <span style={statBadgeStyle}>
+        <span style={{ color: 'var(--color-text-muted)' }}>PA</span>
+        <span style={{ color: 'var(--color-text)' }}>{w.AP}</span>
+      </span>
+      <span style={statBadgeStyle}>
+        <span style={{ color: 'var(--color-text-muted)' }}>D</span>
+        <span style={{ color: 'var(--color-text)' }}>{w.D}</span>
+      </span>
+    </span>
+  )
+}
+
 export function EquipmentSelector({
   datasheet,
   initialPointOptionIndex = 0,
@@ -50,13 +85,17 @@ export function EquipmentSelector({
 
   return (
     <div
-      className="fixed inset-0 flex items-end justify-center"
-      style={{ backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 60 }}
+      className="fixed left-0 right-0 top-0 flex items-end justify-center"
+      style={{
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        zIndex: 60,
+        bottom: 'calc(60px + env(safe-area-inset-bottom, 0px))',
+      }}
       onClick={onCancel}
     >
       <div
         className="w-full max-w-lg rounded-t-2xl"
-        style={{ backgroundColor: 'var(--color-surface)', maxHeight: '75vh', display: 'flex', flexDirection: 'column' }}
+        style={{ backgroundColor: 'var(--color-surface)', maxHeight: '80%', display: 'flex', flexDirection: 'column' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Handle bar */}
@@ -76,7 +115,7 @@ export function EquipmentSelector({
 
         {/* Scrollable content */}
         <div
-          className="px-4 overflow-y-auto"
+          className="px-4 overflow-y-auto scrollbar-thin"
           style={{ flex: '1 1 auto', minHeight: 0, WebkitOverflowScrolling: 'touch' }}
         >
           {/* Point options */}
@@ -128,9 +167,7 @@ export function EquipmentSelector({
                       <span className="text-sm flex-1" style={{ color: 'var(--color-text)' }}>
                         {w.name}
                       </span>
-                      <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                        {w.range} | F{w.S} PA{w.AP} D{w.D}
-                      </span>
+                      <WeaponStats w={w} showRange />
                     </label>
                   )
                 })}
@@ -162,9 +199,7 @@ export function EquipmentSelector({
                       <span className="text-sm flex-1" style={{ color: 'var(--color-text)' }}>
                         {w.name}
                       </span>
-                      <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                        F{w.S} PA{w.AP} D{w.D}
-                      </span>
+                      <WeaponStats w={w} />
                     </label>
                   )
                 })}
@@ -188,13 +223,10 @@ export function EquipmentSelector({
           </div>
         </div>
 
-        {/* Footer — above BottomNav */}
+        {/* Footer */}
         <div
-          className="flex gap-3 px-4 pt-3 shrink-0"
-          style={{
-            borderTop: '1px solid var(--color-bg)',
-            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 70px)',
-          }}
+          className="flex gap-3 px-4 py-3 shrink-0"
+          style={{ borderTop: '1px solid var(--color-bg)' }}
         >
           <Button variant="primary" onClick={() => onConfirm(pointOptionIndex, selectedWeapons, notes)}>
             {confirmLabel}

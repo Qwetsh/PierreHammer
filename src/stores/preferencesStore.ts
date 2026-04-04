@@ -1,14 +1,18 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+export type ColorVisionMode = 'normal' | 'deuteranopia' | 'protanopia' | 'tritanopia'
+
 interface PreferencesState {
   activeFactionId: string | null
   activeListId: string | null
   locale: string
   hasSeenSplash: boolean
+  colorVisionMode: ColorVisionMode
   setActiveFaction: (factionId: string | null) => void
   setActiveList: (listId: string | null) => void
   markSplashSeen: () => void
+  setColorVisionMode: (mode: ColorVisionMode) => void
 }
 
 export const usePreferencesStore = create<PreferencesState>()(
@@ -18,10 +22,12 @@ export const usePreferencesStore = create<PreferencesState>()(
       activeListId: null,
       locale: 'fr',
       hasSeenSplash: false,
+      colorVisionMode: 'normal',
 
       setActiveFaction: (factionId) => set({ activeFactionId: factionId }),
       setActiveList: (listId) => set({ activeListId: listId }),
       markSplashSeen: () => set({ hasSeenSplash: true }),
+      setColorVisionMode: (mode) => set({ colorVisionMode: mode }),
     }),
     {
       name: 'pierrehammer-preferences',

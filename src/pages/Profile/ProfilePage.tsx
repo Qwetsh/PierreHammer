@@ -2,8 +2,16 @@ import { useRef } from 'react'
 import { useExportImport } from '@/hooks/useExportImport'
 import { useCollectionStore } from '@/stores/collectionStore'
 import { useListsStore } from '@/stores/listsStore'
+import { usePreferencesStore, type ColorVisionMode } from '@/stores/preferencesStore'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
+
+const COLOR_VISION_OPTIONS: { value: ColorVisionMode; label: string; description: string }[] = [
+  { value: 'normal', label: 'Normal', description: 'Vision standard' },
+  { value: 'deuteranopia', label: 'Deuteranopie', description: 'Difficulté rouge-vert (la plus courante)' },
+  { value: 'protanopia', label: 'Protanopie', description: 'Difficulté rouge-vert' },
+  { value: 'tritanopia', label: 'Tritanopie', description: 'Difficulté bleu-jaune' },
+]
 
 export function ProfilePage() {
   const { exportData, importData } = useExportImport()
@@ -12,6 +20,8 @@ export function ProfilePage() {
 
   const collectionCount = Object.keys(useCollectionStore((s) => s.items)).length
   const listsCount = Object.keys(useListsStore((s) => s.lists)).length
+  const colorVisionMode = usePreferencesStore((s) => s.colorVisionMode)
+  const setColorVisionMode = usePreferencesStore((s) => s.setColorVisionMode)
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -47,6 +57,40 @@ export function ProfilePage() {
           <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
             {listsCount} liste{listsCount !== 1 ? 's' : ''} d'armée
           </p>
+        </div>
+      </div>
+
+      <div className="mb-8">
+        <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--color-surface)' }}>
+          <h2 className="font-semibold mb-1" style={{ color: 'var(--color-text)' }}>Accessibilité</h2>
+          <p className="text-xs mb-3" style={{ color: 'var(--color-text-muted)' }}>
+            Adapte les couleurs pour les personnes daltoniennes.
+          </p>
+          <div className="flex flex-col gap-1.5">
+            {COLOR_VISION_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-left border-none cursor-pointer min-h-[44px]"
+                style={{
+                  backgroundColor: colorVisionMode === opt.value ? 'var(--color-primary)' : 'var(--color-bg)',
+                  color: colorVisionMode === opt.value ? '#ffffff' : 'var(--color-text)',
+                }}
+                onClick={() => setColorVisionMode(opt.value)}
+              >
+                <span
+                  className="w-4 h-4 rounded-full shrink-0 border-2"
+                  style={{
+                    borderColor: colorVisionMode === opt.value ? '#ffffff' : 'var(--color-text-muted)',
+                    backgroundColor: colorVisionMode === opt.value ? '#ffffff' : 'transparent',
+                  }}
+                />
+                <span className="flex flex-col">
+                  <span className="text-sm font-medium">{opt.label}</span>
+                  <span className="text-xs" style={{ opacity: 0.7 }}>{opt.description}</span>
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
