@@ -4,7 +4,8 @@
 [data-color-vision="deuteranopia"] {
   --color-success: #4fc3f7;   /* green → light blue */
   --color-error: #ff8a65;     /* red → orange */
-  --color-warning: #ffd54f;   /* stays yellow */
+  --color-warning: #ffd54f;   /* orange → yellow */
+  --color-accent: #e0a0ff;    /* gold → lavender (distinct from yellow warning) */
   --color-card-epic: #7c4dff; /* purple stays ok */
   --color-card-battleline: #0288d1; /* blue stays ok */
 }
@@ -14,6 +15,7 @@
   --color-success: #4fc3f7;   /* green → light blue */
   --color-error: #ffb74d;     /* red → amber */
   --color-warning: #fff176;   /* yellow stays */
+  --color-accent: #e0a0ff;    /* gold → lavender */
   --color-card-epic: #7c4dff;
   --color-card-battleline: #0288d1;
 }
@@ -23,6 +25,7 @@
   --color-success: #e57373;   /* green → soft red */
   --color-error: #f06292;     /* red → pink */
   --color-warning: #ff8a65;   /* yellow/orange → coral */
+  --color-accent: #80cbc4;    /* gold → teal (distinct from coral warning) */
   --color-card-epic: #ce93d8; /* lighter purple */
   --color-card-battleline: #e57373; /* blue → red */
 }
