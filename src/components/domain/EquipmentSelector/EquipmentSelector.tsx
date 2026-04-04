@@ -12,9 +12,12 @@ interface EquipmentSelectorProps {
   confirmLabel?: string
 }
 
+function isMelee(w: Weapon): boolean {
+  return w.type === 'Melee' || w.range === 'Melee'
+}
+
 function weaponKey(w: Weapon): string {
-  const type = (w.type === 'Melee' || w.range === 'Melee') ? 'melee' : 'ranged'
-  return `${type}:${w.name}`
+  return `${isMelee(w) ? 'melee' : 'ranged'}:${w.name}`
 }
 
 export function EquipmentSelector({
@@ -28,13 +31,14 @@ export function EquipmentSelector({
 }: EquipmentSelectorProps) {
   const [pointOptionIndex, setPointOptionIndex] = useState(initialPointOptionIndex)
   const [selectedWeapons, setSelectedWeapons] = useState<string[]>(() => {
-    if (initialWeapons) return initialWeapons
+    if (initialWeapons && initialWeapons.length > 0) return initialWeapons
     return datasheet.weapons.map((w) => weaponKey(w))
   })
   const [notes, setNotes] = useState(initialNotes)
 
-  const rangedWeapons = datasheet.weapons.filter((w) => w.type === 'Ranged' || (w.range && w.range !== 'Melee'))
-  const meleeWeapons = datasheet.weapons.filter((w) => w.type === 'Melee' || w.range === 'Melee')
+  // Exclusive filters: melee first, then everything else is ranged
+  const meleeWeapons = datasheet.weapons.filter((w) => isMelee(w))
+  const rangedWeapons = datasheet.weapons.filter((w) => !isMelee(w))
 
   const toggleWeapon = (key: string) => {
     setSelectedWeapons((prev) =>
@@ -46,18 +50,23 @@ export function EquipmentSelector({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center"
-      style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
+      className="fixed inset-0 flex items-end justify-center"
+      style={{ backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 60 }}
       onClick={onCancel}
     >
       <div
-        className="w-full max-w-lg rounded-t-xl flex flex-col max-h-[80vh]"
-        style={{ backgroundColor: 'var(--color-surface)' }}
+        className="w-full max-w-lg rounded-t-2xl"
+        style={{ backgroundColor: 'var(--color-surface)', maxHeight: '75vh', display: 'flex', flexDirection: 'column' }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header — fixed */}
-        <div className="p-4 pb-2">
-          <h3 className="font-semibold mb-1" style={{ color: 'var(--color-text)', fontSize: 'var(--text-lg)' }}>
+        {/* Handle bar */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full" style={{ backgroundColor: 'var(--color-text-muted)', opacity: 0.4 }} />
+        </div>
+
+        {/* Header */}
+        <div className="px-4 pb-3">
+          <h3 className="font-semibold" style={{ color: 'var(--color-text)', fontSize: 'var(--text-lg)' }}>
             {datasheet.name}
           </h3>
           <p className="text-sm" style={{ color: 'var(--color-accent)' }}>
@@ -66,7 +75,10 @@ export function EquipmentSelector({
         </div>
 
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto px-4">
+        <div
+          className="px-4 overflow-y-auto"
+          style={{ flex: '1 1 auto', minHeight: 0, WebkitOverflowScrolling: 'touch' }}
+        >
           {/* Point options */}
           {datasheet.pointOptions.length > 1 && (
             <div className="mb-4">
@@ -161,7 +173,7 @@ export function EquipmentSelector({
           )}
 
           {/* Notes */}
-          <div className="mb-4">
+          <div className="mb-2">
             <p className="text-xs font-medium mb-2" style={{ color: 'var(--color-text-muted)' }}>
               Notes (optionnel)
             </p>
@@ -176,10 +188,13 @@ export function EquipmentSelector({
           </div>
         </div>
 
-        {/* Footer — always visible, fixed at bottom */}
+        {/* Footer — above BottomNav */}
         <div
-          className="flex gap-2 p-4 shrink-0"
-          style={{ borderTop: '1px solid var(--color-bg)' }}
+          className="flex gap-3 px-4 pt-3 shrink-0"
+          style={{
+            borderTop: '1px solid var(--color-bg)',
+            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 70px)',
+          }}
         >
           <Button variant="primary" onClick={() => onConfirm(pointOptionIndex, selectedWeapons, notes)}>
             {confirmLabel}
