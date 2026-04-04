@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import { useCollectionStore } from '@/stores/collectionStore'
 import { useGameDataStore } from '@/stores/gameDataStore'
+import { useFavoritesStore } from '@/stores/favoritesStore'
 import { useSearch } from '@/hooks/useSearch'
 import { CollectionToggle } from '@/components/domain/CollectionToggle'
 import type { CollectionView } from '@/components/domain/CollectionToggle'
@@ -15,6 +16,22 @@ import type { Datasheet } from '@/types/gameData.types'
 interface DatasheetWithFaction extends Datasheet {
   factionSlug: string
   factionName: string
+}
+
+type SortKey = 'name' | 'points' | 'role' | 'paintStatus'
+
+const sortLabels: Record<SortKey, string> = {
+  name: 'Nom',
+  points: 'Points',
+  role: 'Rôle',
+  paintStatus: 'Peinture',
+}
+
+const paintOrder: Record<PaintStatus, number> = {
+  unassembled: 0,
+  assembled: 1,
+  'in-progress': 2,
+  done: 3,
 }
 
 const paintStatusOptions: { value: PaintStatus | 'all'; label: string }[] = [
@@ -37,18 +54,18 @@ export function CollectionPage() {
   const loadedFactions = useGameDataStore((s) => s.loadedFactions)
   const loadFaction = useGameDataStore((s) => s.loadFaction)
   const loadFactionIndex = useGameDataStore((s) => s.loadFactionIndex)
+  const favorites = useFavoritesStore((s) => s.favorites)
 
   const [view, setView] = useState<CollectionView>('owned')
   const [query, setQuery] = useState('')
   const [factionFilter, setFactionFilter] = useState<string | 'all'>('all')
   const [paintFilter, setPaintFilter] = useState<PaintStatus | 'all'>('all')
+  const [sortBy, setSortBy] = useState<SortKey>('name')
 
-  // Load faction index on mount
   useEffect(() => {
     loadFactionIndex()
   }, [loadFactionIndex])
 
-  // Load all factions that have owned items
   useEffect(() => {
     const ownedFactionIds = new Set(Object.values(collectionItems).map((i) => i.factionId))
     for (const slug of ownedFactionIds) {
@@ -58,7 +75,6 @@ export function CollectionPage() {
     }
   }, [collectionItems, loadedFactions, loadFaction])
 
-  // Build flat list of all datasheets from loaded factions
   const allDatasheets = useMemo((): DatasheetWithFaction[] => {
     const result: DatasheetWithFaction[] = []
     for (const [slug, faction] of Object.entries(loadedFactions)) {
@@ -69,29 +85,55 @@ export function CollectionPage() {
     return result
   }, [loadedFactions])
 
-  // Apply toggle filter (owned/all)
   const toggleFiltered = useMemo(() => {
     if (view === 'all') return allDatasheets
     return allDatasheets.filter((ds) => ds.id in collectionItems)
   }, [allDatasheets, view, collectionItems])
 
-  // Apply faction filter
   const factionFiltered = useMemo(() => {
     if (factionFilter === 'all') return toggleFiltered
     return toggleFiltered.filter((ds) => ds.factionSlug === factionFilter)
   }, [toggleFiltered, factionFilter])
 
-  // Apply paint status filter
   const paintFiltered = useMemo(() => {
     if (paintFilter === 'all') return factionFiltered
     return factionFiltered.filter((ds) => collectionItems[ds.id]?.paintStatus === paintFilter)
   }, [factionFiltered, paintFilter, collectionItems])
 
-  // Apply text search
   const extractFields = useCallback(extractSearchFields, [])
-  const filteredDatasheets = useSearch(paintFiltered, query, extractFields)
+  const searched = useSearch(paintFiltered, query, extractFields)
 
-  // Get unique faction slugs for filter chips
+  const sortedDatasheets = useMemo(() => {
+    return [...searched].sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name, 'fr')
+        case 'points': {
+          const pa = a.pointOptions[0]?.cost ?? 0
+          const pb = b.pointOptions[0]?.cost ?? 0
+          return pa - pb
+        }
+        case 'role':
+          return (a.role || '').localeCompare(b.role || '', 'fr')
+        case 'paintStatus': {
+          const sa = collectionItems[a.id]?.paintStatus ?? 'unassembled'
+          const sb = collectionItems[b.id]?.paintStatus ?? 'unassembled'
+          return paintOrder[sa] - paintOrder[sb]
+        }
+      }
+    })
+  }, [searched, sortBy, collectionItems])
+
+  // Separate favorites
+  const favoriteDatasheets = useMemo(
+    () => sortedDatasheets.filter((ds) => favorites.includes(ds.id)),
+    [sortedDatasheets, favorites],
+  )
+  const nonFavoriteDatasheets = useMemo(
+    () => sortedDatasheets.filter((ds) => !favorites.includes(ds.id)),
+    [sortedDatasheets, favorites],
+  )
+
   const availableFactions = useMemo(() => {
     const factions = new Map<string, string>()
     for (const ds of toggleFiltered) {
@@ -109,7 +151,20 @@ export function CollectionPage() {
     setPaintFilter('all')
   }
 
-  // Empty collection state
+  const renderGrid = (items: DatasheetWithFaction[]) => (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+      {items.map((ds) => (
+        <UnitCard
+          key={ds.id}
+          datasheet={ds}
+          owned={collectionItems[ds.id]?.quantity}
+          paintStatus={collectionItems[ds.id]?.paintStatus}
+          onClick={() => navigate(`/catalog/${ds.factionSlug}/${ds.id}`)}
+        />
+      ))}
+    </div>
+  )
+
   if (view === 'owned' && !hasCollection) {
     return (
       <div className="p-4">
@@ -134,7 +189,7 @@ export function CollectionPage() {
       <div className="flex items-center gap-3 mb-4 flex-wrap">
         <CollectionToggle value={view} onChange={setView} />
         <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-          {filteredDatasheets.length} unité{filteredDatasheets.length !== 1 ? 's' : ''}
+          {sortedDatasheets.length} unité{sortedDatasheets.length !== 1 ? 's' : ''}
         </span>
       </div>
 
@@ -191,7 +246,7 @@ export function CollectionPage() {
 
       {/* Paint status filter chips */}
       {view === 'owned' && (
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex flex-wrap gap-2 mb-3">
           {paintStatusOptions.map((opt) => (
             <button
               key={opt.value}
@@ -208,7 +263,28 @@ export function CollectionPage() {
         </div>
       )}
 
-      {filteredDatasheets.length === 0 && hasFilters ? (
+      {/* Sort controls */}
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Trier par :</span>
+        {(Object.keys(sortLabels) as SortKey[]).map((key) => {
+          if (key === 'paintStatus' && view !== 'owned') return null
+          return (
+            <button
+              key={key}
+              className="text-xs px-2 py-1 rounded cursor-pointer border-none min-h-[28px]"
+              style={{
+                backgroundColor: sortBy === key ? 'var(--color-accent)' : 'var(--color-surface)',
+                color: sortBy === key ? '#ffffff' : 'var(--color-text)',
+              }}
+              onClick={() => setSortBy(key)}
+            >
+              {sortLabels[key]}
+            </button>
+          )
+        })}
+      </div>
+
+      {sortedDatasheets.length === 0 && hasFilters ? (
         <EmptyState
           title="Aucune figurine ne correspond"
           description="Essaie d'ajuster tes filtres pour trouver ce que tu cherches."
@@ -216,17 +292,29 @@ export function CollectionPage() {
           onAction={resetFilters}
         />
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-          {filteredDatasheets.map((ds) => (
-            <UnitCard
-              key={ds.id}
-              datasheet={ds}
-              owned={collectionItems[ds.id]?.quantity}
-              paintStatus={collectionItems[ds.id]?.paintStatus}
-              onClick={() => navigate(`/catalog/${ds.factionSlug}/${ds.id}`)}
-            />
-          ))}
-        </div>
+        <>
+          {/* Favorites section */}
+          {favoriteDatasheets.length > 0 && (
+            <div className="mb-6">
+              <h2 className="text-sm font-semibold mb-2" style={{ color: 'var(--color-warning, #f59e0b)' }}>
+                Favoris ({favoriteDatasheets.length})
+              </h2>
+              {renderGrid(favoriteDatasheets)}
+            </div>
+          )}
+
+          {/* Main grid */}
+          {nonFavoriteDatasheets.length > 0 && (
+            <>
+              {favoriteDatasheets.length > 0 && (
+                <h2 className="text-sm font-semibold mb-2" style={{ color: 'var(--color-text-muted)' }}>
+                  Toutes les unités
+                </h2>
+              )}
+              {renderGrid(nonFavoriteDatasheets)}
+            </>
+          )}
+        </>
       )}
     </div>
   )

@@ -57,7 +57,7 @@ describe('UnitCard', () => {
 
   it('shows owned count when > 0', () => {
     render(<UnitCard datasheet={baseDatasheet} owned={3} />)
-    expect(screen.getByText('×3')).toBeInTheDocument()
+    expect(screen.getByText('x3')).toBeInTheDocument()
   })
 
   it('calls onClick when tapped', async () => {

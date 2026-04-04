@@ -10,7 +10,17 @@ interface ListsState {
   getAllLists: () => ArmyList[]
   addUnit: (listId: string, unit: ListUnit) => void
   removeUnit: (listId: string, unitIndex: number) => void
+  updateUnit: (listId: string, unitIndex: number, updates: Partial<ListUnit>) => void
   updateList: (listId: string, updates: Partial<Pick<ArmyList, 'name' | 'detachment' | 'pointsLimit'>>) => void
+}
+
+function migrateUnit(u: ListUnit): ListUnit {
+  return {
+    ...u,
+    selectedPointOptionIndex: u.selectedPointOptionIndex ?? 0,
+    selectedWeapons: u.selectedWeapons ?? [],
+    notes: u.notes ?? '',
+  }
 }
 
 export const useListsStore = create<ListsState>()(
@@ -51,7 +61,7 @@ export const useListsStore = create<ListsState>()(
         set((state) => ({
           lists: {
             ...state.lists,
-            [listId]: { ...state.lists[listId], units: [...state.lists[listId].units, unit] },
+            [listId]: { ...state.lists[listId], units: [...state.lists[listId].units, migrateUnit(unit)] },
           },
         }))
       },
@@ -65,6 +75,22 @@ export const useListsStore = create<ListsState>()(
             [listId]: {
               ...state.lists[listId],
               units: state.lists[listId].units.filter((_, i) => i !== unitIndex),
+            },
+          },
+        }))
+      },
+
+      updateUnit: (listId, unitIndex, updates) => {
+        const list = get().lists[listId]
+        if (!list || unitIndex < 0 || unitIndex >= list.units.length) return
+        set((state) => ({
+          lists: {
+            ...state.lists,
+            [listId]: {
+              ...state.lists[listId],
+              units: state.lists[listId].units.map((u, i) =>
+                i === unitIndex ? { ...migrateUnit(u), ...updates } : u,
+              ),
             },
           },
         }))

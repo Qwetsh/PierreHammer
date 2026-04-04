@@ -6,15 +6,19 @@ import { ToastProvider } from '@/components/ui/Toast'
 import { SplashScreen } from '@/features/personalization/components/SplashScreen'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { NotificationBanner } from '@/components/ui/NotificationBanner'
+import { OfflineBanner } from '@/components/ui/OfflineBanner'
 import { useGameDataStore } from '@/stores/gameDataStore'
+import { useOnlineStatus } from '@/hooks/useOnlineStatus'
 
 const CollectionPage = lazy(() => import('./pages/Collection/CollectionPage').then(m => ({ default: m.CollectionPage })))
 const ListsPage = lazy(() => import('./pages/Lists/ListsPage').then(m => ({ default: m.ListsPage })))
 const ListDetailPage = lazy(() => import('./pages/Lists/ListDetailPage').then(m => ({ default: m.ListDetailPage })))
+const AddUnitPage = lazy(() => import('./pages/Lists/AddUnitPage').then(m => ({ default: m.AddUnitPage })))
 const CatalogPage = lazy(() => import('./pages/Catalog/CatalogPage').then(m => ({ default: m.CatalogPage })))
 const UnitDetailPage = lazy(() => import('./pages/Catalog/UnitDetailPage').then(m => ({ default: m.UnitDetailPage })))
 const ProfilePage = lazy(() => import('./pages/Profile/ProfilePage').then(m => ({ default: m.ProfilePage })))
 const GameModePage = lazy(() => import('./pages/GameMode/GameModePage').then(m => ({ default: m.GameModePage })))
+const ComparatorPage = lazy(() => import('./pages/Comparator/ComparatorPage').then(m => ({ default: m.ComparatorPage })))
 
 function NotFoundPage() {
   const navigate = useNavigate()
@@ -61,9 +65,11 @@ function AnimatedRoutes() {
             <Route path="/collection" element={<CollectionPage />} />
             <Route path="/lists" element={<ListsPage />} />
             <Route path="/lists/:listId" element={<ListDetailPage />} />
+            <Route path="/lists/:listId/add-unit" element={<AddUnitPage />} />
             <Route path="/catalog" element={<CatalogPage />} />
             <Route path="/catalog/:factionId" element={<CatalogPage />} />
             <Route path="/catalog/:factionId/:unitId" element={<UnitDetailPage />} />
+            <Route path="/compare" element={<ComparatorPage />} />
             <Route path="/game-mode/:listId" element={<GameModePage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="*" element={<NotFoundPage />} />
@@ -85,12 +91,22 @@ function DataUpdateNotification() {
   )
 }
 
+function OfflineIndicator() {
+  const isOnline = useOnlineStatus()
+  return (
+    <AnimatePresence>
+      {!isOnline && <OfflineBanner />}
+    </AnimatePresence>
+  )
+}
+
 export function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
         <ToastProvider>
           <SplashScreen />
+          <OfflineIndicator />
           <DataUpdateNotification />
           <AppShell>
             <AnimatedRoutes />

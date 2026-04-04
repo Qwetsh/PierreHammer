@@ -6,7 +6,8 @@ export function resolveUnitPoints(unit: ListUnit, datasheets?: Datasheet[]): num
   if (datasheets) {
     const ds = datasheets.find((d) => d.id === unit.datasheetId)
     if (ds && ds.pointOptions.length > 0) {
-      return ds.pointOptions[0].cost
+      const idx = unit.selectedPointOptionIndex ?? 0
+      return ds.pointOptions[idx]?.cost ?? ds.pointOptions[0].cost
     }
   }
   return unit.points
