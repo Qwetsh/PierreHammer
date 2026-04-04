@@ -7,6 +7,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/PierreHammer/',
   plugins: [
     react(),
     tailwindcss(),
@@ -27,12 +28,12 @@ export default defineConfig({
             },
           },
           {
-            urlPattern: /^https:\/\/wahapedia\.ru\/.*\.(png|jpg|webp|gif)$/,
+            urlPattern: /^https:\/\/static\.wikia\.nocookie\.net\/.*\.(png|jpg|webp|jpeg)$/,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'wahapedia-images',
+              cacheName: 'wiki-images',
               expiration: {
-                maxEntries: 200,
+                maxEntries: 500,
                 maxAgeSeconds: 30 * 24 * 60 * 60,
               },
             },
