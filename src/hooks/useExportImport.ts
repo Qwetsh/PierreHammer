@@ -50,15 +50,15 @@ export function useExportImport() {
       if (data.collection) {
         // Migrate old format (quantity + paintStatus) to new (instances)
         const migrated: Record<string, CollectionItem> = {}
-        for (const [key, item] of Object.entries(data.collection as Record<string, Record<string, unknown>>)) {
-          if (Array.isArray(item.instances)) {
-            migrated[key] = item
+        for (const [key, raw] of Object.entries(data.collection as Record<string, Record<string, unknown>>)) {
+          if (Array.isArray(raw.instances)) {
+            migrated[key] = raw as unknown as CollectionItem
           } else {
-            const qty = (typeof item.quantity === 'number' ? item.quantity : 1)
-            const status = (typeof item.paintStatus === 'string' ? item.paintStatus : 'unassembled')
+            const qty = (typeof raw.quantity === 'number' ? raw.quantity : 1)
+            const status = (typeof raw.paintStatus === 'string' ? raw.paintStatus : 'unassembled')
             migrated[key] = {
-              datasheetId: item.datasheetId,
-              factionId: item.factionId,
+              datasheetId: String(raw.datasheetId),
+              factionId: String(raw.factionId),
               instances: Array(qty).fill(status),
             }
           }
