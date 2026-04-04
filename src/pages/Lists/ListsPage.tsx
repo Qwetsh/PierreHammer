@@ -66,7 +66,7 @@ export function ListsPage() {
   if (allLists.length === 0 && !showForm) {
     return (
       <div className="p-4">
-        <h1 className="text-2xl font-bold mb-4" style={{ fontSize: 'var(--text-2xl)' }}>Mes Listes</h1>
+        <h1 className="font-bold mb-4" style={{ fontSize: 'var(--text-xl)' }}>Mes Listes</h1>
         <EmptyState
           title="Pas encore de liste ?"
           description="Crée ta première liste d'armée pour préparer tes parties."
@@ -80,10 +80,10 @@ export function ListsPage() {
   return (
     <div className="p-4">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold" style={{ fontSize: 'var(--text-2xl)' }}>Mes Listes</h1>
+        <h1 className="font-bold" style={{ fontSize: 'var(--text-xl)' }}>Mes Listes</h1>
         {!showForm && (
           <Button variant="primary" size="sm" onClick={() => setShowForm(true)}>
-            + Nouvelle liste
+            + Nouvelle
           </Button>
         )}
       </div>

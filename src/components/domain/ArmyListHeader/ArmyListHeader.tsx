@@ -19,7 +19,7 @@ export function ArmyListHeader({ name, factionId, detachment, currentPoints, poi
         borderBottom: '1px solid var(--color-bg)',
       }}
     >
-      <div className="flex items-center justify-between gap-2" style={{ height: '48px' }}>
+      <div className="flex items-center justify-between gap-2" style={{ minHeight: '48px', padding: '8px 0' }}>
         <div className="flex flex-col min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-semibold text-sm truncate" style={{ color: 'var(--color-text)' }}>

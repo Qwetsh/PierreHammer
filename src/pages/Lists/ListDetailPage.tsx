@@ -154,21 +154,23 @@ export function ListDetailPage() {
       )}
 
       <div className="p-4">
-        <div className="flex items-center justify-between mb-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/lists')}>
-            ← Retour aux listes
-          </Button>
-          <div className="flex gap-2">
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/lists')}>
+              ← Retour
+            </Button>
             <Button variant="ghost" size="sm" onClick={startEditing}>
               Modifier
             </Button>
+          </div>
+          <div className="flex gap-2">
             {list.units.length > 0 && (
               <Button variant="secondary" size="sm" onClick={() => navigate(`/game-mode/${listId}`)}>
-                Mode partie
+                Jouer
               </Button>
             )}
             <Button variant="primary" size="sm" onClick={() => navigate(`/lists/${listId}/add-unit`)}>
-              + Ajouter une unité
+              + Ajouter
             </Button>
           </div>
         </div>

@@ -24,16 +24,16 @@ export function PointsCounter({ current, limit }: PointsCounterProps) {
 
   return (
     <span
-      className={`font-medium${pulsing ? ' animate-pulse-once' : ''}`}
+      className={`font-medium whitespace-nowrap${pulsing ? ' animate-pulse-once' : ''}`}
       style={{
         fontFamily: 'var(--font-mono)',
-        fontSize: 'var(--text-xl)',
+        fontSize: 'clamp(0.85rem, 3.5vw, 1.563rem)',
         color: getColor(current, limit),
       }}
       aria-live="polite"
       onAnimationEnd={() => setPulsing(false)}
     >
-      {current} / {limit} pts
+      {current}/{limit} pts
     </span>
   )
 }
