@@ -36,7 +36,7 @@ export const useGameDataStore = create<GameDataState>((set, get) => ({
     if (get().factionIndex || get().isLoading) return
     set({ isLoading: true, error: null })
     try {
-      const index = await loadJSON<FactionIndex>('/data/factions.json')
+      const index = await loadJSON<FactionIndex>(`${import.meta.env.BASE_URL}data/factions.json`)
       const previousUpdate = localStorage.getItem(LAST_UPDATE_KEY)
       const currentUpdate = index.lastUpdate
       let notification: string | null = null
@@ -62,7 +62,7 @@ export const useGameDataStore = create<GameDataState>((set, get) => ({
       error: null,
     }))
     try {
-      const faction = await loadJSON<Faction>(`/data/${slug}.json`)
+      const faction = await loadJSON<Faction>(`${import.meta.env.BASE_URL}data/${slug}.json`)
       usePointsHistoryStore.getState().recordFaction(faction, get().dataWasUpdated)
       set((state) => {
         const loading = new Set(state.loadingFactions)
