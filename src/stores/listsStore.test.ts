@@ -34,14 +34,14 @@ describe('listsStore', () => {
 
   it('adds a unit to a list', () => {
     const id = useListsStore.getState().createList('Test', 'f-1', 'det', 2000)
-    useListsStore.getState().addUnit(id, { datasheetId: 'ds-1', datasheetName: 'Intercessors', points: 90 })
+    useListsStore.getState().addUnit(id, { datasheetId: 'ds-1', datasheetName: 'Intercessors', points: 90, selectedPointOptionIndex: 0, selectedWeapons: [], notes: '' })
     expect(useListsStore.getState().getList(id)?.units).toHaveLength(1)
   })
 
   it('removes a unit from a list by index', () => {
     const id = useListsStore.getState().createList('Test', 'f-1', 'det', 2000)
-    useListsStore.getState().addUnit(id, { datasheetId: 'ds-1', datasheetName: 'Intercessors', points: 90 })
-    useListsStore.getState().addUnit(id, { datasheetId: 'ds-2', datasheetName: 'Terminators', points: 200 })
+    useListsStore.getState().addUnit(id, { datasheetId: 'ds-1', datasheetName: 'Intercessors', points: 90, selectedPointOptionIndex: 0, selectedWeapons: [], notes: '' })
+    useListsStore.getState().addUnit(id, { datasheetId: 'ds-2', datasheetName: 'Terminators', points: 200, selectedPointOptionIndex: 0, selectedWeapons: [], notes: '' })
     useListsStore.getState().removeUnit(id, 0)
     const units = useListsStore.getState().getList(id)?.units ?? []
     expect(units).toHaveLength(1)

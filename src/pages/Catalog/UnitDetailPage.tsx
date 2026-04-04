@@ -52,14 +52,14 @@ export function UnitDetailPage() {
       return
     }
     if (lists.length === 1) {
-      addUnit(lists[0].id, { datasheetId: unitId, datasheetName: datasheet.name, points })
+      addUnit(lists[0].id, { datasheetId: unitId, datasheetName: datasheet.name, points, selectedPointOptionIndex: 0, selectedWeapons: [], notes: '' })
       return
     }
     setShowListPicker(true)
   }
 
   const handleSelectList = (listId: string) => {
-    addUnit(listId, { datasheetId: unitId, datasheetName: datasheet.name, points })
+    addUnit(listId, { datasheetId: unitId, datasheetName: datasheet.name, points, selectedPointOptionIndex: 0, selectedWeapons: [], notes: '' })
     setShowListPicker(false)
   }
 
