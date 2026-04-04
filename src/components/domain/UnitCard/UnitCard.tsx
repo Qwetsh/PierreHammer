@@ -9,7 +9,7 @@ type UnitVariant = 'standard' | 'battleline' | 'epic-hero'
 interface UnitCardProps {
   datasheet: Datasheet
   owned?: number
-  paintStatus?: PaintStatus
+  instances?: PaintStatus[]
   onClick?: () => void
   selectable?: boolean
   selected?: boolean
@@ -71,7 +71,7 @@ const paintDotColors: Record<PaintStatus, string> = {
 
 const statLabels = ['M', 'T', 'Sv', 'W', 'Ld', 'OC'] as const
 
-export function UnitCard({ datasheet, owned, paintStatus, onClick, selectable, selected, onToggleSelect }: UnitCardProps) {
+export function UnitCard({ datasheet, owned, instances, onClick, selectable, selected, onToggleSelect }: UnitCardProps) {
   const variant = getVariant(datasheet)
   const style = variantStyles[variant]
   const points = getPoints(datasheet)
@@ -207,17 +207,21 @@ export function UnitCard({ datasheet, owned, paintStatus, onClick, selectable, s
             <span className="font-semibold" style={{ color: 'var(--color-success)', fontSize: '0.6rem' }}>
               x{owned}
             </span>
-            {paintStatus && (
-              <span
-                className="inline-block rounded-full"
-                style={{
-                  width: '7px',
-                  height: '7px',
-                  backgroundColor: paintDotColors[paintStatus],
-                  boxShadow: `0 0 4px ${paintDotColors[paintStatus]}`,
-                }}
-                aria-label={`Peinture: ${paintStatus}`}
-              />
+            {instances && instances.length > 0 && (
+              <div className="flex items-center gap-0.5">
+                {instances.map((status, i) => (
+                  <span
+                    key={i}
+                    className="inline-block rounded-full"
+                    style={{
+                      width: '6px',
+                      height: '6px',
+                      backgroundColor: paintDotColors[status],
+                      boxShadow: `0 0 3px ${paintDotColors[status]}`,
+                    }}
+                  />
+                ))}
+              </div>
             )}
           </div>
         )}

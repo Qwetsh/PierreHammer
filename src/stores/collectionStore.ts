@@ -14,14 +14,27 @@ export interface ProgressStats {
 
 interface CollectionState {
   items: Record<string, CollectionItem>
-  addItem: (datasheetId: string, factionId: string, quantity?: number) => void
+  addItem: (datasheetId: string, factionId: string) => void
   removeItem: (datasheetId: string) => void
-  updateQuantity: (datasheetId: string, quantity: number) => void
-  updateStatus: (datasheetId: string, status: PaintStatus) => void
+  removeInstance: (datasheetId: string, instanceIndex: number) => void
+  addInstance: (datasheetId: string) => void
+  updateInstanceStatus: (datasheetId: string, instanceIndex: number, status: PaintStatus) => void
   getItem: (datasheetId: string) => CollectionItem | undefined
   getOwnedCount: (datasheetId: string) => number
   isOwned: (datasheetId: string) => boolean
   getProgressStats: () => ProgressStats
+}
+
+// Migrate old format { quantity, paintStatus } to new { instances }
+function migrateItem(item: CollectionItem & { quantity?: number; paintStatus?: PaintStatus }): CollectionItem {
+  if (item.instances) return item
+  const qty = item.quantity ?? 1
+  const status = item.paintStatus ?? 'unassembled'
+  return {
+    datasheetId: item.datasheetId,
+    factionId: item.factionId,
+    instances: Array(qty).fill(status),
+  }
 }
 
 export const useCollectionStore = create<CollectionState>()(
@@ -29,18 +42,31 @@ export const useCollectionStore = create<CollectionState>()(
     (set, get) => ({
       items: {},
 
-      addItem: (datasheetId, factionId, quantity = 1) => {
-        set((state) => ({
-          items: {
-            ...state.items,
-            [datasheetId]: {
-              datasheetId,
-              factionId,
-              quantity,
-              paintStatus: 'unassembled' as PaintStatus,
+      addItem: (datasheetId, factionId) => {
+        set((state) => {
+          const existing = state.items[datasheetId]
+          if (existing) {
+            return {
+              items: {
+                ...state.items,
+                [datasheetId]: {
+                  ...existing,
+                  instances: [...existing.instances, 'unassembled'],
+                },
+              },
+            }
+          }
+          return {
+            items: {
+              ...state.items,
+              [datasheetId]: {
+                datasheetId,
+                factionId,
+                instances: ['unassembled'],
+              },
             },
-          },
-        }))
+          }
+        })
       },
 
       removeItem: (datasheetId) => {
@@ -50,54 +76,86 @@ export const useCollectionStore = create<CollectionState>()(
         })
       },
 
-      updateQuantity: (datasheetId, quantity) => {
+      removeInstance: (datasheetId, instanceIndex) => {
         const item = get().items[datasheetId]
         if (!item) return
-        if (quantity <= 0) {
+        const newInstances = item.instances.filter((_, i) => i !== instanceIndex)
+        if (newInstances.length === 0) {
           get().removeItem(datasheetId)
           return
         }
         set((state) => ({
           items: {
             ...state.items,
-            [datasheetId]: { ...state.items[datasheetId], quantity },
+            [datasheetId]: { ...item, instances: newInstances },
           },
         }))
       },
 
-      updateStatus: (datasheetId, status) => {
+      addInstance: (datasheetId) => {
         const item = get().items[datasheetId]
         if (!item) return
         set((state) => ({
           items: {
             ...state.items,
-            [datasheetId]: { ...state.items[datasheetId], paintStatus: status },
+            [datasheetId]: {
+              ...item,
+              instances: [...item.instances, 'unassembled'],
+            },
+          },
+        }))
+      },
+
+      updateInstanceStatus: (datasheetId, instanceIndex, status) => {
+        const item = get().items[datasheetId]
+        if (!item || instanceIndex < 0 || instanceIndex >= item.instances.length) return
+        const newInstances = [...item.instances]
+        newInstances[instanceIndex] = status
+        set((state) => ({
+          items: {
+            ...state.items,
+            [datasheetId]: { ...item, instances: newInstances },
           },
         }))
       },
 
       getItem: (datasheetId) => get().items[datasheetId],
-      getOwnedCount: (datasheetId) => get().items[datasheetId]?.quantity ?? 0,
+      getOwnedCount: (datasheetId) => get().items[datasheetId]?.instances.length ?? 0,
       isOwned: (datasheetId) => datasheetId in get().items,
 
       getProgressStats: () => {
         const items = Object.values(get().items)
-        const total = items.length
+        const allInstances = items.flatMap((i) => i.instances)
+        const total = allInstances.length
         if (total === 0) return { total: 0, unassembled: 0, assembled: 0, inProgress: 0, completed: 0, percentComplete: 0 }
-        const unassembled = items.filter((i) => i.paintStatus === 'unassembled').length
-        const assembled = items.filter((i) => i.paintStatus === 'assembled').length
-        const inProgress = items.filter((i) => i.paintStatus === 'in-progress').length
-        const completed = items.filter((i) => i.paintStatus === 'done').length
+        const unassembled = allInstances.filter((s) => s === 'unassembled').length
+        const assembled = allInstances.filter((s) => s === 'assembled').length
+        const inProgress = allInstances.filter((s) => s === 'in-progress').length
+        const completed = allInstances.filter((s) => s === 'done').length
         const percentComplete = Math.round((completed / total) * 100)
         return { total, unassembled, assembled, inProgress, completed, percentComplete }
       },
     }),
     {
       name: 'pierrehammer-collection',
-      onRehydrateStorage: () => (_state, error) => {
+      onRehydrateStorage: () => (state, error) => {
         if (error) {
           console.error('Failed to rehydrate collection store:', error)
           localStorage.removeItem('pierrehammer-collection')
+          return
+        }
+        // Migrate old format items
+        if (state?.items) {
+          const migrated: Record<string, CollectionItem> = {}
+          let needsMigration = false
+          for (const [key, item] of Object.entries(state.items)) {
+            const m = migrateItem(item as CollectionItem & { quantity?: number; paintStatus?: PaintStatus })
+            migrated[key] = m
+            if (m !== item) needsMigration = true
+          }
+          if (needsMigration) {
+            state.items = migrated
+          }
         }
       },
     },

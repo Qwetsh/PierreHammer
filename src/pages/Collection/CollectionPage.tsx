@@ -34,6 +34,13 @@ const paintOrder: Record<PaintStatus, number> = {
   done: 3,
 }
 
+const paintDotColors: Record<PaintStatus, string> = {
+  unassembled: 'var(--color-text-muted)',
+  assembled: 'var(--color-warning)',
+  'in-progress': 'var(--color-accent)',
+  done: 'var(--color-success)',
+}
+
 const paintStatusOptions: { value: PaintStatus | 'all'; label: string }[] = [
   { value: 'all', label: 'Tous' },
   { value: 'unassembled', label: 'Non montée' },
@@ -56,11 +63,16 @@ export function CollectionPage() {
   const loadFactionIndex = useGameDataStore((s) => s.loadFactionIndex)
   const favorites = useFavoritesStore((s) => s.favorites)
 
+  const updateInstanceStatus = useCollectionStore((s) => s.updateInstanceStatus)
+  const addInstance = useCollectionStore((s) => s.addInstance)
+  const removeInstance = useCollectionStore((s) => s.removeInstance)
+
   const [view, setView] = useState<CollectionView>('owned')
   const [query, setQuery] = useState('')
   const [factionFilter, setFactionFilter] = useState<string | 'all'>('all')
   const [paintFilter, setPaintFilter] = useState<PaintStatus | 'all'>('all')
   const [sortBy, setSortBy] = useState<SortKey>('name')
+  const [editingId, setEditingId] = useState<string | null>(null)
 
   useEffect(() => {
     loadFactionIndex()
@@ -97,7 +109,10 @@ export function CollectionPage() {
 
   const paintFiltered = useMemo(() => {
     if (paintFilter === 'all') return factionFiltered
-    return factionFiltered.filter((ds) => collectionItems[ds.id]?.paintStatus === paintFilter)
+    return factionFiltered.filter((ds) => {
+      const item = collectionItems[ds.id]
+      return item?.instances.some((s) => s === paintFilter)
+    })
   }, [factionFiltered, paintFilter, collectionItems])
 
   const extractFields = useCallback(extractSearchFields, [])
@@ -116,9 +131,11 @@ export function CollectionPage() {
         case 'role':
           return (a.role || '').localeCompare(b.role || '', 'fr')
         case 'paintStatus': {
-          const sa = collectionItems[a.id]?.paintStatus ?? 'unassembled'
-          const sb = collectionItems[b.id]?.paintStatus ?? 'unassembled'
-          return paintOrder[sa] - paintOrder[sb]
+          const ia = collectionItems[a.id]?.instances ?? []
+          const ib = collectionItems[b.id]?.instances ?? []
+          const sa = ia.length > 0 ? Math.min(...ia.map((s) => paintOrder[s])) : 0
+          const sb = ib.length > 0 ? Math.min(...ib.map((s) => paintOrder[s])) : 0
+          return sa - sb
         }
       }
     })
@@ -151,15 +168,32 @@ export function CollectionPage() {
     setPaintFilter('all')
   }
 
+  const paintCycle: PaintStatus[] = ['unassembled', 'assembled', 'in-progress', 'done']
+  const paintLabels: Record<PaintStatus, string> = {
+    unassembled: 'Non montée',
+    assembled: 'Montée',
+    'in-progress': 'En cours',
+    done: 'Terminée',
+  }
+
+  const editingItem = editingId ? collectionItems[editingId] : null
+  const editingDatasheet = editingId ? sortedDatasheets.find((ds) => ds.id === editingId) ?? allDatasheets.find((ds) => ds.id === editingId) : null
+
   const renderGrid = (items: DatasheetWithFaction[]) => (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
       {items.map((ds) => (
         <UnitCard
           key={ds.id}
           datasheet={ds}
-          owned={collectionItems[ds.id]?.quantity}
-          paintStatus={collectionItems[ds.id]?.paintStatus}
-          onClick={() => navigate(`/catalog/${ds.factionSlug}/${ds.id}`)}
+          owned={collectionItems[ds.id]?.instances.length}
+          instances={collectionItems[ds.id]?.instances}
+          onClick={() => {
+            if (view === 'owned' && collectionItems[ds.id]) {
+              setEditingId(ds.id)
+            } else {
+              navigate(`/catalog/${ds.factionSlug}/${ds.id}`)
+            }
+          }}
         />
       ))}
     </div>
@@ -315,6 +349,93 @@ export function CollectionPage() {
             </>
           )}
         </>
+      )}
+
+      {/* Instance editor modal */}
+      {editingId && editingItem && editingDatasheet && (
+        <div
+          className="fixed left-0 right-0 top-0 flex items-end justify-center"
+          style={{
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            zIndex: 60,
+            bottom: 'calc(60px + env(safe-area-inset-bottom, 0px))',
+          }}
+          onClick={() => setEditingId(null)}
+        >
+          <div
+            className="w-full max-w-lg rounded-t-2xl"
+            style={{ backgroundColor: 'var(--color-surface)', maxHeight: '70%', display: 'flex', flexDirection: 'column' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Handle bar */}
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 rounded-full" style={{ backgroundColor: 'var(--color-text-muted)', opacity: 0.4 }} />
+            </div>
+
+            {/* Header */}
+            <div className="px-4 pb-3 flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold" style={{ color: 'var(--color-text)', fontSize: 'var(--text-lg)' }}>
+                  {editingDatasheet.name}
+                </h3>
+                <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                  {editingItem.instances.length} exemplaire{editingItem.instances.length > 1 ? 's' : ''}
+                </p>
+              </div>
+              <button
+                className="text-xs px-3 py-1.5 rounded-lg border-none cursor-pointer min-h-[36px]"
+                style={{ backgroundColor: 'var(--color-primary)', color: '#ffffff' }}
+                onClick={() => addInstance(editingId)}
+              >
+                + Ajouter
+              </button>
+            </div>
+
+            {/* Instances list */}
+            <div className="px-4 pb-4 overflow-y-auto scrollbar-thin" style={{ flex: '1 1 auto', minHeight: 0 }}>
+              <div className="flex flex-col gap-2">
+                {editingItem.instances.map((status, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-2 rounded-lg px-3 py-2"
+                    style={{ backgroundColor: 'var(--color-bg)' }}
+                  >
+                    <span className="text-xs font-medium shrink-0" style={{ color: 'var(--color-text-muted)', width: '20px' }}>
+                      #{i + 1}
+                    </span>
+                    <div className="flex gap-1 flex-1">
+                      {paintCycle.map((s) => (
+                        <button
+                          key={s}
+                          className="text-xs px-2 py-1 rounded border-none cursor-pointer min-h-[32px]"
+                          style={{
+                            backgroundColor: status === s ? paintDotColors[s] : 'var(--color-surface)',
+                            color: status === s ? '#ffffff' : 'var(--color-text-muted)',
+                            flex: '1 1 0',
+                          }}
+                          onClick={() => updateInstanceStatus(editingId, i, s)}
+                        >
+                          {paintLabels[s]}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      className="text-xs px-1.5 py-1 rounded border-none cursor-pointer min-h-[32px]"
+                      style={{ backgroundColor: 'transparent', color: 'var(--color-error)' }}
+                      onClick={() => {
+                        removeInstance(editingId, i)
+                        if (editingItem.instances.length <= 1) setEditingId(null)
+                      }}
+                      aria-label={`Retirer exemplaire ${i + 1}`}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

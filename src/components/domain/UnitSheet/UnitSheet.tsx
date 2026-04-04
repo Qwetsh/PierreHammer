@@ -1,14 +1,10 @@
 import { useState } from 'react'
 import type { Datasheet } from '@/types/gameData.types'
-import { PaintStatusBadge } from '@/components/domain/PaintStatusBadge'
-import type { PaintStatus } from '@/components/domain/PaintStatusBadge'
 import { Button } from '@/components/ui/Button'
 import { sanitizeHtml } from '@/utils/sanitizeHtml'
 
 interface UnitSheetProps {
   datasheet: Datasheet
-  paintStatus?: PaintStatus
-  onPaintCycle?: () => void
   ownedCount?: number
   onAddToCollection?: () => void
   onUpdateQuantity?: (quantity: number) => void
@@ -30,7 +26,7 @@ function SectionTitle({ children }: { children: string }) {
   )
 }
 
-export function UnitSheet({ datasheet, paintStatus, onPaintCycle, ownedCount = 0, onAddToCollection, onUpdateQuantity, onAddToList }: UnitSheetProps) {
+export function UnitSheet({ datasheet, ownedCount = 0, onAddToCollection, onUpdateQuantity, onAddToList }: UnitSheetProps) {
   const rangedWeapons = datasheet.weapons.filter((w) => w.type === 'Ranged' || (w.range && w.range !== 'Melee'))
   const meleeWeapons = datasheet.weapons.filter((w) => w.type === 'Melee' || w.range === 'Melee')
   const [imgError, setImgError] = useState(false)
@@ -111,9 +107,6 @@ export function UnitSheet({ datasheet, paintStatus, onPaintCycle, ownedCount = 0
         <Button variant="secondary" size="sm" disabled={!onAddToList} onClick={onAddToList}>
           Ajouter à une liste
         </Button>
-        {paintStatus && (
-          <PaintStatusBadge status={paintStatus} size="full" onCycle={onPaintCycle} />
-        )}
       </div>
 
       {/* Section 3 — Profil */}

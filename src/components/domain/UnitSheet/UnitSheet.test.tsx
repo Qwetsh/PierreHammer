@@ -111,9 +111,9 @@ describe('UnitSheet', () => {
     expect(btn.closest('button')).toBeDisabled()
   })
 
-  it('renders PaintStatusBadge when paintStatus provided', () => {
-    render(<UnitSheet datasheet={baseDatasheet} paintStatus="done" />)
-    expect(screen.getByLabelText('Terminée')).toBeInTheDocument()
+  it('does not render PaintStatusBadge (moved to collection)', () => {
+    render(<UnitSheet datasheet={baseDatasheet} ownedCount={1} />)
+    expect(screen.queryByLabelText('Terminée')).not.toBeInTheDocument()
   })
 
   it('shows "Non possédé" when ownedCount is 0', () => {

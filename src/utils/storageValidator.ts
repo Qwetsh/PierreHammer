@@ -29,11 +29,18 @@ export function validateExportData(data: unknown): ValidationResult {
         }
         const ci = item as Record<string, unknown>
         if (typeof ci.datasheetId !== 'string') errors.push(`Collection item "${key}": datasheetId manquant.`)
-        if (typeof ci.quantity !== 'number') errors.push(`Collection item "${key}": quantity manquante.`)
-        if (typeof ci.paintStatus !== 'string') {
-          errors.push(`Collection item "${key}": paintStatus manquant.`)
-        } else if (!['unassembled', 'assembled', 'in-progress', 'done'].includes(ci.paintStatus)) {
-          errors.push(`Collection item "${key}": paintStatus invalide "${ci.paintStatus}".`)
+        // Support both old format (quantity + paintStatus) and new format (instances)
+        if (!Array.isArray(ci.instances) && typeof ci.quantity !== 'number') {
+          errors.push(`Collection item "${key}": instances ou quantity manquant.`)
+        }
+        if (Array.isArray(ci.instances)) {
+          const validStatuses = ['unassembled', 'assembled', 'in-progress', 'done']
+          for (const s of ci.instances as unknown[]) {
+            if (typeof s !== 'string' || !validStatuses.includes(s)) {
+              errors.push(`Collection item "${key}": instance status invalide "${s}".`)
+              break
+            }
+          }
         }
       }
     }

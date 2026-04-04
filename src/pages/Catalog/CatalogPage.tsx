@@ -127,8 +127,8 @@ export function CatalogPage() {
           <UnitCard
             key={ds.id}
             datasheet={ds}
-            owned={collectionItems[ds.id]?.quantity}
-            paintStatus={collectionItems[ds.id]?.paintStatus}
+            owned={collectionItems[ds.id]?.instances?.length}
+            instances={collectionItems[ds.id]?.instances}
             onClick={() => navigate(`/catalog/${selectedFactionSlug}/${ds.id}`)}
             selectable={compareMode}
             selected={isSelected(ds.id)}

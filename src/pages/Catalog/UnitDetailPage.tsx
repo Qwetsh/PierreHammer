@@ -24,8 +24,8 @@ export function UnitDetailPage() {
 
   const collectionItem = useCollectionStore((s) => unitId ? s.items[unitId] : undefined)
   const addItem = useCollectionStore((s) => s.addItem)
-  const updateQuantity = useCollectionStore((s) => s.updateQuantity)
-  const updateStatus = useCollectionStore((s) => s.updateStatus)
+  const addInstance = useCollectionStore((s) => s.addInstance)
+  const removeInstance = useCollectionStore((s) => s.removeInstance)
 
   const allLists = useListsStore((s) => s.getAllLists)
   const addUnit = useListsStore((s) => s.addUnit)
@@ -44,6 +44,7 @@ export function UnitDetailPage() {
   }
 
   const points = datasheet.pointOptions.length > 0 ? datasheet.pointOptions[0].cost : 0
+  const ownedCount = collectionItem?.instances.length ?? 0
 
   const handleAddToList = () => {
     const lists = allLists().filter((l) => l.factionId === factionId)
@@ -63,6 +64,15 @@ export function UnitDetailPage() {
     setShowListPicker(false)
   }
 
+  const handleUpdateQuantity = (qty: number) => {
+    if (!collectionItem) return
+    if (qty > ownedCount) {
+      addInstance(unitId)
+    } else if (qty < ownedCount && qty >= 0) {
+      removeInstance(unitId, ownedCount - 1)
+    }
+  }
+
   return (
     <motion.div
       initial={{ x: 60, opacity: 0 }}
@@ -77,16 +87,10 @@ export function UnitDetailPage() {
       </div>
       <UnitSheet
         datasheet={datasheet}
-        ownedCount={collectionItem?.quantity ?? 0}
-        paintStatus={collectionItem?.paintStatus}
+        ownedCount={ownedCount}
         onAddToCollection={() => addItem(unitId, factionId)}
-        onUpdateQuantity={(qty) => updateQuantity(unitId, qty)}
+        onUpdateQuantity={handleUpdateQuantity}
         onAddToList={handleAddToList}
-        onPaintCycle={collectionItem ? () => {
-          const cycle = ['unassembled', 'assembled', 'in-progress', 'done'] as const
-          const idx = cycle.indexOf(collectionItem.paintStatus)
-          updateStatus(unitId, cycle[(idx + 1) % cycle.length])
-        } : undefined}
       />
 
       {showListPicker && (

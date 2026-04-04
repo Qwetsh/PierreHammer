@@ -47,7 +47,22 @@ export function useExportImport() {
       }
 
       if (data.collection) {
-        useCollectionStore.setState({ items: data.collection })
+        // Migrate old format (quantity + paintStatus) to new (instances)
+        const migrated: Record<string, unknown> = {}
+        for (const [key, item] of Object.entries(data.collection as Record<string, Record<string, unknown>>)) {
+          if (Array.isArray(item.instances)) {
+            migrated[key] = item
+          } else {
+            const qty = (typeof item.quantity === 'number' ? item.quantity : 1)
+            const status = (typeof item.paintStatus === 'string' ? item.paintStatus : 'unassembled')
+            migrated[key] = {
+              datasheetId: item.datasheetId,
+              factionId: item.factionId,
+              instances: Array(qty).fill(status),
+            }
+          }
+        }
+        useCollectionStore.setState({ items: migrated })
       }
       if (data.lists) {
         useListsStore.setState({ lists: data.lists })
