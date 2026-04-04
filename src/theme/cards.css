@@ -111,9 +111,9 @@
     );
   outline-color: color-mix(in srgb, var(--color-card-battleline) 50%, transparent);
   box-shadow:
-    0 2px 8px rgba(30, 64, 175, 0.25),
+    0 2px 8px color-mix(in srgb, var(--color-card-battleline) 25%, transparent),
     0 0 1px var(--color-card-battleline),
-    inset 0 1px 0 rgba(100, 150, 255, 0.06),
+    inset 0 1px 0 color-mix(in srgb, var(--color-card-battleline) 6%, transparent),
     inset 0 -1px 0 rgba(0, 0, 0, 0.3);
 }
 
@@ -134,9 +134,9 @@
 
 .unit-card--battleline:hover {
   box-shadow:
-    0 4px 16px rgba(30, 64, 175, 0.35),
+    0 4px 16px color-mix(in srgb, var(--color-card-battleline) 35%, transparent),
     0 0 12px color-mix(in srgb, var(--color-card-battleline) 25%, transparent),
-    inset 0 1px 0 rgba(100, 150, 255, 0.08),
+    inset 0 1px 0 color-mix(in srgb, var(--color-card-battleline) 8%, transparent),
     inset 0 -1px 0 rgba(0, 0, 0, 0.3);
 }
 
@@ -161,7 +161,7 @@
     );
   outline: 1px solid color-mix(in srgb, var(--color-accent) 45%, transparent);
   box-shadow:
-    0 2px 12px rgba(196, 165, 53, 0.2),
+    0 2px 12px color-mix(in srgb, var(--color-accent) 20%, transparent),
     0 0 1px var(--color-accent),
     inset 0 1px 0 color-mix(in srgb, var(--color-accent) 12%, transparent),
     inset 0 -1px 0 rgba(0, 0, 0, 0.4);
@@ -184,7 +184,7 @@
 
 .unit-card--epic-hero:hover {
   box-shadow:
-    0 4px 20px rgba(196, 165, 53, 0.3),
+    0 4px 20px color-mix(in srgb, var(--color-accent) 30%, transparent),
     0 0 16px color-mix(in srgb, var(--color-accent) 25%, transparent),
     inset 0 1px 0 color-mix(in srgb, var(--color-accent) 15%, transparent),
     inset 0 -1px 0 rgba(0, 0, 0, 0.4);
@@ -197,9 +197,9 @@
   background: linear-gradient(
     105deg,
     transparent 40%,
-    rgba(196, 165, 53, 0.04) 45%,
-    rgba(196, 165, 53, 0.08) 50%,
-    rgba(196, 165, 53, 0.04) 55%,
+    color-mix(in srgb, var(--color-accent) 4%, transparent) 45%,
+    color-mix(in srgb, var(--color-accent) 8%, transparent) 50%,
+    color-mix(in srgb, var(--color-accent) 4%, transparent) 55%,
     transparent 60%
   );
   animation: shimmer-sweep 4s ease-in-out infinite;
