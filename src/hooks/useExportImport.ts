@@ -3,6 +3,7 @@ import { useCollectionStore } from '@/stores/collectionStore'
 import { useListsStore } from '@/stores/listsStore'
 import { usePreferencesStore } from '@/stores/preferencesStore'
 import { validateExportData } from '@/utils/storageValidator'
+import type { CollectionItem } from '@/types/collection.types'
 
 interface ExportData {
   version: 1
@@ -48,7 +49,7 @@ export function useExportImport() {
 
       if (data.collection) {
         // Migrate old format (quantity + paintStatus) to new (instances)
-        const migrated: Record<string, unknown> = {}
+        const migrated: Record<string, CollectionItem> = {}
         for (const [key, item] of Object.entries(data.collection as Record<string, Record<string, unknown>>)) {
           if (Array.isArray(item.instances)) {
             migrated[key] = item
