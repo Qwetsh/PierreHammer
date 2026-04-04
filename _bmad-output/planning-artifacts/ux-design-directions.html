@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PierreHammer — Design Directions</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Oswald:wght@500;700&family=Cinzel:wght@600;700&family=Black+Ops+One&family=Orbitron:wght@500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0f0f1a;
+    --surface: #1a1a2e;
+    --surface-hover: #252540;
+    --primary: #e94560;
+    --accent: #c4a535;
+    --text: #eaeaea;
+    --text-muted: #8a8a9a;
+    --success: #4ade80;
+    --warning: #fbbf24;
+    --error: #ef4444;
+    --card-epic: #c4a535;
+    --card-battleline: #a0a0b0;
+    --font-display: 'Oswald', sans-serif;
+    --radius: 8px;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #050510;
+    color: var(--text);
+    line-height: 1.5;
+  }
+
+  /* ===== HEADER ===== */
+  .page-header {
+    text-align: center;
+    padding: 60px 20px 40px;
+    background: linear-gradient(180deg, #1a1a2e 0%, #050510 100%);
+  }
+  .page-header h1 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 48px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .page-header p { color: var(--text-muted); margin-top: 12px; font-size: 16px; }
+
+  /* ===== FACTION SELECTOR ===== */
+  .faction-bar {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px;
+    flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(5,5,16,0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .faction-btn {
+    padding: 8px 16px;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px;
+    background: var(--surface);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.3s;
+  }
+  .faction-btn:hover, .faction-btn.active {
+    border-color: var(--primary);
+    color: var(--text);
+    background: rgba(233,69,96,0.15);
+  }
+
+  /* ===== SECTIONS ===== */
+  .section {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px;
+  }
+  .section-title {
+    font-family: var(--font-display);
+    font-size: 28px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+    color: var(--primary);
+  }
+  .section-desc {
+    color: var(--text-muted);
+    margin-bottom: 32px;
+    font-size: 14px;
+  }
+  .divider {
+    border: none;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(233,69,96,0.3), transparent);
+    margin: 20px 0;
+  }
+
+  /* ===== DIRECTION 1: PHONE MOCKUP ===== */
+  .phone-frame {
+    width: 375px;
+    height: 720px;
+    margin: 0 auto;
+    border: 3px solid #333;
+    border-radius: 32px;
+    overflow: hidden;
+    background: var(--bg);
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .phone-status-bar {
+    height: 44px;
+    background: rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .phone-content {
+    height: calc(100% - 44px - 56px);
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  .phone-content::-webkit-scrollbar { display: none; }
+
+  /* ===== BOTTOM NAV ===== */
+  .bottom-nav {
+    height: 56px;
+    background: var(--surface);
+    border-top: 1px solid rgba(255,255,255,0.05);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+  }
+  .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-size: 10px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  .nav-item.active { color: var(--primary); }
+  .nav-icon { font-size: 20px; }
+
+  /* ===== UNIT CARDS GRID ===== */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    padding: 12px;
+  }
+  .unit-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.05);
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+  }
+  .unit-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    border-color: var(--primary);
+  }
+  .unit-card.epic { border-color: var(--card-epic); border-width: 2px; }
+  .unit-card.battleline { border-color: var(--card-battleline); }
+  .card-img {
+    width: 100%;
+    height: 120px;
+    background: linear-gradient(135deg, rgba(233,69,96,0.2), rgba(196,165,53,0.1));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    position: relative;
+  }
+  .card-img::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 50%, var(--surface));
+  }
+  .card-body {
+    padding: 8px 10px;
+  }
+  .card-name {
+    font-weight: 700;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .card-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .card-pts {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    color: var(--accent);
+  }
+  .card-status {
+    display: flex;
+    gap: 3px;
+  }
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+  }
+  .status-dot.painted { background: var(--success); }
+  .status-dot.wip { background: var(--warning); }
+  .status-dot.built { background: var(--primary); }
+
+  /* ===== COLLECTION HEADER ===== */
+  .collection-header {
+    padding: 16px 12px 8px;
+  }
+  .collection-title {
+    font-family: var(--font-display);
+    font-size: 22px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .collection-stats {
+    display: flex;
+    gap: 16px;
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .stat-value {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text);
+    font-weight: 600;
+  }
+  .progress-bar {
+    height: 4px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 2px;
+    margin-top: 12px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--success), var(--warning));
+    transition: width 0.5s;
+  }
+  .toggle-bar {
+    display: flex;
+    gap: 0;
+    margin-top: 12px;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .toggle-item {
+    flex: 1;
+    padding: 6px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: transparent;
+    color: var(--text-muted);
+  }
+  .toggle-item.active {
+    background: var(--primary);
+    color: white;
+  }
+
+  /* ===== UNIT SHEET (Direction 2) ===== */
+  .sheet-header {
+    position: relative;
+    height: 180px;
+    background: linear-gradient(135deg, rgba(233,69,96,0.3), rgba(196,165,53,0.1));
+    display: flex;
+    align-items: flex-end;
+    padding: 16px;
+  }
+  .sheet-header-content {
+    z-index: 1;
+  }
+  .sheet-unit-name {
+    font-family: var(--font-display);
+    font-size: 24px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .sheet-unit-meta {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-top: 4px;
+    font-size: 13px;
+  }
+  .sheet-pts {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .sheet-keyword {
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.1);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .sheet-actions {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .sheet-btn {
+    flex: 1;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+  }
+  .sheet-btn.primary {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+  }
+  .sheet-btn:hover { opacity: 0.8; }
+
+  .sheet-section {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .sheet-section-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--primary);
+    margin-bottom: 8px;
+    font-weight: 700;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
+    text-align: center;
+  }
+  .stat-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    padding: 4px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 4px 4px 0 0;
+  }
+  .stat-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 6px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 0 0 4px 4px;
+  }
+
+  .weapon-row {
+    display: grid;
+    grid-template-columns: 1fr repeat(5, 40px);
+    gap: 2px;
+    font-size: 12px;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    align-items: center;
+  }
+  .weapon-name { font-weight: 600; font-size: 13px; }
+  .weapon-stat {
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .weapon-header .weapon-stat {
+    font-size: 10px;
+    text-transform: uppercase;
+    color: var(--primary);
+  }
+
+  .ability-item {
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 6px;
+    margin-bottom: 6px;
+    border-left: 3px solid var(--primary);
+  }
+  .ability-name { font-weight: 700; font-size: 13px; }
+  .ability-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  .keywords-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .keyword-tag {
+    padding: 3px 10px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.05);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+  }
+
+  /* ===== DIRECTION 3: ARMY LIST ===== */
+  .list-header-sticky {
+    padding: 12px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .list-name {
+    font-family: var(--font-display);
+    font-size: 18px;
+    text-transform: uppercase;
+  }
+  .list-points {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .list-points .current { color: var(--accent); }
+  .list-points .limit { color: var(--text-muted); }
+  .list-points.over .current { color: var(--error); }
+
+  .list-unit-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .list-unit-row:hover { background: var(--surface-hover); }
+  .list-unit-thumb {
+    width: 44px;
+    height: 44px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, rgba(233,69,96,0.2), rgba(196,165,53,0.1));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .list-unit-info { flex: 1; min-width: 0; }
+  .list-unit-name { font-weight: 600; font-size: 14px; }
+  .list-unit-keywords { font-size: 11px; color: var(--text-muted); }
+  .list-unit-pts {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .not-owned {
+    opacity: 0.5;
+    border-left: 3px solid var(--warning);
+  }
+  .not-owned .list-unit-name::after {
+    content: ' ⚠';
+    font-size: 12px;
+    color: var(--warning);
+  }
+
+  /* ===== MOCKUPS LAYOUT ===== */
+  .mockups-row {
+    display: flex;
+    gap: 40px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 40px 0;
+  }
+  .mockup-label {
+    text-align: center;
+    margin-bottom: 16px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* ===== DIRECTION 4: PARTY MODE ===== */
+  .party-card {
+    padding: 24px 16px;
+    height: calc(100% - 44px);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .party-unit-name {
+    font-family: var(--font-display);
+    font-size: 28px;
+    text-transform: uppercase;
+    text-align: center;
+    letter-spacing: 2px;
+  }
+  .party-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin: 16px 0;
+  }
+  .party-stat-box {
+    text-align: center;
+    padding: 12px 8px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 8px;
+  }
+  .party-stat-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+  .party-stat-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 28px;
+    font-weight: 700;
+    margin-top: 4px;
+  }
+  .party-weapons {
+    flex: 1;
+    overflow-y: auto;
+  }
+  .party-weapon {
+    padding: 10px 12px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 8px;
+    margin-bottom: 8px;
+  }
+  .party-weapon-name { font-size: 16px; font-weight: 700; }
+  .party-weapon-stats {
+    display: flex;
+    gap: 12px;
+    margin-top: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+  .party-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+  }
+  .party-nav-btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    background: var(--surface);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text);
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .party-nav-indicator {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  /* ===== FACTION THEMES DEMO ===== */
+  .themes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .theme-card {
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .theme-header {
+    padding: 20px 16px;
+    position: relative;
+  }
+  .theme-name {
+    font-size: 20px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .theme-colors {
+    display: flex;
+    gap: 6px;
+    margin-top: 12px;
+  }
+  .color-swatch {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: 2px solid rgba(255,255,255,0.1);
+  }
+  .theme-body {
+    padding: 12px 16px;
+  }
+  .theme-sample-card {
+    padding: 10px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .theme-thumb {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+  .theme-info { flex: 1; }
+  .theme-unit-name { font-weight: 600; font-size: 13px; }
+  .theme-unit-pts { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+
+  /* ===== STATUS BADGE DEMO ===== */
+  .status-demo {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+  .status-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .status-badge:hover { transform: scale(1.05); }
+  .status-badge.unbuilt { background: rgba(138,138,154,0.15); color: #8a8a9a; }
+  .status-badge.built { background: rgba(233,69,96,0.15); color: #e94560; }
+  .status-badge.wip { background: rgba(251,191,36,0.15); color: #fbbf24; }
+  .status-badge.done { background: rgba(74,222,128,0.15); color: #4ade80; }
+  .status-icon { font-size: 14px; }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .mockups-row { flex-direction: column; align-items: center; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>PierreHammer</h1>
+  <p>Design Directions — Explorations visuelles</p>
+</div>
+
+<div class="faction-bar">
+  <button class="faction-btn active" onclick="setFaction('default')">Neutre</button>
+  <button class="faction-btn" onclick="setFaction('space-marines')">Space Marines</button>
+  <button class="faction-btn" onclick="setFaction('orks')">Orks</button>
+  <button class="faction-btn" onclick="setFaction('aeldari')">Aeldari</button>
+  <button class="faction-btn" onclick="setFaction('necrons')">Necrons</button>
+  <button class="faction-btn" onclick="setFaction('chaos')">Chaos</button>
+</div>
+
+<!-- ===== DIRECTION 1: COLLECTION VIEW ===== -->
+<div class="section">
+  <h2 class="section-title">Direction 1 — Collection</h2>
+  <p class="section-desc">Vue galerie avec grille de cartes, toggle collection/catalogue, barre de progression</p>
+
+  <div class="mockups-row">
+    <div>
+      <div class="mockup-label">Ma Collection</div>
+      <div class="phone-frame" id="phone-collection">
+        <div class="phone-status-bar">9:41 — PierreHammer</div>
+        <div class="phone-content">
+          <div class="collection-header">
+            <div class="collection-title" id="faction-title">Ma Collection</div>
+            <div class="collection-stats">
+              <span><span class="stat-value">22</span> figurines</span>
+              <span><span class="stat-value">73%</span> peintes</span>
+              <span><span class="stat-value">1850</span> pts</span>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" style="width:73%"></div></div>
+            <div class="toggle-bar">
+              <div class="toggle-item active">Ma collection</div>
+              <div class="toggle-item">Tout le catalogue</div>
+            </div>
+          </div>
+          <div class="cards-grid">
+            <div class="unit-card epic">
+              <div class="card-img">⚔️</div>
+              <div class="card-body">
+                <div class="card-name">Marneus Calgar</div>
+                <div class="card-meta">
+                  <span class="card-pts">200 pts</span>
+                  <div class="card-status"><div class="status-dot painted"></div></div>
+                </div>
+              </div>
+            </div>
+            <div class="unit-card battleline">
+              <div class="card-img">🛡️</div>
+              <div class="card-body">
+                <div class="card-name">Intercessors</div>
+                <div class="card-meta">
+                  <span class="card-pts">80 pts</span>
+                  <div class="card-status">
+                    <div class="status-dot painted"></div>
+                    <div class="status-dot painted"></div>
+                    <div class="status-dot wip"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="unit-card">
+              <div class="card-img">🔫</div>
+              <div class="card-body">
+                <div class="card-name">Hellblasters</div>
+                <div class="card-meta">
+                  <span class="card-pts">125 pts</span>
+                  <div class="card-status"><div class="status-dot built"></div></div>
+                </div>
+              </div>
+            </div>
+            <div class="unit-card battleline">
+              <div class="card-img">🏃</div>
+              <div class="card-body">
+                <div class="card-name">Assault Intercessors</div>
+                <div class="card-meta">
+                  <span class="card-pts">75 pts</span>
+                  <div class="card-status">
+                    <div class="status-dot painted"></div>
+                    <div class="status-dot painted"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="unit-card">
+              <div class="card-img">🚀</div>
+              <div class="card-body">
+                <div class="card-name">Redemptor Dread.</div>
+                <div class="card-meta">
+                  <span class="card-pts">210 pts</span>
+                  <div class="card-status"><div class="status-dot wip"></div></div>
+                </div>
+              </div>
+            </div>
+            <div class="unit-card">
+              <div class="card-img">✝️</div>
+              <div class="card-body">
+                <div class="card-name">Chaplain</div>
+                <div class="card-meta">
+                  <span class="card-pts">75 pts</span>
+                  <div class="card-status"><div class="status-dot painted"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-item active"><span class="nav-icon">📦</span>Collection</div>
+          <div class="nav-item"><span class="nav-icon">📋</span>Listes</div>
+          <div class="nav-item"><span class="nav-icon">📖</span>Catalogue</div>
+          <div class="nav-item"><span class="nav-icon">👤</span>Profil</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ===== DIRECTION 2: UNIT SHEET ===== -->
+<div class="section">
+  <h2 class="section-title">Direction 2 — Fiche d'unité</h2>
+  <p class="section-desc">Fiche fusionnée scrollable — stats, armes, capacités, collection, army builder. Zéro accordéon.</p>
+
+  <div class="mockups-row">
+    <div>
+      <div class="mockup-label">Fiche complète</div>
+      <div class="phone-frame">
+        <div class="phone-status-bar">9:41 — PierreHammer</div>
+        <div class="phone-content">
+          <div class="sheet-header">
+            <div class="sheet-header-content">
+              <div class="sheet-unit-name">Intercessor Squad</div>
+              <div class="sheet-unit-meta">
+                <span class="sheet-pts">80 pts</span>
+                <span class="sheet-keyword">Battleline</span>
+                <span class="sheet-keyword">Infantry</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="sheet-actions">
+            <button class="sheet-btn">Possédé: 3 ✓</button>
+            <button class="sheet-btn primary">+ Ajouter à ma liste</button>
+          </div>
+
+          <div class="sheet-section">
+            <div class="sheet-section-title">Profil</div>
+            <div class="stats-grid">
+              <div class="stat-label">M</div>
+              <div class="stat-label">T</div>
+              <div class="stat-label">Sv</div>
+              <div class="stat-label">W</div>
+              <div class="stat-label">Ld</div>
+              <div class="stat-label">OC</div>
+              <div class="stat-val">6"</div>
+              <div class="stat-val">4</div>
+              <div class="stat-val">3+</div>
+              <div class="stat-val">2</div>
+              <div class="stat-val">6+</div>
+              <div class="stat-val">2</div>
+            </div>
+          </div>
+
+          <div class="sheet-section">
+            <div class="sheet-section-title">Armes de tir</div>
+            <div class="weapon-row weapon-header">
+              <span></span>
+              <span class="weapon-stat">RG</span>
+              <span class="weapon-stat">A</span>
+              <span class="weapon-stat">BS</span>
+              <span class="weapon-stat">S</span>
+              <span class="weapon-stat">AP</span>
+            </div>
+            <div class="weapon-row">
+              <span class="weapon-name">Bolt rifle</span>
+              <span class="weapon-stat">24"</span>
+              <span class="weapon-stat">2</span>
+              <span class="weapon-stat">3+</span>
+              <span class="weapon-stat">4</span>
+              <span class="weapon-stat">-1</span>
+            </div>
+            <div class="weapon-row">
+              <span class="weapon-name">Bolt pistol</span>
+              <span class="weapon-stat">12"</span>
+              <span class="weapon-stat">1</span>
+              <span class="weapon-stat">3+</span>
+              <span class="weapon-stat">4</span>
+              <span class="weapon-stat">0</span>
+            </div>
+          </div>
+
+          <div class="sheet-section">
+            <div class="sheet-section-title">Armes de mêlée</div>
+            <div class="weapon-row weapon-header">
+              <span></span>
+              <span class="weapon-stat">RG</span>
+              <span class="weapon-stat">A</span>
+              <span class="weapon-stat">WS</span>
+              <span class="weapon-stat">S</span>
+              <span class="weapon-stat">AP</span>
+            </div>
+            <div class="weapon-row">
+              <span class="weapon-name">Close combat</span>
+              <span class="weapon-stat">M</span>
+              <span class="weapon-stat">3</span>
+              <span class="weapon-stat">3+</span>
+              <span class="weapon-stat">4</span>
+              <span class="weapon-stat">0</span>
+            </div>
+          </div>
+
+          <div class="sheet-section">
+            <div class="sheet-section-title">Capacités</div>
+            <div class="ability-item">
+              <div class="ability-name">Oath of Moment</div>
+              <div class="ability-desc">Core. Au début du tour de commande, sélectionnez une unité ennemie. Relancez les jets de touche et de blessure contre cette unité.</div>
+            </div>
+            <div class="ability-item">
+              <div class="ability-name">Tactical Flexibility</div>
+              <div class="ability-desc">Cette unité est éligible pour tirer et déclarer une charge au même tour où elle a effectué un repli.</div>
+            </div>
+          </div>
+
+          <div class="sheet-section">
+            <div class="sheet-section-title">Mots-clés</div>
+            <div class="keywords-row">
+              <span class="keyword-tag">Infantry</span>
+              <span class="keyword-tag">Battleline</span>
+              <span class="keyword-tag">Imperium</span>
+              <span class="keyword-tag">Tacticus</span>
+              <span class="keyword-tag">Intercessor</span>
+            </div>
+          </div>
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-item"><span class="nav-icon">📦</span>Collection</div>
+          <div class="nav-item"><span class="nav-icon">📋</span>Listes</div>
+          <div class="nav-item active"><span class="nav-icon">📖</span>Catalogue</div>
+          <div class="nav-item"><span class="nav-icon">👤</span>Profil</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ===== DIRECTION 3: ARMY LIST ===== -->
+<div class="section">
+  <h2 class="section-title">Direction 3 — Army Builder</h2>
+  <p class="section-desc">Liste d'armée avec compteur de points sticky, indicateurs de possession, ajout rapide</p>
+
+  <div class="mockups-row">
+    <div>
+      <div class="mockup-label">Ma liste</div>
+      <div class="phone-frame">
+        <div class="phone-status-bar">9:41 — PierreHammer</div>
+        <div class="phone-content">
+          <div class="list-header-sticky">
+            <div>
+              <div class="list-name">Tournoi Mars</div>
+              <div style="font-size:12px;color:var(--text-muted)">Space Marines — Gladius</div>
+            </div>
+            <div class="list-points">
+              <span class="current">1975</span><span class="limit"> / 2000</span>
+            </div>
+          </div>
+
+          <div class="list-unit-row">
+            <div class="list-unit-thumb">⚔️</div>
+            <div class="list-unit-info">
+              <div class="list-unit-name">Marneus Calgar</div>
+              <div class="list-unit-keywords">EPIC HERO · CHARACTER</div>
+            </div>
+            <div class="list-unit-pts">200</div>
+          </div>
+          <div class="list-unit-row">
+            <div class="list-unit-thumb">🛡️</div>
+            <div class="list-unit-info">
+              <div class="list-unit-name">Intercessor Squad</div>
+              <div class="list-unit-keywords">BATTLELINE · INFANTRY</div>
+            </div>
+            <div class="list-unit-pts">80</div>
+          </div>
+          <div class="list-unit-row">
+            <div class="list-unit-thumb">🛡️</div>
+            <div class="list-unit-info">
+              <div class="list-unit-name">Intercessor Squad</div>
+              <div class="list-unit-keywords">BATTLELINE · INFANTRY</div>
+            </div>
+            <div class="list-unit-pts">80</div>
+          </div>
+          <div class="list-unit-row">
+            <div class="list-unit-thumb">🔫</div>
+            <div class="list-unit-info">
+              <div class="list-unit-name">Hellblaster Squad</div>
+              <div class="list-unit-keywords">INFANTRY · TACTICUS</div>
+            </div>
+            <div class="list-unit-pts">125</div>
+          </div>
+          <div class="list-unit-row not-owned">
+            <div class="list-unit-thumb">🦅</div>
+            <div class="list-unit-info">
+              <div class="list-unit-name">Captain w/ Jump Pack</div>
+              <div class="list-unit-keywords">CHARACTER · FLY</div>
+            </div>
+            <div class="list-unit-pts">100</div>
+          </div>
+          <div class="list-unit-row">
+            <div class="list-unit-thumb">🚀</div>
+            <div class="list-unit-info">
+              <div class="list-unit-name">Redemptor Dreadnought</div>
+              <div class="list-unit-keywords">VEHICLE · WALKER</div>
+            </div>
+            <div class="list-unit-pts">210</div>
+          </div>
+          <div class="list-unit-row">
+            <div class="list-unit-thumb">🏃</div>
+            <div class="list-unit-info">
+              <div class="list-unit-name">Assault Intercessors</div>
+              <div class="list-unit-keywords">BATTLELINE · INFANTRY</div>
+            </div>
+            <div class="list-unit-pts">75</div>
+          </div>
+
+          <div style="padding:16px;text-align:center">
+            <button class="sheet-btn primary" style="width:100%">+ Ajouter une unité</button>
+          </div>
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-item"><span class="nav-icon">📦</span>Collection</div>
+          <div class="nav-item active"><span class="nav-icon">📋</span>Listes</div>
+          <div class="nav-item"><span class="nav-icon">📖</span>Catalogue</div>
+          <div class="nav-item"><span class="nav-icon">👤</span>Profil</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ===== DIRECTION 4: PARTY MODE ===== -->
+<div class="section">
+  <h2 class="section-title">Direction 4 — Mode Partie</h2>
+  <p class="section-desc">Consultation rapide en jeu — gros texte, stats essentielles, navigation par swipe</p>
+
+  <div class="mockups-row">
+    <div>
+      <div class="mockup-label">Mode partie (Phase 2)</div>
+      <div class="phone-frame">
+        <div class="phone-status-bar">9:41 — Mode Partie</div>
+        <div class="party-card">
+          <div>
+            <div class="party-unit-name">Intercessor Squad</div>
+            <div style="text-align:center;color:var(--text-muted);font-size:13px;margin-top:4px">BATTLELINE · 80 pts</div>
+          </div>
+
+          <div class="party-stats">
+            <div class="party-stat-box">
+              <div class="party-stat-label">Move</div>
+              <div class="party-stat-val">6"</div>
+            </div>
+            <div class="party-stat-box">
+              <div class="party-stat-label">Tough</div>
+              <div class="party-stat-val">4</div>
+            </div>
+            <div class="party-stat-box">
+              <div class="party-stat-label">Save</div>
+              <div class="party-stat-val">3+</div>
+            </div>
+            <div class="party-stat-box">
+              <div class="party-stat-label">Wounds</div>
+              <div class="party-stat-val">2</div>
+            </div>
+            <div class="party-stat-box">
+              <div class="party-stat-label">Lead</div>
+              <div class="party-stat-val">6+</div>
+            </div>
+            <div class="party-stat-box">
+              <div class="party-stat-label">OC</div>
+              <div class="party-stat-val">2</div>
+            </div>
+          </div>
+
+          <div class="party-weapons">
+            <div class="party-weapon">
+              <div class="party-weapon-name">🔫 Bolt Rifle</div>
+              <div class="party-weapon-stats">
+                <span>24"</span>
+                <span>A2</span>
+                <span>BS3+</span>
+                <span>S4</span>
+                <span>AP-1</span>
+                <span>D1</span>
+              </div>
+            </div>
+            <div class="party-weapon">
+              <div class="party-weapon-name">⚔️ Close Combat</div>
+              <div class="party-weapon-stats">
+                <span>Melee</span>
+                <span>A3</span>
+                <span>WS3+</span>
+                <span>S4</span>
+                <span>AP0</span>
+                <span>D1</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="party-nav">
+            <button class="party-nav-btn">← Calgar</button>
+            <span class="party-nav-indicator">2 / 7</span>
+            <button class="party-nav-btn">Hellblasters →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ===== DIRECTION 5: FACTION THEMES ===== -->
+<div class="section">
+  <h2 class="section-title">Direction 5 — Skins par Faction</h2>
+  <p class="section-desc">L'app change de personnalité visuelle selon la faction sélectionnée</p>
+
+  <div class="themes-grid">
+    <div class="theme-card" style="background:#0d1f3c">
+      <div class="theme-header" style="background:linear-gradient(135deg,#1b3a6b,#0d1f3c)">
+        <div class="theme-name" style="font-family:'Cinzel',serif;color:#c4a535">Space Marines</div>
+        <div class="theme-colors">
+          <div class="color-swatch" style="background:#1b3a6b"></div>
+          <div class="color-swatch" style="background:#c4a535"></div>
+          <div class="color-swatch" style="background:#0d1f3c"></div>
+          <div class="color-swatch" style="background:#eaeaea"></div>
+        </div>
+      </div>
+      <div class="theme-body">
+        <div class="theme-sample-card" style="background:rgba(27,58,107,0.2)">
+          <div class="theme-thumb" style="background:rgba(27,58,107,0.3)">⚔️</div>
+          <div class="theme-info">
+            <div class="theme-unit-name">Marneus Calgar</div>
+            <div class="theme-unit-pts" style="color:#c4a535">200 pts</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="theme-card" style="background:#1a2e0f">
+      <div class="theme-header" style="background:linear-gradient(135deg,#2d4a1e,#1a2e0f)">
+        <div class="theme-name" style="font-family:'Black Ops One',sans-serif;color:#ff6b35">Orks</div>
+        <div class="theme-colors">
+          <div class="color-swatch" style="background:#2d4a1e"></div>
+          <div class="color-swatch" style="background:#ff6b35"></div>
+          <div class="color-swatch" style="background:#1a2e0f"></div>
+          <div class="color-swatch" style="background:#eaeaea"></div>
+        </div>
+      </div>
+      <div class="theme-body">
+        <div class="theme-sample-card" style="background:rgba(45,74,30,0.2)">
+          <div class="theme-thumb" style="background:rgba(45,74,30,0.3)">🪓</div>
+          <div class="theme-info">
+            <div class="theme-unit-name">Boyz</div>
+            <div class="theme-unit-pts" style="color:#ff6b35">70 pts</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="theme-card" style="background:#0d1f2a">
+      <div class="theme-header" style="background:linear-gradient(135deg,#1a3a3a,#0d1f2a)">
+        <div class="theme-name" style="font-family:'Quicksand',sans-serif;color:#e8c547">Aeldari</div>
+        <div class="theme-colors">
+          <div class="color-swatch" style="background:#1a3a3a"></div>
+          <div class="color-swatch" style="background:#e8c547"></div>
+          <div class="color-swatch" style="background:#0d1f2a"></div>
+          <div class="color-swatch" style="background:#eaeaea"></div>
+        </div>
+      </div>
+      <div class="theme-body">
+        <div class="theme-sample-card" style="background:rgba(26,58,58,0.2)">
+          <div class="theme-thumb" style="background:rgba(26,58,58,0.3)">🌀</div>
+          <div class="theme-info">
+            <div class="theme-unit-name">Farseer</div>
+            <div class="theme-unit-pts" style="color:#e8c547">90 pts</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="theme-card" style="background:#0a0a0a">
+      <div class="theme-header" style="background:linear-gradient(135deg,#1a1a1a,#0a0a0a)">
+        <div class="theme-name" style="font-family:'Orbitron',sans-serif;color:#00ff88">Necrons</div>
+        <div class="theme-colors">
+          <div class="color-swatch" style="background:#1a1a1a"></div>
+          <div class="color-swatch" style="background:#00ff88"></div>
+          <div class="color-swatch" style="background:#0a0a0a"></div>
+          <div class="color-swatch" style="background:#c0c0c0"></div>
+        </div>
+      </div>
+      <div class="theme-body">
+        <div class="theme-sample-card" style="background:rgba(26,26,26,0.3)">
+          <div class="theme-thumb" style="background:rgba(0,255,136,0.1)">💀</div>
+          <div class="theme-info">
+            <div class="theme-unit-name">Warriors</div>
+            <div class="theme-unit-pts" style="color:#00ff88">100 pts</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="theme-card" style="background:#150505">
+      <div class="theme-header" style="background:linear-gradient(135deg,#2a0a0a,#150505)">
+        <div class="theme-name" style="color:#ff4444">Chaos</div>
+        <div class="theme-colors">
+          <div class="color-swatch" style="background:#2a0a0a"></div>
+          <div class="color-swatch" style="background:#ff4444"></div>
+          <div class="color-swatch" style="background:#150505"></div>
+          <div class="color-swatch" style="background:#eaeaea"></div>
+        </div>
+      </div>
+      <div class="theme-body">
+        <div class="theme-sample-card" style="background:rgba(42,10,10,0.3)">
+          <div class="theme-thumb" style="background:rgba(255,68,68,0.1)">👹</div>
+          <div class="theme-info">
+            <div class="theme-unit-name">Legionaries</div>
+            <div class="theme-unit-pts" style="color:#ff4444">90 pts</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="theme-card" style="background:#1f0d1f">
+      <div class="theme-header" style="background:linear-gradient(135deg,#3a1a3a,#1f0d1f)">
+        <div class="theme-name" style="color:#e94560">Tyranides</div>
+        <div class="theme-colors">
+          <div class="color-swatch" style="background:#3a1a3a"></div>
+          <div class="color-swatch" style="background:#e94560"></div>
+          <div class="color-swatch" style="background:#1f0d1f"></div>
+          <div class="color-swatch" style="background:#eaeaea"></div>
+        </div>
+      </div>
+      <div class="theme-body">
+        <div class="theme-sample-card" style="background:rgba(58,26,58,0.2)">
+          <div class="theme-thumb" style="background:rgba(233,69,96,0.1)">🐛</div>
+          <div class="theme-info">
+            <div class="theme-unit-name">Termagants</div>
+            <div class="theme-unit-pts" style="color:#e94560">75 pts</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ===== DIRECTION 6: STATUS BADGES ===== -->
+<div class="section">
+  <h2 class="section-title">Direction 6 — Statuts de peinture</h2>
+  <p class="section-desc">4 statuts de progression avec indicateurs visuels — tap-to-toggle</p>
+
+  <div style="max-width:400px;margin:0 auto">
+    <div class="status-demo">
+      <div class="status-badge unbuilt"><span class="status-icon">○</span> Non montée</div>
+      <div class="status-badge built"><span class="status-icon">◐</span> Montée</div>
+      <div class="status-badge wip"><span class="status-icon">◑</span> En cours</div>
+      <div class="status-badge done"><span class="status-icon">●</span> Terminée</div>
+    </div>
+
+    <div style="margin-top:32px;padding:16px;background:var(--surface);border-radius:12px">
+      <div style="font-weight:700;margin-bottom:12px">Progression par statut</div>
+      <div style="margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+          <span style="color:#4ade80">● Terminées</span><span style="font-family:'JetBrains Mono';color:#4ade80">16 (73%)</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:73%;background:#4ade80"></div></div>
+      </div>
+      <div style="margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+          <span style="color:#fbbf24">◑ En cours</span><span style="font-family:'JetBrains Mono';color:#fbbf24">3 (14%)</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:14%;background:#fbbf24"></div></div>
+      </div>
+      <div style="margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+          <span style="color:#e94560">◐ Montées</span><span style="font-family:'JetBrains Mono';color:#e94560">2 (9%)</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:9%;background:#e94560"></div></div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+          <span style="color:#8a8a9a">○ Non montées</span><span style="font-family:'JetBrains Mono';color:#8a8a9a">1 (4%)</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:4%;background:#8a8a9a"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const factions = {
+  'default': {
+    '--bg': '#0f0f1a', '--surface': '#1a1a2e', '--primary': '#e94560',
+    '--accent': '#c4a535', '--font-display': "'Oswald', sans-serif",
+    title: 'Ma Collection'
+  },
+  'space-marines': {
+    '--bg': '#0d1f3c', '--surface': '#132d5a', '--primary': '#1b3a6b',
+    '--accent': '#c4a535', '--font-display': "'Cinzel', serif",
+    title: 'Space Marines'
+  },
+  'orks': {
+    '--bg': '#1a2e0f', '--surface': '#243d18', '--primary': '#2d4a1e',
+    '--accent': '#ff6b35', '--font-display': "'Black Ops One', sans-serif",
+    title: 'Orks'
+  },
+  'aeldari': {
+    '--bg': '#0d1f2a', '--surface': '#152f3a', '--primary': '#1a3a3a',
+    '--accent': '#e8c547', '--font-display': "'Quicksand', sans-serif",
+    title: 'Aeldari'
+  },
+  'necrons': {
+    '--bg': '#0a0a0a', '--surface': '#151515', '--primary': '#1a1a1a',
+    '--accent': '#00ff88', '--font-display': "'Orbitron', sans-serif",
+    title: 'Necrons'
+  },
+  'chaos': {
+    '--bg': '#150505', '--surface': '#200a0a', '--primary': '#2a0a0a',
+    '--accent': '#ff4444', '--font-display': "'Oswald', sans-serif",
+    title: 'Chaos'
+  }
+};
+
+function setFaction(name) {
+  const f = factions[name];
+  const root = document.documentElement;
+  Object.entries(f).forEach(([k, v]) => {
+    if (k.startsWith('--')) root.style.setProperty(k, v);
+  });
+  document.getElementById('faction-title').textContent = f.title;
+  document.querySelectorAll('.faction-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+}
+</script>
+
+</body>
+</html>

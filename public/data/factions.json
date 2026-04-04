@@ -1,0 +1,143 @@
+{
+  "lastUpdate": "2026-04-01",
+  "factions": [
+    {
+      "id": "imperial-agents",
+      "name": "Imperial Agents",
+      "slug": "imperial-agents",
+      "datasheetCount": 45
+    },
+    {
+      "id": "astra-militarum",
+      "name": "Astra Militarum",
+      "slug": "astra-militarum",
+      "datasheetCount": 128
+    },
+    {
+      "id": "genestealer-cults",
+      "name": "Genestealer Cults",
+      "slug": "genestealer-cults",
+      "datasheetCount": 136
+    },
+    {
+      "id": "necrons",
+      "name": "Necrons",
+      "slug": "necrons",
+      "datasheetCount": 64
+    },
+    {
+      "id": "aeldari",
+      "name": "Aeldari",
+      "slug": "aeldari",
+      "datasheetCount": 97
+    },
+    {
+      "id": "orks",
+      "name": "Orks",
+      "slug": "orks",
+      "datasheetCount": 86
+    },
+    {
+      "id": "grey-knights",
+      "name": "Grey Knights",
+      "slug": "grey-knights",
+      "datasheetCount": 31
+    },
+    {
+      "id": "t-au-empire",
+      "name": "T’au Empire",
+      "slug": "t-au-empire",
+      "datasheetCount": 63
+    },
+    {
+      "id": "leagues-of-votann",
+      "name": "Leagues of Votann",
+      "slug": "leagues-of-votann",
+      "datasheetCount": 22
+    },
+    {
+      "id": "adeptus-mechanicus",
+      "name": "Adeptus Mechanicus",
+      "slug": "adeptus-mechanicus",
+      "datasheetCount": 36
+    },
+    {
+      "id": "thousand-sons",
+      "name": "Thousand Sons",
+      "slug": "thousand-sons",
+      "datasheetCount": 60
+    },
+    {
+      "id": "death-guard",
+      "name": "Death Guard",
+      "slug": "death-guard",
+      "datasheetCount": 71
+    },
+    {
+      "id": "emperor-s-children",
+      "name": "Emperor’s Children",
+      "slug": "emperor-s-children",
+      "datasheetCount": 22
+    },
+    {
+      "id": "world-eaters",
+      "name": "World Eaters",
+      "slug": "world-eaters",
+      "datasheetCount": 58
+    },
+    {
+      "id": "chaos-knights",
+      "name": "Chaos Knights",
+      "slug": "chaos-knights",
+      "datasheetCount": 37
+    },
+    {
+      "id": "chaos-daemons",
+      "name": "Chaos Daemons",
+      "slug": "chaos-daemons",
+      "datasheetCount": 106
+    },
+    {
+      "id": "imperial-knights",
+      "name": "Imperial Knights",
+      "slug": "imperial-knights",
+      "datasheetCount": 27
+    },
+    {
+      "id": "space-marines",
+      "name": "Space Marines",
+      "slug": "space-marines",
+      "datasheetCount": 299
+    },
+    {
+      "id": "tyranids",
+      "name": "Tyranids",
+      "slug": "tyranids",
+      "datasheetCount": 56
+    },
+    {
+      "id": "adeptus-custodes",
+      "name": "Adeptus Custodes",
+      "slug": "adeptus-custodes",
+      "datasheetCount": 31
+    },
+    {
+      "id": "adepta-sororitas",
+      "name": "Adepta Sororitas",
+      "slug": "adepta-sororitas",
+      "datasheetCount": 37
+    },
+    {
+      "id": "chaos-space-marines",
+      "name": "Chaos Space Marines",
+      "slug": "chaos-space-marines",
+      "datasheetCount": 112
+    },
+    {
+      "id": "drukhari",
+      "name": "Drukhari",
+      "slug": "drukhari",
+      "datasheetCount": 47
+    }
+  ]
+}

@@ -1,0 +1,245 @@
+/* Forged Buttons — textured, faction-themed buttons in pure CSS */
+
+/* === BASE FORGED BUTTON === */
+.btn-forged {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: none;
+  min-height: 44px;
+  min-width: 44px;
+  overflow: hidden;
+  isolation: isolate;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.btn-forged:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.btn-forged:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.4);
+}
+
+/* === PRIMARY — "Forged Metal" === */
+.btn-primary-forged {
+  background:
+    /* Brushed metal grain — fine horizontal streaks */
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.015) 1px,
+      transparent 2px,
+      transparent 4px
+    ),
+    /* Metallic sheen gradient */
+    linear-gradient(
+      160deg,
+      color-mix(in srgb, var(--color-primary) 60%, #000) 0%,
+      var(--color-primary) 30%,
+      color-mix(in srgb, var(--color-primary) 85%, #fff) 48%,
+      var(--color-primary) 52%,
+      color-mix(in srgb, var(--color-primary) 70%, #000) 100%
+    );
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6), 0 0 8px color-mix(in srgb, var(--color-accent) 30%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 50%, transparent);
+  border-top-color: color-mix(in srgb, var(--color-accent) 70%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--color-accent) 30%, transparent);
+  box-shadow:
+    /* Outer glow */
+    0 0 12px color-mix(in srgb, var(--color-accent) 20%, transparent),
+    /* Depth shadow */
+    0 4px 8px rgba(0, 0, 0, 0.4),
+    /* Top edge highlight */
+    inset 0 1px 0 color-mix(in srgb, var(--color-accent) 25%, transparent),
+    /* Bottom edge shadow */
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+    /* Inner depth */
+    inset 0 0 20px rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+}
+
+/* Shine sweep on hover */
+.btn-primary-forged::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.08) 42%,
+    rgba(255, 255, 255, 0.14) 50%,
+    rgba(255, 255, 255, 0.08) 58%,
+    transparent 65%
+  );
+  transform: translateX(-110%);
+  transition: transform 0.5s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.btn-primary-forged:hover:not(:disabled)::before {
+  transform: translateX(110%);
+}
+
+.btn-primary-forged:hover:not(:disabled) {
+  box-shadow:
+    0 0 20px color-mix(in srgb, var(--color-accent) 35%, transparent),
+    0 6px 12px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 color-mix(in srgb, var(--color-accent) 35%, transparent),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+    inset 0 0 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Corner rivets / ornaments */
+.btn-primary-forged::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 15%, transparent);
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+
+/* === SECONDARY — "Etched Plate" === */
+.btn-secondary-forged {
+  background:
+    /* Subtle noise texture */
+    repeating-linear-gradient(
+      135deg,
+      transparent,
+      rgba(255, 255, 255, 0.008) 1px,
+      transparent 2px,
+      transparent 5px
+    ),
+    /* Dark metallic base */
+    linear-gradient(
+      160deg,
+      color-mix(in srgb, var(--color-surface) 90%, #000) 0%,
+      var(--color-surface) 40%,
+      color-mix(in srgb, var(--color-surface) 95%, #fff) 50%,
+      var(--color-surface) 60%,
+      color-mix(in srgb, var(--color-surface) 85%, #000) 100%
+    );
+  color: var(--color-text);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 40%, transparent);
+  border-top-color: color-mix(in srgb, var(--color-primary) 50%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--color-primary) 25%, transparent);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.btn-secondary-forged:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-accent) 50%, transparent);
+  box-shadow:
+    0 0 10px color-mix(in srgb, var(--color-accent) 15%, transparent),
+    0 3px 8px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+}
+
+
+/* === GHOST — "Spectral" === */
+.btn-ghost-forged {
+  background: transparent;
+  color: var(--color-text);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  border: none;
+  border-radius: 4px;
+  box-shadow: none;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.btn-ghost-forged:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+  color: var(--color-accent);
+}
+
+
+/* === DANGER — "Warp-Touched" === */
+.btn-danger-forged {
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.012) 1px,
+      transparent 2px,
+      transparent 4px
+    ),
+    linear-gradient(
+      160deg,
+      color-mix(in srgb, var(--color-error) 50%, #000) 0%,
+      var(--color-error) 35%,
+      color-mix(in srgb, var(--color-error) 80%, #fff) 48%,
+      var(--color-error) 55%,
+      color-mix(in srgb, var(--color-error) 60%, #000) 100%
+    );
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6), 0 0 6px rgba(255, 0, 0, 0.3);
+  border: 1px solid color-mix(in srgb, var(--color-error) 60%, transparent);
+  border-top-color: color-mix(in srgb, var(--color-error) 70%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--color-error) 35%, transparent);
+  box-shadow:
+    0 0 10px rgba(255, 0, 0, 0.15),
+    0 3px 6px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 100, 100, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+
+.btn-danger-forged:hover:not(:disabled) {
+  box-shadow:
+    0 0 18px rgba(255, 0, 0, 0.25),
+    0 4px 10px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 100, 100, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+}
+
+
+/* === SIZE VARIANTS === */
+.btn-sm {
+  padding: 6px 14px;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+}
+
+.btn-md {
+  padding: 10px 20px;
+  font-size: 0.85rem;
+}
+
+.btn-lg {
+  padding: 14px 28px;
+  font-size: 1rem;
+}
+
+
+/* === REDUCED MOTION === */
+@media (prefers-reduced-motion: reduce) {
+  .btn-forged,
+  .btn-primary-forged::before {
+    transition: none !important;
+    animation: none !important;
+  }
+  .btn-primary-forged:hover::before {
+    transform: none;
+  }
+  .btn-forged:active:not(:disabled) {
+    transform: none;
+  }
+}

@@ -1,0 +1,1 @@
+export { PointsCounter } from './PointsCounter'

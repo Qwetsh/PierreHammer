@@ -1,0 +1,210 @@
+/* Faction theme palettes — applied via data-faction attribute on <html> */
+
+[data-faction="space-marines"] {
+  --color-primary: #1b3a6b;
+  --color-accent: #c4a535;
+  --color-surface: #141e33;
+  --color-surface-alt: #1a2845;
+  --font-display: 'Cinzel', serif;
+  --faction-gradient: linear-gradient(135deg, #0a1628 0%, #1b3a6b 50%, #0f1f3d 100%);
+}
+
+[data-faction="orks"] {
+  --color-primary: #2d4a1e;
+  --color-accent: #ff6b35;
+  --color-surface: #1a2813;
+  --color-surface-alt: #243a18;
+  --font-display: 'Black Ops One', sans-serif;
+  --faction-gradient: linear-gradient(135deg, #0d1a08 0%, #2d4a1e 50%, #1a2e10 100%);
+}
+
+[data-faction="aeldari"] {
+  --color-primary: #0d6b58;
+  --color-accent: #50c878;
+  --color-surface: #0f2420;
+  --color-surface-alt: #143530;
+  --font-display: 'Quicksand', sans-serif;
+  --faction-gradient: linear-gradient(135deg, #071a15 0%, #0d6b58 50%, #0a2e26 100%);
+}
+
+[data-faction="necrons"] {
+  --color-primary: #1a3a1a;
+  --color-accent: #00ff41;
+  --color-surface: #0f1f0f;
+  --color-surface-alt: #152d15;
+  --font-display: 'Orbitron', sans-serif;
+  --faction-gradient: linear-gradient(135deg, #050f05 0%, #1a3a1a 50%, #0a200a 100%);
+}
+
+[data-faction="chaos"] {
+  --color-primary: #5c1a1a;
+  --color-accent: #ff2020;
+  --color-surface: #2a1010;
+  --color-surface-alt: #3d1515;
+  --font-display: 'Cinzel', serif;
+  --faction-gradient: linear-gradient(135deg, #1a0808 0%, #5c1a1a 50%, #2e0e0e 100%);
+}
+
+[data-faction="tyranids"] {
+  --color-primary: #4a1a5c;
+  --color-accent: #c850c0;
+  --color-surface: #1f0f28;
+  --color-surface-alt: #2d153d;
+  --font-display: 'Quicksand', sans-serif;
+  --faction-gradient: linear-gradient(135deg, #120820 0%, #4a1a5c 50%, #200e30 100%);
+}
+
+/* Additional factions */
+[data-faction="adeptus-custodes"] {
+  --color-primary: #6b5a1e;
+  --color-accent: #ffd700;
+  --color-surface: #1f1a0f;
+  --color-surface-alt: #2e2815;
+  --font-display: 'Cinzel', serif;
+  --faction-gradient: linear-gradient(135deg, #120f05 0%, #6b5a1e 50%, #2e2510 100%);
+}
+
+[data-faction="adepta-sororitas"] {
+  --color-primary: #5c1a3a;
+  --color-accent: #e6a8c8;
+  --color-surface: #1f0f18;
+  --color-surface-alt: #2d1525;
+  --font-display: 'Cinzel', serif;
+  --faction-gradient: linear-gradient(135deg, #150810 0%, #5c1a3a 50%, #2e0e1e 100%);
+}
+
+[data-faction="death-guard"] {
+  --color-primary: #4a5c1a;
+  --color-accent: #b8cc3c;
+  --color-surface: #1a1f0f;
+  --color-surface-alt: #252d15;
+  --font-display: 'Cinzel', serif;
+  --faction-gradient: linear-gradient(135deg, #0f1408 0%, #4a5c1a 50%, #262e10 100%);
+}
+
+[data-faction="thousand-sons"] {
+  --color-primary: #1a3a6b;
+  --color-accent: #40e0d0;
+  --color-surface: #0f1828;
+  --color-surface-alt: #152540;
+  --font-display: 'Orbitron', sans-serif;
+  --faction-gradient: linear-gradient(135deg, #080f1a 0%, #1a3a6b 50%, #0f2040 100%);
+}
+
+[data-faction="t-au-empire"] {
+  --color-primary: #1a4a5c;
+  --color-accent: #ff6b35;
+  --color-surface: #0f1f28;
+  --color-surface-alt: #152d3d;
+  --font-display: 'Orbitron', sans-serif;
+  --faction-gradient: linear-gradient(135deg, #08141a 0%, #1a4a5c 50%, #0f2830 100%);
+}
+
+[data-faction="chaos-space-marines"],
+[data-faction="world-eaters"],
+[data-faction="emperor-s-children"] {
+  --color-primary: #5c1a1a;
+  --color-accent: #ff2020;
+  --color-surface: #2a1010;
+  --color-surface-alt: #3d1515;
+  --font-display: 'Cinzel', serif;
+  --faction-gradient: linear-gradient(135deg, #1a0808 0%, #5c1a1a 50%, #2e0e0e 100%);
+}
+
+[data-faction="drukhari"] {
+  --color-primary: #3a1a5c;
+  --color-accent: #8b5cf6;
+  --color-surface: #180f28;
+  --color-surface-alt: #25153d;
+  --font-display: 'Quicksand', sans-serif;
+  --faction-gradient: linear-gradient(135deg, #0f0820 0%, #3a1a5c 50%, #1e0e30 100%);
+}
+
+[data-faction="imperial-knights"],
+[data-faction="chaos-knights"] {
+  --color-primary: #4a3a1a;
+  --color-accent: #c4a535;
+  --color-surface: #1a160f;
+  --color-surface-alt: #282015;
+  --font-display: 'Cinzel', serif;
+  --faction-gradient: linear-gradient(135deg, #100c05 0%, #4a3a1a 50%, #251e0e 100%);
+}
+
+[data-faction="astra-militarum"] {
+  --color-primary: #3a4a2e;
+  --color-accent: #c4a535;
+  --color-surface: #161f10;
+  --color-surface-alt: #1f2c18;
+  --font-display: 'Inter', sans-serif;
+  --faction-gradient: linear-gradient(135deg, #0c1208 0%, #3a4a2e 50%, #1a2510 100%);
+}
+
+[data-faction="grey-knights"] {
+  --color-primary: #3a3a5c;
+  --color-accent: #a0a0ff;
+  --color-surface: #161628;
+  --color-surface-alt: #1f1f3d;
+  --font-display: 'Cinzel', serif;
+  --faction-gradient: linear-gradient(135deg, #0a0a1a 0%, #3a3a5c 50%, #1a1a30 100%);
+}
+
+[data-faction="leagues-of-votann"] {
+  --color-primary: #5c4a1a;
+  --color-accent: #ff9800;
+  --color-surface: #1f1a0f;
+  --color-surface-alt: #2e2515;
+  --font-display: 'Inter', sans-serif;
+  --faction-gradient: linear-gradient(135deg, #120f05 0%, #5c4a1a 50%, #2e240e 100%);
+}
+
+[data-faction="adeptus-mechanicus"] {
+  --color-primary: #5c1a1a;
+  --color-accent: #ff4444;
+  --color-surface: #1f0f0f;
+  --color-surface-alt: #2e1515;
+  --font-display: 'Orbitron', sans-serif;
+  --faction-gradient: linear-gradient(135deg, #1a0808 0%, #5c1a1a 50%, #2e0e0e 100%);
+}
+
+[data-faction="genestealer-cults"] {
+  --color-primary: #4a1a5c;
+  --color-accent: #9c27b0;
+  --color-surface: #1f0f28;
+  --color-surface-alt: #2d153d;
+  --font-display: 'Inter', sans-serif;
+  --faction-gradient: linear-gradient(135deg, #120820 0%, #4a1a5c 50%, #200e30 100%);
+}
+
+[data-faction="chaos-daemons"] {
+  --color-primary: #5c1a2a;
+  --color-accent: #ff1744;
+  --color-surface: #2a1015;
+  --color-surface-alt: #3d1520;
+  --font-display: 'Cinzel', serif;
+  --faction-gradient: linear-gradient(135deg, #1a080c 0%, #5c1a2a 50%, #2e0e15 100%);
+}
+
+[data-faction="imperial-agents"] {
+  --color-primary: #3a3a4a;
+  --color-accent: #c4a535;
+  --color-surface: #16161f;
+  --color-surface-alt: #1f1f2d;
+  --font-display: 'Cinzel', serif;
+  --faction-gradient: linear-gradient(135deg, #0a0a12 0%, #3a3a4a 50%, #1a1a25 100%);
+}
+
+/* Smooth theme transitions */
+:root {
+  --faction-gradient: none;
+  --color-surface-alt: var(--color-surface);
+}
+
+body {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body {
+    transition: none;
+  }
+}

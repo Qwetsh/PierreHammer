@@ -1,0 +1,176 @@
+/* Faction Tiles — forged armory plates for faction selection */
+
+/* === BASE TILE === */
+.faction-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 100px;
+  padding: 16px 12px;
+  overflow: hidden;
+  cursor: pointer;
+  text-align: center;
+  border: none;
+  color: #ffffff;
+  isolation: isolate;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+
+  /* Outer frame — metallic bevel */
+  border-radius: 8px;
+  outline: 1px solid color-mix(in srgb, var(--tile-accent) 25%, transparent);
+
+  /* Brushed metal + body gradient */
+  background:
+    repeating-linear-gradient(
+      95deg,
+      transparent,
+      rgba(255, 255, 255, 0.008) 1px,
+      transparent 2px,
+      transparent 5px
+    ),
+    linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--tile-surface) 85%, #000) 0%,
+      var(--tile-surface) 25%,
+      color-mix(in srgb, var(--tile-surface) 92%, #fff) 45%,
+      var(--tile-surface) 55%,
+      color-mix(in srgb, var(--tile-surface) 65%, var(--tile-primary)) 100%
+    );
+
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.4),
+    0 0 1px color-mix(in srgb, var(--tile-primary) 30%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+}
+
+.faction-tile:hover {
+  box-shadow:
+    0 4px 16px color-mix(in srgb, var(--tile-primary) 40%, transparent),
+    0 0 12px color-mix(in srgb, var(--tile-accent) 20%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+}
+
+.faction-tile:active {
+  transform: scale(0.97);
+}
+
+/* Inner frame line */
+.faction-tile::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border: 1px solid color-mix(in srgb, var(--tile-accent) 12%, transparent);
+  border-radius: 5px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Top edge highlight */
+.faction-tile::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 12px;
+  right: 12px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--tile-accent) 30%, transparent) 30%,
+    color-mix(in srgb, var(--tile-accent) 50%, transparent) 50%,
+    color-mix(in srgb, var(--tile-accent) 30%, transparent) 70%,
+    transparent
+  );
+  pointer-events: none;
+  z-index: 5;
+}
+
+
+/* === SELECTED STATE === */
+.faction-tile--selected {
+  outline: 2px solid color-mix(in srgb, var(--tile-accent) 60%, transparent);
+  box-shadow:
+    0 4px 20px color-mix(in srgb, var(--tile-accent) 30%, transparent),
+    0 0 12px color-mix(in srgb, var(--tile-accent) 20%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+}
+
+.faction-tile--selected::before {
+  border-width: 2px;
+  border-color: color-mix(in srgb, var(--tile-accent) 20%, transparent);
+}
+
+
+/* === FACTION NAME === */
+.faction-tile__name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+  position: relative;
+  z-index: 2;
+}
+
+/* === UNIT COUNT === */
+.faction-tile__count {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.7;
+  position: relative;
+  z-index: 2;
+}
+
+/* === SIGIL — faction emblem placeholder === */
+.faction-tile__sigil {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-weight: 900;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  position: relative;
+  z-index: 2;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+
+  background: linear-gradient(
+    135deg,
+    var(--tile-primary),
+    color-mix(in srgb, var(--tile-primary) 60%, #000)
+  );
+  color: var(--tile-accent);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--tile-primary) 40%, transparent);
+}
+
+/* Glow ring on sigil */
+.faction-tile__sigil::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--tile-accent) 10%, transparent);
+  pointer-events: none;
+}
+
+
+/* === REDUCED MOTION === */
+@media (prefers-reduced-motion: reduce) {
+  .faction-tile {
+    transition: none !important;
+  }
+  .faction-tile:active {
+    transform: none;
+  }
+}

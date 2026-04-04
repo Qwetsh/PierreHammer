@@ -1,0 +1,21 @@
+{
+  "name": "pierrehammer-pipeline",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "download": "tsx src/index.ts download",
+    "parse": "tsx src/index.ts parse",
+    "generate": "tsx src/index.ts generate",
+    "pipeline": "tsx src/index.ts pipeline",
+    "check-update": "tsx src/index.ts check-update"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2"
+  },
+  "dependencies": {
+    "csv-parse": "^6.2.1"
+  }
+}
