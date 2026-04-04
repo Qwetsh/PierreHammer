@@ -224,8 +224,8 @@ export function UnitSheet({ datasheet, paintStatus, onPaintCycle, ownedCount = 0
         <>
           <SectionTitle>Capacités</SectionTitle>
           <div className="flex flex-col gap-3">
-            {datasheet.abilities.map((a) => (
-              <div key={a.id}>
+            {datasheet.abilities.map((a, i) => (
+              <div key={`${a.id}-${i}`}>
                 <h3 className="font-semibold text-sm" style={{ color: 'var(--color-accent)' }}>
                   {a.name}
                 </h3>
