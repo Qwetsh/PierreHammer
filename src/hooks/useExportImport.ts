@@ -3,6 +3,7 @@ import { useCollectionStore } from '@/stores/collectionStore'
 import { useListsStore } from '@/stores/listsStore'
 import { usePreferencesStore } from '@/stores/preferencesStore'
 import { validateExportData } from '@/utils/storageValidator'
+import { exportAllCustomImages, importAllCustomImages } from '@/stores/customImageStore'
 import type { CollectionItem } from '@/types/collection.types'
 
 interface ExportData {
@@ -11,10 +12,13 @@ interface ExportData {
   collection: Record<string, unknown>
   lists: Record<string, unknown>
   preferences: Record<string, unknown>
+  customImages?: Record<string, string>
 }
 
 export function useExportImport() {
-  const exportData = useCallback(() => {
+  const exportData = useCallback(async () => {
+    const customImages = await exportAllCustomImages()
+
     const data: ExportData = {
       version: 1,
       exportedAt: new Date().toISOString(),
@@ -25,6 +29,7 @@ export function useExportImport() {
         activeListId: usePreferencesStore.getState().activeListId,
         locale: usePreferencesStore.getState().locale,
       },
+      ...(Object.keys(customImages).length > 0 && { customImages }),
     }
 
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
@@ -75,6 +80,10 @@ export function useExportImport() {
           activeListId: prefs.activeListId ?? null,
           locale: prefs.locale ?? 'fr',
         })
+      }
+
+      if (data.customImages && typeof data.customImages === 'object') {
+        await importAllCustomImages(data.customImages)
       }
 
       return { success: true }

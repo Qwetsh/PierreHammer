@@ -1,7 +1,30 @@
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import type { Datasheet } from '@/types/gameData.types'
 import { Button } from '@/components/ui/Button'
 import { sanitizeHtml } from '@/utils/sanitizeHtml'
+import { useCustomImage } from '@/hooks/useCustomImage'
+
+function useLongPress(callback: () => void, ms = 500) {
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const start = useCallback(() => {
+    timerRef.current = setTimeout(callback, ms)
+  }, [callback, ms])
+
+  const clear = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current)
+      timerRef.current = null
+    }
+  }, [])
+
+  return {
+    onPointerDown: start,
+    onPointerUp: clear,
+    onPointerLeave: clear,
+    onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
+  }
+}
 
 interface UnitSheetProps {
   datasheet: Datasheet
@@ -29,17 +52,22 @@ function SectionTitle({ children }: { children: string }) {
 export function UnitSheet({ datasheet, ownedCount = 0, onAddToCollection, onUpdateQuantity, onAddToList }: UnitSheetProps) {
   const rangedWeapons = datasheet.weapons.filter((w) => w.type === 'Ranged' || (w.range && w.range !== 'Melee'))
   const meleeWeapons = datasheet.weapons.filter((w) => w.type === 'Melee' || w.range === 'Melee')
+  const { customImageUrl, save: saveCustomImage, remove: removeCustomImage } = useCustomImage(datasheet.id)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [imgError, setImgError] = useState(false)
-  const hasImage = datasheet.imageUrl && !imgError
+  const [showPhotoMenu, setShowPhotoMenu] = useState(false)
+  const imageUrl = customImageUrl || datasheet.imageUrl
+  const hasImage = imageUrl && !imgError
+  const longPressHandlers = useLongPress(() => setShowPhotoMenu(true))
 
   return (
     <div className="pb-8">
-      {/* Section 1 — Header with background image */}
-      <div className="unit-sheet__header mb-4">
+      {/* Section 1 — Header with background image (long-press for photo menu) */}
+      <div className="unit-sheet__header mb-4 relative" {...longPressHandlers} style={{ touchAction: 'pan-y' }}>
         {hasImage && (
           <div className="unit-sheet__header-bg">
             <img
-              src={datasheet.imageUrl}
+              src={imageUrl}
               alt=""
               className="unit-sheet__header-bg-img"
               onError={() => setImgError(true)}
@@ -73,7 +101,59 @@ export function UnitSheet({ datasheet, ownedCount = 0, onAddToCollection, onUpda
             {ownedCount > 0 ? `Possédé: ${ownedCount}` : 'Non possédé'}
           </p>
         </div>
+
+        {/* Photo menu (long-press) */}
+        {showPhotoMenu && (
+          <div
+            className="absolute inset-0 z-20 flex items-center justify-center"
+            style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
+            onClick={() => setShowPhotoMenu(false)}
+          >
+            <div
+              className="flex flex-col gap-1 rounded-xl p-2"
+              style={{ backgroundColor: 'var(--color-surface)', minWidth: '180px' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                className="text-left text-sm px-3 py-2 rounded-lg border-none cursor-pointer"
+                style={{ backgroundColor: 'transparent', color: 'var(--color-text)' }}
+                onClick={() => { fileInputRef.current?.click(); setShowPhotoMenu(false) }}
+              >
+                {customImageUrl ? 'Changer la photo' : 'Ajouter une photo'}
+              </button>
+              {customImageUrl && (
+                <button
+                  className="text-left text-sm px-3 py-2 rounded-lg border-none cursor-pointer"
+                  style={{ backgroundColor: 'transparent', color: 'var(--color-error, #ef4444)' }}
+                  onClick={() => { removeCustomImage(); setShowPhotoMenu(false) }}
+                >
+                  Supprimer la photo
+                </button>
+              )}
+              <button
+                className="text-left text-sm px-3 py-2 rounded-lg border-none cursor-pointer"
+                style={{ backgroundColor: 'transparent', color: 'var(--color-text-muted)' }}
+                onClick={() => setShowPhotoMenu(false)}
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Photo custom */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          if (file) saveCustomImage(file)
+          e.target.value = ''
+        }}
+      />
 
       {/* Section 2 — Actions */}
       <div className="flex items-center gap-3 mb-2 flex-wrap">

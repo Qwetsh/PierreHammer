@@ -3,6 +3,7 @@ import type { Datasheet } from '@/types/gameData.types'
 import type { PaintStatus } from '@/components/domain/PaintStatusBadge'
 import { usePointsHistoryStore } from '@/stores/pointsHistoryStore'
 import { useFavoritesStore } from '@/stores/favoritesStore'
+import { useCustomImage } from '@/hooks/useCustomImage'
 
 type UnitVariant = 'standard' | 'battleline' | 'epic-hero'
 
@@ -80,8 +81,10 @@ export function UnitCard({ datasheet, owned, instances, onClick, selectable, sel
   const isFavorite = useFavoritesStore((s) => s.favorites.includes(datasheet.id))
   const toggleFavorite = useFavoritesStore((s) => s.toggleFavorite)
   const profile = datasheet.profiles[0]
+  const { customImageUrl } = useCustomImage(datasheet.id)
   const [imgError, setImgError] = useState(false)
-  const hasImage = datasheet.imageUrl && !imgError
+  const imageUrl = customImageUrl || datasheet.imageUrl
+  const hasImage = imageUrl && !imgError
 
   const handleClick = () => {
     if (selectable && onToggleSelect) {
@@ -140,7 +143,7 @@ export function UnitCard({ datasheet, owned, instances, onClick, selectable, sel
         >
           {hasImage ? (
             <img
-              src={datasheet.imageUrl}
+              src={imageUrl}
               alt={datasheet.name}
               className="unit-card__avatar-img"
               onError={() => setImgError(true)}
