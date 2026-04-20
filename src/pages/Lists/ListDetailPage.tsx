@@ -11,7 +11,7 @@ import { EquipmentSelector } from '@/components/domain/EquipmentSelector'
 import { calculateTotalPoints, resolveUnitPoints, countSquads, resolveSquadTotalPoints } from '@/utils/pointsCalculator'
 import { validateArmyList } from '@/features/army-list/utils/validateArmyList'
 import type { PointsLimit, ListUnit } from '@/types/armyList.types'
-import type { Datasheet } from '@/types/gameData.types'
+import type { Datasheet, Detachment, Enhancement } from '@/types/gameData.types'
 
 function isCharacter(ds: Datasheet | undefined): boolean {
   if (!ds) return false
@@ -28,6 +28,7 @@ export function ListDetailPage() {
   const updateList = useListsStore((s) => s.updateList)
   const attachHero = useListsStore((s) => s.attachHero)
   const detachHero = useListsStore((s) => s.detachHero)
+  const setEnhancement = useListsStore((s) => s.setEnhancement)
   const loadedFactions = useGameDataStore((s) => s.loadedFactions)
   const loadFaction = useGameDataStore((s) => s.loadFaction)
   const isOwned = useCollectionStore((s) => s.isOwned)
@@ -44,6 +45,7 @@ export function ListDetailPage() {
   const [editPoints, setEditPoints] = useState<PointsLimit>(2000)
   const [editingUnitIndex, setEditingUnitIndex] = useState<number | null>(null)
   const [attachingHeroIndex, setAttachingHeroIndex] = useState<number | null>(null)
+  const [enhancementUnitIndex, setEnhancementUnitIndex] = useState<number | null>(null)
 
   const validation = useMemo(() => {
     if (!list) return undefined
@@ -68,6 +70,16 @@ export function ListDetailPage() {
   const faction = loadedFactions[list.factionId]
   const totalPoints = calculateTotalPoints(list.units, faction?.datasheets)
   const squadCount = countSquads(list.units)
+
+  const detachment: Detachment | undefined = faction?.detachments?.find(
+    (d) => d.id === list.detachmentId || d.name === list.detachment,
+  )
+  const availableEnhancements: Enhancement[] = detachment?.enhancements ?? []
+
+  // Units that already have an enhancement (for uniqueness check)
+  const usedEnhancementIds = new Set(
+    list.units.filter((u) => u.enhancement).map((u) => u.enhancement!.enhancementId),
+  )
 
   const startEditing = () => {
     setEditName(list.name)
@@ -184,6 +196,17 @@ export function ListDetailPage() {
                 {weaponCount} arme{weaponCount > 1 ? 's' : ''}
               </span>
             )}
+            {/* Enhancement for characters */}
+            {isChar && availableEnhancements.length > 0 && !unit.enhancement && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => { e.stopPropagation(); setEnhancementUnitIndex(index) }}
+                aria-label="Ajouter une amélioration"
+              >
+                ✦
+              </Button>
+            )}
             {/* Attach/Detach for characters */}
             {isChar && unit.attachedToId && (
               <Button
@@ -215,6 +238,20 @@ export function ListDetailPage() {
             </Button>
           </div>
         </div>
+        {unit.enhancement && (
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-xs" style={{ color: 'var(--color-accent)' }}>
+              ✦ {unit.enhancement.enhancementName} (+{unit.enhancement.cost} pts)
+            </span>
+            <button
+              className="text-xs border-none bg-transparent cursor-pointer"
+              style={{ color: 'var(--color-text-muted)' }}
+              onClick={(e) => { e.stopPropagation(); setEnhancement(safeListId, index, undefined) }}
+            >
+              ✕
+            </button>
+          </div>
+        )}
         {unit.notes && (
           <p className="text-xs mt-1 truncate" style={{ color: 'var(--color-text-muted)' }}>
             {unit.notes}
@@ -372,6 +409,70 @@ export function ListDetailPage() {
           onCancel={() => setEditingUnitIndex(null)}
           confirmLabel="Enregistrer"
         />
+      )}
+
+      {/* Enhancement picker modal */}
+      {enhancementUnitIndex !== null && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center"
+          style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
+          onClick={() => setEnhancementUnitIndex(null)}
+        >
+          <div
+            className="w-full max-w-lg rounded-t-xl p-4"
+            style={{ backgroundColor: 'var(--color-bg)', maxHeight: '70vh', overflowY: 'auto' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-semibold mb-3" style={{ color: 'var(--color-text)' }}>
+              Choisir une amélioration
+            </h3>
+            <div className="flex flex-col gap-2">
+              {availableEnhancements
+                .filter((enh) => !usedEnhancementIds.has(enh.id))
+                .map((enh) => (
+                  <button
+                    key={enh.id}
+                    className="text-left rounded-lg p-3 border-none cursor-pointer"
+                    style={{ backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                    onClick={() => {
+                      setEnhancement(safeListId, enhancementUnitIndex, {
+                        enhancementId: enh.id,
+                        enhancementName: enh.name,
+                        cost: enh.cost,
+                      })
+                      setEnhancementUnitIndex(null)
+                      showToast(`${enh.name} assignée`, 'success')
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm">{enh.name}</span>
+                      <span className="text-xs font-mono" style={{ color: 'var(--color-accent)' }}>
+                        {enh.cost} pts
+                      </span>
+                    </div>
+                    {enh.legend && (
+                      <p className="text-xs italic mt-1" style={{ color: 'var(--color-text-muted)' }}>
+                        {enh.legend}
+                      </p>
+                    )}
+                    <div
+                      className="text-xs mt-1 leading-relaxed"
+                      style={{ color: 'var(--color-text-muted)' }}
+                      dangerouslySetInnerHTML={{ __html: enh.description }}
+                    />
+                  </button>
+                ))}
+              {availableEnhancements.filter((enh) => !usedEnhancementIds.has(enh.id)).length === 0 && (
+                <p className="text-sm text-center py-4" style={{ color: 'var(--color-text-muted)' }}>
+                  Toutes les améliorations sont déjà assignées.
+                </p>
+              )}
+            </div>
+            <Button variant="ghost" size="sm" className="mt-3" onClick={() => setEnhancementUnitIndex(null)}>
+              Annuler
+            </Button>
+          </div>
+        </div>
       )}
 
       {/* Attach hero modal */}

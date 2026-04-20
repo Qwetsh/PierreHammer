@@ -4,6 +4,7 @@ import { generate } from './transform.js'
 import { validate } from './validate.js'
 import { checkUpdate } from './check-update.js'
 import { fetchImages } from './fetch-images.js'
+import { enrichDetachments } from './enrich-detachments.js'
 
 async function pipeline(): Promise<void> {
   const startTime = performance.now()
@@ -50,6 +51,7 @@ const commands: Record<string, () => Promise<void>> = {
     console.log('\n💡 Relancez "generate" pour injecter les URLs dans les JSON')
   },
   'check-update': checkUpdate,
+  'enrich-detachments': enrichDetachments,
 }
 
 async function main() {

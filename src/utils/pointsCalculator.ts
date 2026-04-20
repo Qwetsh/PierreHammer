@@ -3,14 +3,15 @@ import type { Datasheet } from '@/types/gameData.types'
 
 /** Resolve live points for a unit from faction data, falling back to stored value */
 export function resolveUnitPoints(unit: ListUnit, datasheets?: Datasheet[]): number {
+  let base = unit.points
   if (datasheets) {
     const ds = datasheets.find((d) => d.id === unit.datasheetId)
     if (ds && ds.pointOptions.length > 0) {
       const idx = unit.selectedPointOptionIndex ?? 0
-      return ds.pointOptions[idx]?.cost ?? ds.pointOptions[0].cost
+      base = ds.pointOptions[idx]?.cost ?? ds.pointOptions[0].cost
     }
   }
-  return unit.points
+  return base + (unit.enhancement?.cost ?? 0)
 }
 
 export function calculateTotalPoints(units: ListUnit[], datasheets?: Datasheet[]): number {

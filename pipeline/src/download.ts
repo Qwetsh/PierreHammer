@@ -2,7 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const BASE_URL = 'https://wahapedia.ru/wh40k10ed/TheData'
+const BASE_URL = 'https://wahapedia.ru/wh40k10ed'
 
 const CSV_FILES = [
   'Factions.csv',
@@ -13,6 +13,9 @@ const CSV_FILES = [
   'Wargear.csv',
   'Datasheets_points.csv',
   'Last_update.csv',
+  'Stratagems.csv',
+  'Detachment_abilities.csv',
+  'Enhancements.csv',
 ] as const
 
 const __dirname = dirname(fileURLToPath(import.meta.url))

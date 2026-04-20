@@ -70,6 +70,41 @@ export interface RawPoints {
   models: string
 }
 
+export interface RawStratagem {
+  faction_id: string
+  name: string
+  id: string
+  type: string
+  cp_cost: string
+  legend: string
+  turn: string
+  phase: string
+  detachment: string
+  detachment_id: string
+  description: string
+}
+
+export interface RawDetachmentAbility {
+  id: string
+  faction_id: string
+  name: string
+  legend: string
+  description: string
+  detachment: string
+  detachment_id: string
+}
+
+export interface RawEnhancement {
+  faction_id: string
+  id: string
+  name: string
+  cost: string
+  detachment: string
+  detachment_id: string
+  legend: string
+  description: string
+}
+
 // Transformed types — structured for app consumption
 export interface Faction {
   id: string
@@ -121,6 +156,33 @@ export interface PointOption {
   models: string
 }
 
+export interface Stratagem {
+  id: string
+  name: string
+  type: string
+  cpCost: number
+  legend: string
+  turn: string
+  phase: string
+  description: string
+}
+
+export interface Enhancement {
+  id: string
+  name: string
+  cost: number
+  legend: string
+  description: string
+}
+
+export interface Detachment {
+  id: string
+  name: string
+  rule: { name: string; legend: string; description: string } | null
+  stratagems: Stratagem[]
+  enhancements: Enhancement[]
+}
+
 export interface Datasheet {
   id: string
   name: string
@@ -143,6 +205,9 @@ export interface Datasheet {
 export interface ParseResult {
   factions: Map<string, Faction>
   datasheets: Map<string, Datasheet>
+  stratagems: RawStratagem[]
+  detachmentAbilities: RawDetachmentAbility[]
+  enhancements: RawEnhancement[]
   errors: string[]
   warnings: string[]
 }

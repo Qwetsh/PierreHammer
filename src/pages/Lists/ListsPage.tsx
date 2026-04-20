@@ -8,6 +8,7 @@ import { FactionPicker } from '@/components/domain/FactionPicker'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import type { PointsLimit } from '@/types/armyList.types'
+import type { Detachment } from '@/types/gameData.types'
 
 const pointsOptions: PointsLimit[] = [1000, 2000, 3000]
 
@@ -30,18 +31,33 @@ export function ListsPage() {
   const [showForm, setShowForm] = useState(false)
   const [name, setName] = useState('')
   const [selectedFaction, setSelectedFaction] = useState<string | null>(null)
+  const [selectedDetachment, setSelectedDetachment] = useState<Detachment | null>(null)
   const [detachment, setDetachment] = useState('')
   const [pointsLimit, setPointsLimit] = useState<PointsLimit>(2000)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   const allLists = getAllLists()
 
+  const factionDetachments = selectedFaction
+    ? loadedFactions[selectedFaction]?.detachments ?? []
+    : []
+
+  const handleSelectFaction = (slug: string | null) => {
+    setSelectedFaction(slug)
+    setSelectedDetachment(null)
+    setDetachment('')
+    if (slug) loadFaction(slug)
+  }
+
   const handleCreate = () => {
     if (!name.trim() || !selectedFaction) return
-    const id = createList(name.trim(), selectedFaction, detachment.trim() || 'Standard', pointsLimit)
+    const detName = selectedDetachment?.name || detachment.trim() || 'Standard'
+    const detId = selectedDetachment?.id
+    const id = createList(name.trim(), selectedFaction, detName, pointsLimit, detId)
     setShowForm(false)
     setName('')
     setSelectedFaction(null)
+    setSelectedDetachment(null)
     setDetachment('')
     setPointsLimit(2000)
     navigate(`/lists/${id}`)
@@ -108,15 +124,34 @@ export function ListsPage() {
               aria-label="Nom de la liste"
             />
 
-            <input
-              type="text"
-              value={detachment}
-              onChange={(e) => setDetachment(e.target.value)}
-              placeholder="Détachement (ex: Gladius Task Force)"
-              className="w-full rounded-lg px-3 py-2 bg-transparent outline-none min-h-[44px]"
-              style={{ color: 'var(--color-text)', border: '1px solid var(--color-text-muted)' }}
-              aria-label="Détachement"
-            />
+            {factionDetachments.length > 0 ? (
+              <select
+                value={selectedDetachment?.id ?? ''}
+                onChange={(e) => {
+                  const det = factionDetachments.find((d) => d.id === e.target.value) ?? null
+                  setSelectedDetachment(det)
+                  setDetachment(det?.name ?? '')
+                }}
+                className="w-full rounded-lg px-3 py-2 bg-transparent outline-none min-h-[44px]"
+                style={{ color: 'var(--color-text)', border: '1px solid var(--color-text-muted)', backgroundColor: 'var(--color-surface)' }}
+                aria-label="Détachement"
+              >
+                <option value="">— Choisir un détachement —</option>
+                {factionDetachments.map((det) => (
+                  <option key={det.id} value={det.id}>{det.name}</option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={detachment}
+                onChange={(e) => setDetachment(e.target.value)}
+                placeholder="Détachement (ex: Gladius Task Force)"
+                className="w-full rounded-lg px-3 py-2 bg-transparent outline-none min-h-[44px]"
+                style={{ color: 'var(--color-text)', border: '1px solid var(--color-text-muted)' }}
+                aria-label="Détachement"
+              />
+            )}
 
             <div>
               <p className="text-sm mb-2" style={{ color: 'var(--color-text-muted)' }}>Limite de points</p>
@@ -142,7 +177,7 @@ export function ListsPage() {
                 <p className="text-sm mb-2" style={{ color: 'var(--color-text-muted)' }}>Faction</p>
                 <FactionPicker
                   factions={factionIndex.factions}
-                  onSelect={(slug) => setSelectedFaction(slug)}
+                  onSelect={handleSelectFaction}
                   selectedSlug={selectedFaction}
                 />
               </div>

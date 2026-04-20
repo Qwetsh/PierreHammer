@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { ArmyList, ListUnit, PointsLimit } from '@/types/armyList.types'
+import type { ArmyList, ListUnit, ListEnhancement, PointsLimit } from '@/types/armyList.types'
 
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
@@ -8,7 +8,7 @@ function generateId(): string {
 
 interface ListsState {
   lists: Record<string, ArmyList>
-  createList: (name: string, factionId: string, detachment: string, pointsLimit: PointsLimit) => string
+  createList: (name: string, factionId: string, detachment: string, pointsLimit: PointsLimit, detachmentId?: string) => string
   deleteList: (listId: string) => void
   getList: (listId: string) => ArmyList | undefined
   getAllLists: () => ArmyList[]
@@ -18,6 +18,7 @@ interface ListsState {
   updateList: (listId: string, updates: Partial<Pick<ArmyList, 'name' | 'detachment' | 'pointsLimit'>>) => void
   attachHero: (listId: string, heroIndex: number, squadId: string) => void
   detachHero: (listId: string, heroIndex: number) => void
+  setEnhancement: (listId: string, unitIndex: number, enhancement: ListEnhancement | undefined) => void
 }
 
 function migrateUnit(u: ListUnit): ListUnit {
@@ -35,13 +36,14 @@ export const useListsStore = create<ListsState>()(
     (set, get) => ({
       lists: {},
 
-      createList: (name, factionId, detachment, pointsLimit) => {
+      createList: (name, factionId, detachment, pointsLimit, detachmentId?) => {
         const id = generateId()
         const newList: ArmyList = {
           id,
           name,
           factionId,
           detachment,
+          detachmentId,
           pointsLimit,
           units: [],
           createdAt: Date.now(),
@@ -147,6 +149,22 @@ export const useListsStore = create<ListsState>()(
               ...state.lists[listId],
               units: state.lists[listId].units.map((u, i) =>
                 i === heroIndex ? { ...u, attachedToId: undefined } : u,
+              ),
+            },
+          },
+        }))
+      },
+
+      setEnhancement: (listId, unitIndex, enhancement) => {
+        const list = get().lists[listId]
+        if (!list || unitIndex < 0 || unitIndex >= list.units.length) return
+        set((state) => ({
+          lists: {
+            ...state.lists,
+            [listId]: {
+              ...state.lists[listId],
+              units: state.lists[listId].units.map((u, i) =>
+                i === unitIndex ? { ...u, enhancement } : u,
               ),
             },
           },

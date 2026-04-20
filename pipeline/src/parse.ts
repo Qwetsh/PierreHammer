@@ -10,6 +10,9 @@ import type {
   RawModel,
   RawWargear,
   RawPoints,
+  RawStratagem,
+  RawDetachmentAbility,
+  RawEnhancement,
   Faction,
   Datasheet,
   Profile,
@@ -139,6 +142,9 @@ export async function parseData(): Promise<ParseResult> {
   let rawModels: RawModel[]
   let rawWargear: RawWargear[]
   let rawPoints: RawPoints[]
+  let rawStratagems: RawStratagem[]
+  let rawDetachmentAbilities: RawDetachmentAbility[]
+  let rawEnhancements: RawEnhancement[]
 
   try {
     console.log('  Parsing Factions.csv...')
@@ -168,11 +174,23 @@ export async function parseData(): Promise<ParseResult> {
     console.log('  Parsing Datasheets_points.csv...')
     rawPoints = await parseCsvFile<RawPoints>('Datasheets_points.csv')
     console.log(`  ✅ ${rawPoints.length} point options`)
+
+    console.log('  Parsing Stratagems.csv...')
+    rawStratagems = await parseCsvFile<RawStratagem>('Stratagems.csv')
+    console.log(`  ✅ ${rawStratagems.length} stratagems`)
+
+    console.log('  Parsing Detachment_abilities.csv...')
+    rawDetachmentAbilities = await parseCsvFile<RawDetachmentAbility>('Detachment_abilities.csv')
+    console.log(`  ✅ ${rawDetachmentAbilities.length} detachment abilities`)
+
+    console.log('  Parsing Enhancements.csv...')
+    rawEnhancements = await parseCsvFile<RawEnhancement>('Enhancements.csv')
+    console.log(`  ✅ ${rawEnhancements.length} enhancements`)
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     console.error(`\n❌ Erreur fatale de parsing: ${msg}`)
     process.exitCode = 1
-    return { factions: new Map(), datasheets: new Map(), errors: [msg], warnings: [] }
+    return { factions: new Map(), datasheets: new Map(), stratagems: [], detachmentAbilities: [], enhancements: [], errors: [msg], warnings: [] }
   }
 
   // Build faction map
@@ -261,7 +279,7 @@ export async function parseData(): Promise<ParseResult> {
     process.exitCode = 1
   }
 
-  return { factions, datasheets, errors, warnings }
+  return { factions, datasheets, stratagems: rawStratagems, detachmentAbilities: rawDetachmentAbilities, enhancements: rawEnhancements, errors, warnings }
 }
 
 export async function parse(): Promise<void> {

@@ -73,9 +73,37 @@ export interface Datasheet {
   pointOptions: PointOption[]
 }
 
+export interface Stratagem {
+  id: string
+  name: string
+  type: string
+  cpCost: number
+  legend: string
+  turn: string
+  phase: string
+  description: string
+}
+
+export interface Enhancement {
+  id: string
+  name: string
+  cost: number
+  legend: string
+  description: string
+}
+
+export interface Detachment {
+  id: string
+  name: string
+  rule: { name: string; legend: string; description: string } | null
+  stratagems: Stratagem[]
+  enhancements: Enhancement[]
+}
+
 export interface Faction {
   id: string
   name: string
   slug: string
   datasheets: Datasheet[]
+  detachments?: Detachment[]
 }
