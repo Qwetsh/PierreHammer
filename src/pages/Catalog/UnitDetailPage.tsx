@@ -60,7 +60,7 @@ export function UnitDetailPage() {
   }
 
   const handleSelectList = (listId: string) => {
-    addUnit(listId, { datasheetId: unitId, datasheetName: datasheet.name, points, selectedPointOptionIndex: 0, selectedWeapons: [], notes: '' })
+    addUnit(listId, { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), datasheetId: unitId, datasheetName: datasheet.name, points, selectedPointOptionIndex: 0, selectedWeapons: [], notes: '' })
     setShowListPicker(false)
   }
 
