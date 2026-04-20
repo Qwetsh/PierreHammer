@@ -21,12 +21,12 @@ export default defineConfig({
         runtimeCaching: [
           {
             urlPattern: /\/data\/.*\.json$/,
-            handler: 'CacheFirst',
+            handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'game-data',
               expiration: {
                 maxEntries: 50,
-                maxAgeSeconds: 30 * 24 * 60 * 60,
+                maxAgeSeconds: 7 * 24 * 60 * 60,
               },
             },
           },
