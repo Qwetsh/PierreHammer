@@ -66,6 +66,7 @@ export function AddUnitPage() {
     if (!selectedDatasheet) return
     const cost = selectedDatasheet.pointOptions[pointOptionIndex]?.cost ?? selectedDatasheet.pointOptions[0]?.cost ?? 0
     addUnit(listId, {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       datasheetId: selectedDatasheet.id,
       datasheetName: selectedDatasheet.name,
       points: cost,

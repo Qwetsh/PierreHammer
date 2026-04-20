@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router'
 import { useListsStore } from '@/stores/listsStore'
 import { useGameDataStore } from '@/stores/gameDataStore'
 import { useGameData } from '@/hooks/useGameData'
-import { calculateTotalPoints } from '@/utils/pointsCalculator'
+import { calculateTotalPoints, countSquads } from '@/utils/pointsCalculator'
 import { FactionPicker } from '@/components/domain/FactionPicker'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -173,7 +173,7 @@ export function ListsPage() {
             <div>
               <h3 className="font-semibold" style={{ color: 'var(--color-text)' }}>{list.name}</h3>
               <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-                {list.factionId} · {list.detachment} · {totalPoints(list.id)}/{list.pointsLimit} pts
+                {list.factionId} · {list.detachment} · {countSquads(list.units)} escouade{countSquads(list.units) > 1 ? 's' : ''} · {totalPoints(list.id)}/{list.pointsLimit} pts
               </p>
             </div>
           </div>

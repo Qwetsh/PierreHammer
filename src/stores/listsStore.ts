@@ -2,6 +2,10 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { ArmyList, ListUnit, PointsLimit } from '@/types/armyList.types'
 
+function generateId(): string {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
+}
+
 interface ListsState {
   lists: Record<string, ArmyList>
   createList: (name: string, factionId: string, detachment: string, pointsLimit: PointsLimit) => string
@@ -12,11 +16,14 @@ interface ListsState {
   removeUnit: (listId: string, unitIndex: number) => void
   updateUnit: (listId: string, unitIndex: number, updates: Partial<ListUnit>) => void
   updateList: (listId: string, updates: Partial<Pick<ArmyList, 'name' | 'detachment' | 'pointsLimit'>>) => void
+  attachHero: (listId: string, heroIndex: number, squadId: string) => void
+  detachHero: (listId: string, heroIndex: number) => void
 }
 
 function migrateUnit(u: ListUnit): ListUnit {
   return {
     ...u,
+    id: u.id || generateId(),
     selectedPointOptionIndex: u.selectedPointOptionIndex ?? 0,
     selectedWeapons: u.selectedWeapons ?? [],
     notes: u.notes ?? '',
@@ -29,7 +36,7 @@ export const useListsStore = create<ListsState>()(
       lists: {},
 
       createList: (name, factionId, detachment, pointsLimit) => {
-        const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
+        const id = generateId()
         const newList: ArmyList = {
           id,
           name,
@@ -69,15 +76,22 @@ export const useListsStore = create<ListsState>()(
       removeUnit: (listId, unitIndex) => {
         const list = get().lists[listId]
         if (!list) return
-        set((state) => ({
-          lists: {
-            ...state.lists,
-            [listId]: {
-              ...state.lists[listId],
-              units: state.lists[listId].units.filter((_, i) => i !== unitIndex),
+        const removedUnit = list.units[unitIndex]
+        set((state) => {
+          let units = state.lists[listId].units.filter((_, i) => i !== unitIndex)
+          // If removing a squad, detach any heroes attached to it
+          if (removedUnit) {
+            units = units.map((u) =>
+              u.attachedToId === removedUnit.id ? { ...u, attachedToId: undefined } : u,
+            )
+          }
+          return {
+            lists: {
+              ...state.lists,
+              [listId]: { ...state.lists[listId], units },
             },
-          },
-        }))
+          }
+        })
       },
 
       updateUnit: (listId, unitIndex, updates) => {
@@ -106,9 +120,52 @@ export const useListsStore = create<ListsState>()(
           },
         }))
       },
+
+      attachHero: (listId, heroIndex, squadId) => {
+        const list = get().lists[listId]
+        if (!list || heroIndex < 0 || heroIndex >= list.units.length) return
+        set((state) => ({
+          lists: {
+            ...state.lists,
+            [listId]: {
+              ...state.lists[listId],
+              units: state.lists[listId].units.map((u, i) =>
+                i === heroIndex ? { ...u, attachedToId: squadId } : u,
+              ),
+            },
+          },
+        }))
+      },
+
+      detachHero: (listId, heroIndex) => {
+        const list = get().lists[listId]
+        if (!list || heroIndex < 0 || heroIndex >= list.units.length) return
+        set((state) => ({
+          lists: {
+            ...state.lists,
+            [listId]: {
+              ...state.lists[listId],
+              units: state.lists[listId].units.map((u, i) =>
+                i === heroIndex ? { ...u, attachedToId: undefined } : u,
+              ),
+            },
+          },
+        }))
+      },
     }),
     {
       name: 'pierrehammer-lists',
+      version: 2,
+      migrate: (persisted, version) => {
+        const state = persisted as { lists: Record<string, ArmyList> }
+        if (version < 2) {
+          // Add IDs to existing units
+          for (const list of Object.values(state.lists)) {
+            list.units = list.units.map((u) => migrateUnit(u))
+          }
+        }
+        return state
+      },
       onRehydrateStorage: () => (_state, error) => {
         if (error) {
           console.error('Failed to rehydrate lists store:', error)
