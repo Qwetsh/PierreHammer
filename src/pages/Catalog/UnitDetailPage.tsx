@@ -53,7 +53,7 @@ export function UnitDetailPage() {
       return
     }
     if (lists.length === 1) {
-      addUnit(lists[0].id, { datasheetId: unitId, datasheetName: datasheet.name, points, selectedPointOptionIndex: 0, selectedWeapons: [], notes: '' })
+      addUnit(lists[0].id, { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), datasheetId: unitId, datasheetName: datasheet.name, points, selectedPointOptionIndex: 0, selectedWeapons: [], notes: '' })
       return
     }
     setShowListPicker(true)

@@ -63,6 +63,8 @@ export function ListDetailPage() {
     )
   }
 
+  // listId is guaranteed to be defined after the guard above
+  const safeListId = listId as string
   const faction = loadedFactions[list.factionId]
   const totalPoints = calculateTotalPoints(list.units, faction?.datasheets)
   const squadCount = countSquads(list.units)
@@ -77,7 +79,7 @@ export function ListDetailPage() {
   const saveEditing = () => {
     const trimmedName = editName.trim()
     if (!trimmedName) return
-    updateList(listId, {
+    updateList(safeListId, {
       name: trimmedName,
       detachment: editDetachment.trim() || list.detachment,
       pointsLimit: editPoints,
@@ -93,7 +95,7 @@ export function ListDetailPage() {
   const handleSaveEquipment = (pointOptionIndex: number, weapons: string[], notes: string) => {
     if (editingUnitIndex === null || !editingDatasheet) return
     const cost = editingDatasheet.pointOptions[pointOptionIndex]?.cost ?? editingDatasheet.pointOptions[0]?.cost ?? 0
-    updateUnit(listId, editingUnitIndex, {
+    updateUnit(safeListId, editingUnitIndex, {
       points: cost,
       selectedPointOptionIndex: pointOptionIndex,
       selectedWeapons: weapons,
@@ -187,7 +189,7 @@ export function ListDetailPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={(e) => { e.stopPropagation(); detachHero(listId, index) }}
+                onClick={(e) => { e.stopPropagation(); detachHero(safeListId, index) }}
                 aria-label="Détacher le héros"
               >
                 ⇥
@@ -206,7 +208,7 @@ export function ListDetailPage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={(e) => { e.stopPropagation(); removeUnit(listId, index) }}
+              onClick={(e) => { e.stopPropagation(); removeUnit(safeListId, index) }}
               aria-label={`Retirer ${unit.datasheetName}`}
             >
               ✕
@@ -294,7 +296,7 @@ export function ListDetailPage() {
           <div className="flex items-center gap-2">
             {list.units.length > 0 && (
               <>
-                <Button variant="secondary" size="sm" onClick={() => navigate(`/game-mode/${listId}`)}>
+                <Button variant="secondary" size="sm" onClick={() => navigate(`/game-mode/${safeListId}`)}>
                   Jouer
                 </Button>
                 <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
@@ -302,7 +304,7 @@ export function ListDetailPage() {
                 </span>
               </>
             )}
-            <Button variant="primary" size="sm" onClick={() => navigate(`/lists/${listId}/add-unit`)}>
+            <Button variant="primary" size="sm" onClick={() => navigate(`/lists/${safeListId}/add-unit`)}>
               + Ajouter
             </Button>
           </div>
@@ -313,7 +315,7 @@ export function ListDetailPage() {
             title="Liste vide"
             description="Ajoute des unités depuis le catalogue pour commencer à construire ta liste."
             actionLabel="Ajouter une unité"
-            onAction={() => navigate(`/lists/${listId}/add-unit`)}
+            onAction={() => navigate(`/lists/${safeListId}/add-unit`)}
           />
         ) : (
           <div className="flex flex-col gap-2">
@@ -394,7 +396,7 @@ export function ListDetailPage() {
                   className="text-left rounded-lg p-3 border-none cursor-pointer"
                   style={{ backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
                   onClick={() => {
-                    attachHero(listId, attachingHeroIndex, sq.id)
+                    attachHero(safeListId, attachingHeroIndex, sq.id)
                     setAttachingHeroIndex(null)
                     showToast('Héros attaché', 'success')
                   }}

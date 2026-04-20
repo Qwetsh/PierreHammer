@@ -14,8 +14,8 @@ const mockList: ArmyList = {
   detachment: 'Gladius',
   pointsLimit: 2000,
   units: [
-    { datasheetId: 'ds-1', datasheetName: 'Intercessors', points: 100, selectedPointOptionIndex: 0, selectedWeapons: [], notes: '' },
-    { datasheetId: 'ds-2', datasheetName: 'Redemptor Dreadnought', points: 210, selectedPointOptionIndex: 0, selectedWeapons: [], notes: '' },
+    { id: 'u1', datasheetId: 'ds-1', datasheetName: 'Intercessors', points: 100, selectedPointOptionIndex: 0, selectedWeapons: [], notes: '' },
+    { id: 'u2', datasheetId: 'ds-2', datasheetName: 'Redemptor Dreadnought', points: 210, selectedPointOptionIndex: 0, selectedWeapons: [], notes: '' },
   ],
   createdAt: 1000,
 }
