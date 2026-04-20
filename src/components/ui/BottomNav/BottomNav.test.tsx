@@ -11,10 +11,10 @@ function renderWithRouter(initialEntries = ['/collection']) {
 }
 
 describe('BottomNav', () => {
-  it('renders 4 tabs', () => {
+  it('renders 5 tabs', () => {
     renderWithRouter()
     const tabs = screen.getAllByRole('tab')
-    expect(tabs).toHaveLength(4)
+    expect(tabs).toHaveLength(5)
   })
 
   it('renders tab labels', () => {
@@ -22,6 +22,7 @@ describe('BottomNav', () => {
     expect(screen.getByText('Collection')).toBeInTheDocument()
     expect(screen.getByText('Mes Listes')).toBeInTheDocument()
     expect(screen.getByText('Catalogue')).toBeInTheDocument()
+    expect(screen.getByText('Calcul')).toBeInTheDocument()
     expect(screen.getByText('Profil')).toBeInTheDocument()
   })
 
