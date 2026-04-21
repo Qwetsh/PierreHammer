@@ -3,11 +3,10 @@ import { useParams, useNavigate } from 'react-router'
 import { useGameDataStore } from '@/stores/gameDataStore'
 import { useGameData } from '@/hooks/useGameData'
 import { useFactionTheme } from '@/hooks/useFactionTheme'
-import { resolveCombat, parseDiceNotation } from '@/utils/combatEngine'
+import { resolveCombat } from '@/utils/combatEngine'
 import { parseWeaponKeywords } from '@/utils/weaponKeywordParser'
 import { extractCombatEffects } from '@/utils/combatEffectsExtractor'
-import { Button } from '@/components/ui/Button'
-import type { Weapon, Datasheet, Profile } from '@/types/gameData.types'
+import type { Weapon, Datasheet } from '@/types/gameData.types'
 import type { CombatResult } from '@/types/combat.types'
 
 function StatBadge({ label, value, sub }: { label: string; value: string | number; sub?: string }) {

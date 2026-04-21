@@ -16,7 +16,6 @@ import type { ArmyList } from '@/types/armyList.types'
 import type { Datasheet, Detachment } from '@/types/gameData.types'
 import type { ListUnit } from '@/types/armyList.types'
 import type { Profile } from '@/services/friendsService'
-import type { CasualtyState } from '@/stores/gameSessionStore'
 
 function getModelCount(unit: ListUnit, ds?: Datasheet): number {
   if (!ds || ds.pointOptions.length === 0) return 1
@@ -29,10 +28,6 @@ function isMultiWound(ds: Datasheet): boolean {
   return w > 1
 }
 
-function getTotalWounds(ds: Datasheet, modelCount: number): number {
-  const w = parseInt(ds.profiles[0]?.W ?? '1', 10)
-  return w * modelCount
-}
 
 function profileDisplayName(p: { username?: string | null; display_name?: string | null; id: string }): string {
   return p.username || p.display_name || p.id.slice(0, 8)
@@ -749,7 +744,7 @@ export function GameModePage() {
           defenderDatasheet={simTarget.ds}
           defenderCasualty={(hasSession ? opponentCasualties : casualties)[simTarget.unit.id] ?? null}
           attackerEnhancement={findEnhancement(attackingUnit.unit, faction)}
-          defenderEnhancement={findEnhancement(simTarget.unit, hasSession ? opponentFaction : faction)}
+          defenderEnhancement={findEnhancement(simTarget.unit, (hasSession ? opponentFaction : faction) ?? undefined)}
           attackerStratagems={detachment?.stratagems ?? []}
           defenderStratagems={hasSession
             ? (opponentFaction?.detachments?.find((d) => d.name === opponentList?.detachment)?.stratagems ?? [])

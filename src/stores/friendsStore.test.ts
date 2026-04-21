@@ -18,7 +18,7 @@ vi.mock('@/services/friendsService', () => ({
   respondToRequest: vi.fn().mockResolvedValue(true),
   removeFriend: vi.fn().mockResolvedValue(true),
   updateUsername: vi.fn().mockResolvedValue(true),
-  getProfile: vi.fn().mockResolvedValue({ id: 'u1', username: 'bob', created_at: '2024-01-01' }),
+  getProfile: vi.fn().mockResolvedValue({ id: 'u1', username: 'bob', display_name: null, created_at: '2024-01-01' }),
 }))
 
 describe('friendsStore', () => {
@@ -46,8 +46,8 @@ describe('friendsStore', () => {
   it('searchUsers populates searchResults excluding self', async () => {
     const svc = await import('@/services/friendsService')
     vi.mocked(svc.searchUsers).mockResolvedValue([
-      { id: 'u1', username: 'me', created_at: '2024-01-01' },
-      { id: 'u2', username: 'other', created_at: '2024-01-01' },
+      { id: 'u1', username: 'me', display_name: null, created_at: '2024-01-01' },
+      { id: 'u2', username: 'other', display_name: null, created_at: '2024-01-01' },
     ])
     await useFriendsStore.getState().searchUsers('test')
     expect(useFriendsStore.getState().searchResults).toHaveLength(1)
@@ -69,7 +69,7 @@ describe('friendsStore', () => {
   })
 
   it('updateUsername updates profile in state', async () => {
-    useFriendsStore.setState({ profile: { id: 'u1', username: 'old', created_at: '2024-01-01' } })
+    useFriendsStore.setState({ profile: { id: 'u1', username: 'old', display_name: null, created_at: '2024-01-01' } })
     await useFriendsStore.getState().updateUsername('new-name')
     expect(useFriendsStore.getState().profile?.username).toBe('new-name')
   })

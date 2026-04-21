@@ -61,7 +61,7 @@ describe('gameSessionStore', () => {
 
   it('startSession creates session and loads opponent data', async () => {
     const session = { id: 's1', player1_id: 'p1', player2_id: 'p2', player1_list_id: 'l1', player2_list_id: 'l2', status: 'active' }
-    const profile = { id: 'p2', username: 'Bob', created_at: '2026-01-01' }
+    const profile = { id: 'p2', username: 'Bob', display_name: null, created_at: '2026-01-01' }
     const list = { id: 'local', remoteId: 'l2', factionId: 'sm', name: 'Bob list', units: [] }
 
     mockCreateSession.mockResolvedValue(session)
@@ -87,7 +87,7 @@ describe('gameSessionStore', () => {
 
   it('loadSession loads existing session with casualties', async () => {
     const session = { id: 's1', player1_id: 'p1', player2_id: 'p2', player1_list_id: 'l1', player2_list_id: 'l2', status: 'active' }
-    const profile = { id: 'p2', username: 'Bob', created_at: '2026-01-01' }
+    const profile = { id: 'p2', username: 'Bob', display_name: null, created_at: '2026-01-01' }
     const list = { id: 'local', remoteId: 'l2', factionId: 'csm', name: 'Bob list', units: [] }
 
     mockGetActiveSession.mockResolvedValue(session)
@@ -116,7 +116,7 @@ describe('gameSessionStore', () => {
     const unsub = vi.fn()
     useGameSessionStore.setState({
       activeSession: { id: 's1', player1_id: 'p1', player2_id: 'p2', player1_list_id: 'l1', player2_list_id: 'l2', status: 'active', created_at: '', updated_at: '' },
-      opponentProfile: { id: 'p2', username: 'Bob', created_at: '' },
+      opponentProfile: { id: 'p2', username: 'Bob', display_name: null, created_at: '' },
       casualties: { u1: { modelsDestroyed: 2, woundsRemaining: null } },
       _unsubscribe: unsub,
     })
