@@ -6,6 +6,7 @@
   display: flex;
   flex-direction: column;
   width: 100%;
+  min-width: 0;
   overflow: hidden;
   cursor: pointer;
   text-align: left;
@@ -404,6 +405,83 @@
   justify-content: flex-end;
   min-height: 140px;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+
+/* === LIST CARD — Armory plate with crosshatch + gold trim === */
+.list-card {
+  position: relative;
+  border-radius: 6px;
+  padding: 12px 14px;
+  cursor: pointer;
+  isolation: isolate;
+  overflow: hidden;
+
+  /* Faction surface base */
+  background:
+    /* Fine crosshatch pattern */
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 7px,
+      rgba(255, 255, 255, 0.03) 7px,
+      rgba(255, 255, 255, 0.03) 8px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 7px,
+      rgba(255, 255, 255, 0.03) 7px,
+      rgba(255, 255, 255, 0.03) 8px
+    ),
+    /* Metallic body gradient */
+    linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--color-surface) 80%, #000) 0%,
+      var(--color-surface) 30%,
+      color-mix(in srgb, var(--color-surface) 90%, #fff) 50%,
+      var(--color-surface) 70%,
+      color-mix(in srgb, var(--color-surface) 60%, var(--color-primary)) 100%
+    );
+
+  /* Gold outer border */
+  border: 1px solid color-mix(in srgb, #c4a535 50%, transparent);
+
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Gold inner frame */
+.list-card::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border: 1px solid color-mix(in srgb, #c4a535 25%, transparent);
+  border-radius: 3px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Top edge gold highlight */
+.list-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10px;
+  right: 10px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, #c4a535 35%, transparent) 25%,
+    color-mix(in srgb, #c4a535 60%, transparent) 50%,
+    color-mix(in srgb, #c4a535 35%, transparent) 75%,
+    transparent
+  );
+  pointer-events: none;
+  z-index: 5;
 }
 
 

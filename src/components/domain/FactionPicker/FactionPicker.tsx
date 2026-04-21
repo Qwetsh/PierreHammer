@@ -1,9 +1,13 @@
-import type { FactionSummary } from '@/types/gameData.types'
+import { useState } from 'react'
+import type { FactionSummary, Detachment } from '@/types/gameData.types'
 
 interface FactionPickerProps {
   factions: FactionSummary[]
-  onSelect: (slug: string) => void
+  onSelect: (slug: string | null) => void
   selectedSlug?: string | null
+  detachments?: Detachment[]
+  selectedDetachment?: Detachment | null
+  onDetachmentChange?: (det: Detachment | null) => void
 }
 
 interface FactionTheme {
@@ -50,30 +54,90 @@ function getInitials(name: string): string {
     .join('')
 }
 
-export function FactionPicker({ factions, onSelect, selectedSlug }: FactionPickerProps) {
+export function FactionPicker({
+  factions,
+  onSelect,
+  selectedSlug,
+  detachments = [],
+  selectedDetachment,
+  onDetachmentChange,
+}: FactionPickerProps) {
+  const [showDetachments, setShowDetachments] = useState(false)
+
   return (
     <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 lg:grid-cols-4">
-      {factions.map((faction) => {
+      {factions
+        .filter((faction) => !selectedSlug || selectedSlug === faction.slug)
+        .map((faction) => {
         const theme = factionThemes[faction.slug] ?? defaultTheme
         const isSelected = selectedSlug === faction.slug
 
         return (
-          <button
-            key={faction.id}
-            onClick={() => onSelect(faction.slug)}
-            className={`faction-tile animate-fade-in ${isSelected ? 'faction-tile--selected' : ''}`}
-            style={{
-              '--tile-primary': theme.primary,
-              '--tile-accent': theme.accent,
-              '--tile-surface': theme.surface,
-            } as React.CSSProperties}
-          >
-            <div className="faction-tile__sigil">
-              {getInitials(faction.name)}
-            </div>
-            <span className="faction-tile__name">{faction.name}</span>
-            <span className="faction-tile__count">{faction.datasheetCount} unités</span>
-          </button>
+          <div key={faction.id} className={isSelected ? 'faction-tile-wrapper--expanded' : ''}>
+            <button
+              className={`faction-tile animate-fade-in ${isSelected ? 'faction-tile--selected faction-tile--expanded' : ''}`}
+              style={{
+                '--tile-primary': theme.primary,
+                '--tile-accent': theme.accent,
+                '--tile-surface': theme.surface,
+              } as React.CSSProperties}
+              onClick={() => {
+                if (isSelected) {
+                  onSelect(null)
+                  setShowDetachments(false)
+                } else {
+                  onSelect(faction.slug)
+                }
+              }}
+            >
+              <div className="faction-tile__sigil">
+                {getInitials(faction.name)}
+              </div>
+              <span className="faction-tile__name">{faction.name}</span>
+              <span className="faction-tile__count">{faction.datasheetCount} unités</span>
+              {isSelected && detachments.length > 0 && (
+                <button
+                  type="button"
+                  className={`faction-tile__detachment-btn ${selectedDetachment ? 'faction-tile__detachment-btn--active' : ''}`}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setShowDetachments(true)
+                  }}
+                >
+                  {selectedDetachment?.name ?? 'Choisir un détachement'}
+                </button>
+              )}
+            </button>
+
+            {showDetachments && isSelected && detachments.length > 0 && (
+              <div className="detachment-modal-overlay" onClick={() => setShowDetachments(false)}>
+                <div className="detachment-modal" onClick={(e) => e.stopPropagation()}
+                  style={{
+                    '--tile-primary': theme.primary,
+                    '--tile-accent': theme.accent,
+                    '--tile-surface': theme.surface,
+                  } as React.CSSProperties}
+                >
+                  <h3 className="detachment-modal__title">Détachement</h3>
+                  <div className="detachment-modal__list">
+                    {detachments.map((det) => (
+                      <button
+                        key={det.id}
+                        type="button"
+                        className={`detachment-modal__item ${selectedDetachment?.id === det.id ? 'detachment-modal__item--active' : ''}`}
+                        onClick={() => {
+                          onDetachmentChange?.(det)
+                          setShowDetachments(false)
+                        }}
+                      >
+                        {det.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         )
       })}
     </div>

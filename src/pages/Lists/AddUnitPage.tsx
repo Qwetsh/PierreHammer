@@ -4,6 +4,7 @@ import { useListsStore } from '@/stores/listsStore'
 import { useGameDataStore } from '@/stores/gameDataStore'
 import { useCollectionStore } from '@/stores/collectionStore'
 import { useSearch } from '@/hooks/useSearch'
+import { useFactionTheme } from '@/hooks/useFactionTheme'
 import { useToast } from '@/components/ui/Toast'
 import { UnitCard } from '@/components/domain/UnitCard'
 import { SearchBar } from '@/components/ui/SearchBar'
@@ -11,7 +12,8 @@ import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { EquipmentSelector } from '@/components/domain/EquipmentSelector'
 import { calculateTotalPoints } from '@/utils/pointsCalculator'
-import type { Datasheet } from '@/types/gameData.types'
+import { isCharacter, canEquipEnhancement } from '@/utils/enhancementUtils'
+import type { Datasheet, Enhancement } from '@/types/gameData.types'
 
 const extractSearchFields = (ds: Datasheet): string[] => [
   ds.name,
@@ -24,6 +26,7 @@ export function AddUnitPage() {
   const { showToast } = useToast()
   const list = useListsStore((s) => listId ? s.lists[listId] : undefined)
   const addUnit = useListsStore((s) => s.addUnit)
+  const setEnhancement = useListsStore((s) => s.setEnhancement)
   const loadedFactions = useGameDataStore((s) => s.loadedFactions)
   const loadFaction = useGameDataStore((s) => s.loadFaction)
   const collectionItems = useCollectionStore((s) => s.items)
@@ -31,6 +34,13 @@ export function AddUnitPage() {
   const [query, setQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState<string | 'all'>('all')
   const [selectedDatasheet, setSelectedDatasheet] = useState<Datasheet | null>(null)
+  const [enhancementPicker, setEnhancementPicker] = useState<{
+    datasheet: Datasheet
+    unitIndex: number
+    enhancements: Enhancement[]
+  } | null>(null)
+
+  useFactionTheme(list?.factionId ?? null)
 
   useEffect(() => {
     if (list) loadFaction(list.factionId)
@@ -38,6 +48,12 @@ export function AddUnitPage() {
 
   const faction = list ? loadedFactions[list.factionId] : undefined
   const datasheets = faction?.datasheets ?? []
+
+  const detachment = useMemo(() => {
+    if (!list || !faction?.detachments) return undefined
+    return faction.detachments.find((d) => d.id === list.detachmentId) ??
+      faction.detachments.find((d) => d.name === list.detachment)
+  }, [list, faction])
 
   const roles = useMemo(() => {
     const r = new Set(datasheets.map((ds) => ds.role).filter(Boolean))
@@ -62,11 +78,17 @@ export function AddUnitPage() {
 
   const totalPoints = faction ? calculateTotalPoints(list.units, faction.datasheets) : 0
 
+  // IDs of enhancements already used in this list
+  const usedEnhancementIds = new Set(
+    list.units.map((u) => u.enhancement?.enhancementId).filter(Boolean),
+  )
+
   const handleConfirmAdd = (pointOptionIndex: number, weapons: string[], notes: string) => {
     if (!selectedDatasheet) return
     const cost = selectedDatasheet.pointOptions[pointOptionIndex]?.cost ?? selectedDatasheet.pointOptions[0]?.cost ?? 0
+    const unitId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
     addUnit(listId, {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      id: unitId,
       datasheetId: selectedDatasheet.id,
       datasheetName: selectedDatasheet.name,
       points: cost,
@@ -74,8 +96,41 @@ export function AddUnitPage() {
       selectedWeapons: weapons,
       notes,
     })
+
+    // Check if this character has eligible enhancements
+    const enhancements = detachment?.enhancements ?? []
+    if (isCharacter(selectedDatasheet) && enhancements.length > 0) {
+      const eligible = enhancements.filter(
+        (e) => !usedEnhancementIds.has(e.id) && canEquipEnhancement(e, selectedDatasheet),
+      )
+      if (eligible.length > 0) {
+        // Unit was just added → it's the last one in the list
+        const unitIndex = list.units.length // current length = index of newly added unit
+        setEnhancementPicker({ datasheet: selectedDatasheet, unitIndex, enhancements: eligible })
+        setSelectedDatasheet(null)
+        return
+      }
+    }
+
     showToast(`${selectedDatasheet.name} ajoutée à ${list.name}`, 'success')
     setSelectedDatasheet(null)
+  }
+
+  const handleSelectEnhancement = (enh: Enhancement) => {
+    if (!enhancementPicker) return
+    setEnhancement(listId, enhancementPicker.unitIndex, {
+      enhancementId: enh.id,
+      enhancementName: enh.name,
+      cost: enh.cost,
+    })
+    showToast(`${enhancementPicker.datasheet.name} + ${enh.name} ajoutée`, 'success')
+    setEnhancementPicker(null)
+  }
+
+  const handleSkipEnhancement = () => {
+    if (!enhancementPicker) return
+    showToast(`${enhancementPicker.datasheet.name} ajoutée à ${list.name}`, 'success')
+    setEnhancementPicker(null)
   }
 
   return (
@@ -164,6 +219,106 @@ export function AddUnitPage() {
           onCancel={() => setSelectedDatasheet(null)}
           confirmLabel="Ajouter à la liste"
         />
+      )}
+
+      {/* Enhancement picker modal */}
+      {enhancementPicker && (
+        <div
+          className="fixed left-0 right-0 top-0 flex items-end justify-center"
+          style={{
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            zIndex: 70,
+            bottom: 'calc(60px + env(safe-area-inset-bottom, 0px))',
+          }}
+          onClick={handleSkipEnhancement}
+        >
+          <div
+            className="w-full max-w-lg rounded-t-2xl"
+            style={{
+              backgroundColor: 'var(--color-surface)',
+              maxHeight: '60%',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Handle bar */}
+            <div className="flex justify-center pt-3 pb-1">
+              <div
+                className="w-10 h-1 rounded-full"
+                style={{ backgroundColor: 'var(--color-text-muted)', opacity: 0.4 }}
+              />
+            </div>
+
+            {/* Header */}
+            <div className="px-4 pb-3">
+              <h3
+                className="font-semibold"
+                style={{ color: 'var(--color-text)', fontSize: 'var(--text-lg)' }}
+              >
+                Amélioration pour {enhancementPicker.datasheet.name}
+              </h3>
+              <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                Optionnel — touche en dehors pour passer
+              </p>
+            </div>
+
+            {/* Enhancement list */}
+            <div
+              className="px-4 pb-2 overflow-y-auto"
+              style={{
+                flex: '1 1 auto',
+                minHeight: 0,
+                WebkitOverflowScrolling: 'touch',
+                scrollbarWidth: 'none',
+              }}
+            >
+              <div className="flex flex-col gap-2">
+                {enhancementPicker.enhancements.map((enh) => (
+                  <button
+                    key={enh.id}
+                    className="flex items-center justify-between rounded-lg px-3 py-3 border-none cursor-pointer min-h-[44px] text-left"
+                    style={{ backgroundColor: 'var(--color-bg)' }}
+                    onClick={() => handleSelectEnhancement(enh)}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <span
+                        className="text-sm font-medium block"
+                        style={{ color: 'var(--color-text)' }}
+                      >
+                        {enh.name}
+                      </span>
+                      {enh.legend && (
+                        <span
+                          className="text-xs italic block mt-0.5"
+                          style={{ color: 'var(--color-text-muted)' }}
+                        >
+                          {enh.legend}
+                        </span>
+                      )}
+                    </div>
+                    <span
+                      className="text-sm font-semibold shrink-0 ml-3"
+                      style={{ color: 'var(--color-accent)' }}
+                    >
+                      {enh.cost} pts
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Skip button */}
+            <div
+              className="px-4 py-3 shrink-0"
+              style={{ borderTop: '1px solid var(--color-bg)' }}
+            >
+              <Button variant="ghost" onClick={handleSkipEnhancement}>
+                Passer
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

@@ -13,8 +13,8 @@
   --color-card-battleline: #1e40af;
 
   /* Typography */
-  --font-display: 'Inter', sans-serif;
-  --font-body: 'Inter', sans-serif;
+  --font-display: 'Inquisitor', 'Cinzel', serif;
+  --font-body: 'EB Garamond', serif;
   --font-mono: 'JetBrains Mono', monospace;
 
   /* Typographic scale — 1.25 Major Third */

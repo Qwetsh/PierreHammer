@@ -12,17 +12,16 @@ import { calculateTotalPoints, resolveUnitPoints, countSquads, resolveSquadTotal
 import { validateArmyList } from '@/features/army-list/utils/validateArmyList'
 import type { PointsLimit, ListUnit } from '@/types/armyList.types'
 import type { Datasheet, Detachment, Enhancement } from '@/types/gameData.types'
-
-function isCharacter(ds: Datasheet | undefined): boolean {
-  if (!ds) return false
-  return ds.keywords.some((k) => k.keyword.toUpperCase() === 'CHARACTER')
-}
+import { isCharacter, canEquipEnhancement } from '@/utils/enhancementUtils'
+import { useFactionTheme } from '@/hooks/useFactionTheme'
 
 export function ListDetailPage() {
   const { listId } = useParams<{ listId: string }>()
   const navigate = useNavigate()
   const { showToast } = useToast()
   const list = useListsStore((s) => listId ? s.lists[listId] : undefined)
+
+  useFactionTheme(list?.factionId ?? null)
   const removeUnit = useListsStore((s) => s.removeUnit)
   const updateUnit = useListsStore((s) => s.updateUnit)
   const updateList = useListsStore((s) => s.updateList)
@@ -41,8 +40,10 @@ export function ListDetailPage() {
 
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState('')
-  const [editDetachment, setEditDetachment] = useState('')
+  const [editDetachmentId, setEditDetachmentId] = useState<string | undefined>(undefined)
+  const [editDetachmentName, setEditDetachmentName] = useState('')
   const [editPoints, setEditPoints] = useState<PointsLimit>(2000)
+  const [showDetachmentModal, setShowDetachmentModal] = useState(false)
   const [editingUnitIndex, setEditingUnitIndex] = useState<number | null>(null)
   const [attachingHeroIndex, setAttachingHeroIndex] = useState<number | null>(null)
   const [enhancementUnitIndex, setEnhancementUnitIndex] = useState<number | null>(null)
@@ -81,9 +82,12 @@ export function ListDetailPage() {
     list.units.filter((u) => u.enhancement).map((u) => u.enhancement!.enhancementId),
   )
 
+  const factionDetachments: Detachment[] = faction?.detachments ?? []
+
   const startEditing = () => {
     setEditName(list.name)
-    setEditDetachment(list.detachment)
+    setEditDetachmentId(list.detachmentId)
+    setEditDetachmentName(list.detachment)
     setEditPoints(list.pointsLimit)
     setEditing(true)
   }
@@ -93,7 +97,8 @@ export function ListDetailPage() {
     if (!trimmedName) return
     updateList(safeListId, {
       name: trimmedName,
-      detachment: editDetachment.trim() || list.detachment,
+      detachment: editDetachmentName || list.detachment,
+      detachmentId: editDetachmentId,
       pointsLimit: editPoints,
     })
     setEditing(false)
@@ -197,7 +202,7 @@ export function ListDetailPage() {
               </span>
             )}
             {/* Enhancement for characters */}
-            {isChar && availableEnhancements.length > 0 && !unit.enhancement && (
+            {isChar && ds && availableEnhancements.some((e) => !usedEnhancementIds.has(e.id) && canEquipEnhancement(e, ds)) && !unit.enhancement && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -269,7 +274,10 @@ export function ListDetailPage() {
         detachment={list.detachment}
         currentPoints={totalPoints}
         pointsLimit={list.pointsLimit}
+        squadCount={squadCount}
         validation={validation}
+        onBack={() => navigate('/lists')}
+        onEdit={startEditing}
       />
 
       {editing && (
@@ -287,30 +295,39 @@ export function ListDetailPage() {
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>Détachement</label>
-            <input
-              type="text"
-              value={editDetachment}
-              onChange={(e) => setEditDetachment(e.target.value)}
-              className="rounded-lg px-3 py-2 text-sm border-none outline-none"
-              style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)' }}
-            />
+            {factionDetachments.length > 0 ? (
+              <button
+                className="rounded-lg px-3 py-2 text-sm border-none cursor-pointer text-left min-h-[44px]"
+                style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)' }}
+                onClick={() => setShowDetachmentModal(true)}
+              >
+                {editDetachmentName || '— Choisir un détachement —'}
+              </button>
+            ) : (
+              <input
+                type="text"
+                value={editDetachmentName}
+                onChange={(e) => setEditDetachmentName(e.target.value)}
+                className="rounded-lg px-3 py-2 text-sm border-none outline-none"
+                style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)' }}
+              />
+            )}
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>Limite de points</label>
-            <div className="flex gap-2">
-              {([1000, 2000, 3000] as PointsLimit[]).map((pts) => (
-                <button
-                  key={pts}
-                  className="flex-1 rounded-lg py-2 text-sm font-medium border-none cursor-pointer min-h-[44px]"
-                  style={{
-                    backgroundColor: editPoints === pts ? 'var(--color-accent)' : 'var(--color-bg)',
-                    color: editPoints === pts ? '#ffffff' : 'var(--color-text)',
-                  }}
-                  onClick={() => setEditPoints(pts)}
-                >
-                  {pts}
-                </button>
-              ))}
+            <div className="flex gap-3">
+              {([1000, 2000, 3000] as PointsLimit[]).map((pts) => {
+                const metal = pts === 1000 ? 'bronze' : pts === 2000 ? 'silver' : 'gold'
+                return (
+                  <button
+                    key={pts}
+                    className={`btn-points btn-points--${metal} flex-1 ${editPoints === pts ? 'btn-points--selected' : ''}`}
+                    onClick={() => setEditPoints(pts)}
+                  >
+                    {pts}
+                  </button>
+                )
+              })}
             </div>
           </div>
           <div className="flex gap-2 justify-end">
@@ -320,32 +337,50 @@ export function ListDetailPage() {
         </div>
       )}
 
-      <div className="p-4">
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/lists')}>
-              ← Retour
-            </Button>
-            <Button variant="ghost" size="sm" onClick={startEditing}>
-              Modifier
-            </Button>
+      {/* Detachment picker modal (edit mode) */}
+      {showDetachmentModal && (
+        <div className="detachment-modal-overlay" onClick={() => setShowDetachmentModal(false)}>
+          <div
+            className="detachment-modal"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              '--tile-primary': 'var(--color-primary)',
+              '--tile-accent': 'var(--color-accent)',
+              '--tile-surface': 'var(--color-surface)',
+            } as React.CSSProperties}
+          >
+            <h3 className="detachment-modal__title">Détachement</h3>
+            <div className="detachment-modal__list">
+              {factionDetachments.map((det) => (
+                <button
+                  key={det.id}
+                  type="button"
+                  className={`detachment-modal__item ${editDetachmentId === det.id ? 'detachment-modal__item--active' : ''}`}
+                  onClick={() => {
+                    setEditDetachmentId(det.id)
+                    setEditDetachmentName(det.name)
+                    setShowDetachmentModal(false)
+                  }}
+                >
+                  {det.name}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            {list.units.length > 0 && (
-              <>
-                <Button variant="secondary" size="sm" onClick={() => navigate(`/game-mode/${safeListId}`)}>
-                  Jouer
-                </Button>
-                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                  {squadCount} escouade{squadCount > 1 ? 's' : ''}
-                </span>
-              </>
-            )}
+        </div>
+      )}
+
+      <div className="p-4">
+        {list.units.length > 0 && (
+          <div className="flex items-center gap-2 mb-4">
+            <Button variant="secondary" size="sm" onClick={() => navigate(`/game-mode/${safeListId}`)}>
+              Jouer
+            </Button>
             <Button variant="primary" size="sm" onClick={() => navigate(`/lists/${safeListId}/add-unit`)}>
               + Ajouter
             </Button>
           </div>
-        </div>
+        )}
 
         {list.units.length === 0 ? (
           <EmptyState
@@ -428,7 +463,12 @@ export function ListDetailPage() {
             </h3>
             <div className="flex flex-col gap-2">
               {availableEnhancements
-                .filter((enh) => !usedEnhancementIds.has(enh.id))
+                .filter((enh) => {
+                  if (usedEnhancementIds.has(enh.id)) return false
+                  const enhUnit = enhancementUnitIndex !== null ? list.units[enhancementUnitIndex] : null
+                  const enhDs = enhUnit ? faction?.datasheets.find((d) => d.id === enhUnit.datasheetId) : undefined
+                  return enhDs ? canEquipEnhancement(enh, enhDs) : true
+                })
                 .map((enh) => (
                   <button
                     key={enh.id}

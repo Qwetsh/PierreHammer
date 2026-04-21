@@ -211,6 +211,157 @@
 }
 
 
+/* === POINTS LIMIT — Aged Metal Coins === */
+.btn-points {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  border: none;
+  min-height: 44px;
+  min-width: 64px;
+  padding: 8px 18px;
+  border-radius: 6px;
+  overflow: hidden;
+  isolation: isolate;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.btn-points:active {
+  transform: scale(0.95);
+}
+
+/* Shine sweep */
+.btn-points::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.1) 45%,
+    rgba(255, 255, 255, 0.18) 50%,
+    rgba(255, 255, 255, 0.1) 55%,
+    transparent 65%
+  );
+  transform: translateX(-110%);
+  transition: transform 0.5s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.btn-points:hover::before {
+  transform: translateX(110%);
+}
+
+/* Inner frame */
+.btn-points::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* --- BRONZE (1000 pts) --- */
+.btn-points--bronze {
+  background:
+    repeating-linear-gradient(90deg, transparent, rgba(255,255,255,0.01) 1px, transparent 2px, transparent 4px),
+    linear-gradient(160deg, #3d2814 0%, #6b4226 25%, #a0673c 45%, #c98a52 50%, #8b5e34 55%, #5c3a1e 80%, #3d2814 100%);
+  color: #d4a574;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.7), 0 0 6px rgba(166,120,70,0.3);
+  border: 1px solid rgba(166,120,70,0.4);
+  border-top-color: rgba(200,150,90,0.5);
+  border-bottom-color: rgba(80,50,20,0.6);
+  box-shadow:
+    0 2px 8px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(200,160,100,0.15),
+    inset 0 -1px 0 rgba(0,0,0,0.3);
+}
+
+.btn-points--bronze::after {
+  border: 1px solid rgba(166,120,70,0.12);
+}
+
+.btn-points--bronze:hover {
+  box-shadow:
+    0 0 14px rgba(166,120,70,0.25),
+    0 4px 10px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(200,160,100,0.2),
+    inset 0 -1px 0 rgba(0,0,0,0.3);
+}
+
+/* --- SILVER (2000 pts) --- */
+.btn-points--silver {
+  background:
+    repeating-linear-gradient(90deg, transparent, rgba(255,255,255,0.015) 1px, transparent 2px, transparent 4px),
+    linear-gradient(160deg, #2a2a30 0%, #4a4a55 25%, #7a7a88 45%, #a0a0b0 50%, #6a6a78 55%, #3a3a42 80%, #2a2a30 100%);
+  color: #c0c0d0;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.7), 0 0 6px rgba(160,160,190,0.3);
+  border: 1px solid rgba(160,160,190,0.35);
+  border-top-color: rgba(200,200,220,0.45);
+  border-bottom-color: rgba(60,60,70,0.6);
+  box-shadow:
+    0 2px 8px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(200,200,220,0.12),
+    inset 0 -1px 0 rgba(0,0,0,0.3);
+}
+
+.btn-points--silver::after {
+  border: 1px solid rgba(160,160,190,0.1);
+}
+
+.btn-points--silver:hover {
+  box-shadow:
+    0 0 14px rgba(160,160,200,0.2),
+    0 4px 10px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(200,200,220,0.18),
+    inset 0 -1px 0 rgba(0,0,0,0.3);
+}
+
+/* --- GOLD (3000 pts) --- */
+.btn-points--gold {
+  background:
+    repeating-linear-gradient(90deg, transparent, rgba(255,255,255,0.015) 1px, transparent 2px, transparent 4px),
+    linear-gradient(160deg, #3a2e0a 0%, #6b5a1e 25%, #a08c30 45%, #d4b844 50%, #9a8428 55%, #5c4a14 80%, #3a2e0a 100%);
+  color: #f0d860;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.7), 0 0 8px rgba(212,184,68,0.35);
+  border: 1px solid rgba(212,184,68,0.4);
+  border-top-color: rgba(240,220,100,0.5);
+  border-bottom-color: rgba(80,60,10,0.6);
+  box-shadow:
+    0 2px 8px rgba(0,0,0,0.4),
+    0 0 8px rgba(212,184,68,0.1),
+    inset 0 1px 0 rgba(240,220,100,0.15),
+    inset 0 -1px 0 rgba(0,0,0,0.3);
+}
+
+.btn-points--gold::after {
+  border: 1px solid rgba(212,184,68,0.12);
+}
+
+.btn-points--gold:hover {
+  box-shadow:
+    0 0 18px rgba(212,184,68,0.3),
+    0 4px 10px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(240,220,100,0.22),
+    inset 0 -1px 0 rgba(0,0,0,0.3);
+}
+
+/* --- SELECTED STATE (any metal) --- */
+.btn-points--selected {
+  transform: scale(1.05);
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+
 /* === SIZE VARIANTS === */
 .btn-sm {
   padding: 6px 14px;

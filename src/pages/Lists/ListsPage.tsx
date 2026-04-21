@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useListsStore } from '@/stores/listsStore'
 import { useGameDataStore } from '@/stores/gameDataStore'
 import { useGameData } from '@/hooks/useGameData'
+import { useFactionTheme } from '@/hooks/useFactionTheme'
 import { calculateTotalPoints, countSquads } from '@/utils/pointsCalculator'
 import { FactionPicker } from '@/components/domain/FactionPicker'
 import { Button } from '@/components/ui/Button'
@@ -11,6 +12,107 @@ import type { PointsLimit } from '@/types/armyList.types'
 import type { Detachment } from '@/types/gameData.types'
 
 const pointsOptions: PointsLimit[] = [1000, 2000, 3000]
+const SWIPE_THRESHOLD = 80
+
+function SwipeableListItem({
+  children,
+  factionId,
+  onTap,
+  onDelete,
+}: {
+  children: React.ReactNode
+  factionId?: string
+  onTap: () => void
+  onDelete: () => void
+}) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const startX = useRef(0)
+  const startY = useRef(0)
+  const currentX = useRef(0)
+  const swiping = useRef(false)
+  const isOpen = useRef(false)
+  const [offset, setOffset] = useState(0)
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    startX.current = e.touches[0].clientX
+    startY.current = e.touches[0].clientY
+    swiping.current = false
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const dx = e.touches[0].clientX - startX.current
+    const dy = e.touches[0].clientY - startY.current
+
+    // If vertical scroll is dominant, ignore
+    if (!swiping.current && Math.abs(dy) > Math.abs(dx)) return
+
+    swiping.current = true
+    const base = isOpen.current ? -SWIPE_THRESHOLD : 0
+    currentX.current = Math.min(0, Math.max(-SWIPE_THRESHOLD, base + dx))
+    setOffset(currentX.current)
+  }
+
+  const handleTouchEnd = () => {
+    if (!swiping.current) return
+    if (currentX.current < -SWIPE_THRESHOLD / 2) {
+      setOffset(-SWIPE_THRESHOLD)
+      isOpen.current = true
+    } else {
+      setOffset(0)
+      isOpen.current = false
+    }
+  }
+
+  const handleClick = () => {
+    if (isOpen.current) {
+      setOffset(0)
+      isOpen.current = false
+    } else if (!swiping.current) {
+      onTap()
+    }
+  }
+
+  return (
+    <div
+      className="relative mb-3 overflow-hidden rounded-lg"
+      style={{ minHeight: '44px' }}
+      data-faction={factionId}
+    >
+      {/* Delete button behind — only visible when swiped */}
+      {offset < 0 && (
+        <div
+          className="absolute right-0 top-0 bottom-0 flex items-center justify-center cursor-pointer"
+          style={{
+            width: `${SWIPE_THRESHOLD}px`,
+            backgroundColor: 'var(--color-error)',
+          }}
+          onClick={onDelete}
+        >
+          <span className="text-xs font-bold text-white uppercase" style={{ fontFamily: 'var(--font-display)', letterSpacing: '0.05em' }}>
+            Suppr.
+          </span>
+        </div>
+      )}
+
+      {/* Foreground card */}
+      <div
+        ref={containerRef}
+        className="list-card"
+        style={{
+          transform: `translateX(${offset}px)`,
+          transition: swiping.current ? 'none' : 'transform 0.25s ease',
+          zIndex: 1,
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onClick={handleClick}
+      >
+        {children}
+      </div>
+    </div>
+  )
+}
 
 export function ListsPage() {
   const navigate = useNavigate()
@@ -21,6 +123,8 @@ export function ListsPage() {
   const { factionIndex } = useGameData()
   const loadedFactions = useGameDataStore((s) => s.loadedFactions)
   const loadFaction = useGameDataStore((s) => s.loadFaction)
+
+  useFactionTheme(null)
 
   const allListsForLoad = Object.values(lists)
   useEffect(() => {
@@ -34,7 +138,6 @@ export function ListsPage() {
   const [selectedDetachment, setSelectedDetachment] = useState<Detachment | null>(null)
   const [detachment, setDetachment] = useState('')
   const [pointsLimit, setPointsLimit] = useState<PointsLimit>(2000)
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   const allLists = getAllLists()
 
@@ -61,15 +164,6 @@ export function ListsPage() {
     setDetachment('')
     setPointsLimit(2000)
     navigate(`/lists/${id}`)
-  }
-
-  const handleDelete = (listId: string) => {
-    if (confirmDeleteId === listId) {
-      deleteList(listId)
-      setConfirmDeleteId(null)
-    } else {
-      setConfirmDeleteId(listId)
-    }
   }
 
   const totalPoints = (listId: string) => {
@@ -124,51 +218,21 @@ export function ListsPage() {
               aria-label="Nom de la liste"
             />
 
-            {factionDetachments.length > 0 ? (
-              <select
-                value={selectedDetachment?.id ?? ''}
-                onChange={(e) => {
-                  const det = factionDetachments.find((d) => d.id === e.target.value) ?? null
-                  setSelectedDetachment(det)
-                  setDetachment(det?.name ?? '')
-                }}
-                className="w-full rounded-lg px-3 py-2 bg-transparent outline-none min-h-[44px]"
-                style={{ color: 'var(--color-text)', border: '1px solid var(--color-text-muted)', backgroundColor: 'var(--color-surface)' }}
-                aria-label="Détachement"
-              >
-                <option value="">— Choisir un détachement —</option>
-                {factionDetachments.map((det) => (
-                  <option key={det.id} value={det.id}>{det.name}</option>
-                ))}
-              </select>
-            ) : (
-              <input
-                type="text"
-                value={detachment}
-                onChange={(e) => setDetachment(e.target.value)}
-                placeholder="Détachement (ex: Gladius Task Force)"
-                className="w-full rounded-lg px-3 py-2 bg-transparent outline-none min-h-[44px]"
-                style={{ color: 'var(--color-text)', border: '1px solid var(--color-text-muted)' }}
-                aria-label="Détachement"
-              />
-            )}
-
             <div>
               <p className="text-sm mb-2" style={{ color: 'var(--color-text-muted)' }}>Limite de points</p>
-              <div className="flex gap-2">
-                {pointsOptions.map((pts) => (
-                  <button
-                    key={pts}
-                    className="px-4 py-2 rounded-lg text-sm font-medium min-h-[44px] cursor-pointer border-none"
-                    style={{
-                      backgroundColor: pointsLimit === pts ? 'var(--color-primary)' : 'var(--color-bg)',
-                      color: pointsLimit === pts ? '#ffffff' : 'var(--color-text)',
-                    }}
-                    onClick={() => setPointsLimit(pts)}
-                  >
-                    {pts}
-                  </button>
-                ))}
+              <div className="flex gap-3">
+                {pointsOptions.map((pts) => {
+                  const metal = pts === 1000 ? 'bronze' : pts === 2000 ? 'silver' : 'gold'
+                  return (
+                    <button
+                      key={pts}
+                      className={`btn-points btn-points--${metal} ${pointsLimit === pts ? 'btn-points--selected' : ''}`}
+                      onClick={() => setPointsLimit(pts)}
+                    >
+                      {pts}
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
@@ -179,6 +243,12 @@ export function ListsPage() {
                   factions={factionIndex.factions}
                   onSelect={handleSelectFaction}
                   selectedSlug={selectedFaction}
+                  detachments={factionDetachments}
+                  selectedDetachment={selectedDetachment}
+                  onDetachmentChange={(det) => {
+                    setSelectedDetachment(det)
+                    setDetachment(det?.name ?? '')
+                  }}
                 />
               </div>
             )}
@@ -196,37 +266,17 @@ export function ListsPage() {
       )}
 
       {allLists.map((list) => (
-        <div
+        <SwipeableListItem
           key={list.id}
-          className="rounded-lg p-3 mb-3 cursor-pointer"
-          style={{ backgroundColor: 'var(--color-surface)' }}
+          factionId={list.factionId}
+          onTap={() => navigate(`/lists/${list.id}`)}
+          onDelete={() => deleteList(list.id)}
         >
-          <div
-            className="flex items-center justify-between"
-            onClick={() => navigate(`/lists/${list.id}`)}
-          >
-            <div>
-              <h3 className="font-semibold" style={{ color: 'var(--color-text)' }}>{list.name}</h3>
-              <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-                {list.factionId} · {list.detachment} · {countSquads(list.units)} escouade{countSquads(list.units) > 1 ? 's' : ''} · {totalPoints(list.id)}/{list.pointsLimit} pts
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-2 mt-2">
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={(e) => { e.stopPropagation(); handleDelete(list.id) }}
-            >
-              {confirmDeleteId === list.id ? 'Confirmer la suppression' : 'Supprimer'}
-            </Button>
-            {confirmDeleteId === list.id && (
-              <Button variant="ghost" size="sm" onClick={() => setConfirmDeleteId(null)}>
-                Annuler
-              </Button>
-            )}
-          </div>
-        </div>
+          <h3 className="font-semibold" style={{ color: 'var(--color-text)' }}>{list.name}</h3>
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+            {list.factionId} · {list.detachment} · {countSquads(list.units)} escouade{countSquads(list.units) > 1 ? 's' : ''} · {totalPoints(list.id)}/{list.pointsLimit} pts
+          </p>
+        </SwipeableListItem>
       ))}
     </div>
   )

@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import { motion } from 'motion/react'
 import { useGameDataStore } from '@/stores/gameDataStore'
 import { useCollectionStore } from '@/stores/collectionStore'
 import { useListsStore } from '@/stores/listsStore'
 import { useFactionTheme } from '@/hooks/useFactionTheme'
+import { isCharacter, canEquipEnhancement } from '@/utils/enhancementUtils'
 import { UnitSheet } from '@/components/domain/UnitSheet'
 import { Button } from '@/components/ui/Button'
 
@@ -45,6 +46,16 @@ export function UnitDetailPage() {
 
   const points = datasheet.pointOptions.length > 0 ? datasheet.pointOptions[0].cost : 0
   const ownedCount = collectionItem?.instances.length ?? 0
+
+  const enhancementGroups = useMemo(() => {
+    if (!isCharacter(datasheet) || !faction?.detachments) return []
+    return faction.detachments
+      .map((det) => ({
+        detachmentName: det.name,
+        enhancements: (det.enhancements ?? []).filter((e) => canEquipEnhancement(e, datasheet)),
+      }))
+      .filter((g) => g.enhancements.length > 0)
+  }, [datasheet, faction])
 
   const handleAddToList = () => {
     const lists = allLists().filter((l) => l.factionId === factionId)
@@ -88,6 +99,7 @@ export function UnitDetailPage() {
       <UnitSheet
         datasheet={datasheet}
         ownedCount={ownedCount}
+        enhancementGroups={enhancementGroups}
         onAddToCollection={() => addItem(unitId, factionId)}
         onUpdateQuantity={handleUpdateQuantity}
         onAddToList={handleAddToList}

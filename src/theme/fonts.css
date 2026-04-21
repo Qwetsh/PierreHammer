@@ -1,0 +1,33 @@
+/* Inquisitor — Dark Heresy gothic font */
+
+@font-face {
+  font-family: 'Inquisitor';
+  src: url('../fonts/Inquisitor.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inquisitor';
+  src: url('../fonts/Inquisitor Italic.otf') format('opentype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inquisitor';
+  src: url('../fonts/Inquisitor Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inquisitor';
+  src: url('../fonts/Inquisitor Bold Italic.otf') format('opentype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}

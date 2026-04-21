@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { Datasheet, Weapon } from '@/types/gameData.types'
+import { useCustomImage } from '@/hooks/useCustomImage'
 import { Button } from '@/components/ui/Button'
 
 interface EquipmentSelectorProps {
@@ -70,6 +71,9 @@ export function EquipmentSelector({
     return datasheet.weapons.map((w) => weaponKey(w))
   })
   const [notes, setNotes] = useState(initialNotes)
+  const { customImageUrl, save: saveImage } = useCustomImage(datasheet.id)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const imageUrl = customImageUrl || datasheet.imageUrl
 
   // Exclusive filters: melee first, then everything else is ranged
   const meleeWeapons = datasheet.weapons.filter((w) => isMelee(w))
@@ -103,14 +107,54 @@ export function EquipmentSelector({
           <div className="w-10 h-1 rounded-full" style={{ backgroundColor: 'var(--color-text-muted)', opacity: 0.4 }} />
         </div>
 
-        {/* Header */}
-        <div className="px-4 pb-3">
-          <h3 className="font-semibold" style={{ color: 'var(--color-text)', fontSize: 'var(--text-lg)' }}>
-            {datasheet.name}
-          </h3>
-          <p className="text-sm" style={{ color: 'var(--color-accent)' }}>
-            {cost} pts
-          </p>
+        {/* Unit image + header */}
+        <div className="flex items-center gap-3 px-4 pb-3">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) saveImage(file)
+              e.target.value = ''
+            }}
+          />
+          <div
+            className="shrink-0 rounded-lg overflow-hidden cursor-pointer"
+            style={{
+              width: '64px',
+              height: '64px',
+              backgroundColor: 'var(--color-bg)',
+              border: '1px solid rgba(255,255,255,0.1)',
+            }}
+            onClick={() => fileInputRef.current?.click()}
+            title="Changer la photo"
+          >
+            {imageUrl ? (
+              <img
+                src={imageUrl}
+                alt={datasheet.name}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <div
+                className="w-full h-full flex items-center justify-center text-xs"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                Photo
+              </div>
+            )}
+          </div>
+          <div className="min-w-0">
+            <h3 className="font-semibold truncate" style={{ color: 'var(--color-text)', fontSize: 'var(--text-lg)' }}>
+              {datasheet.name}
+            </h3>
+            <p className="text-sm" style={{ color: 'var(--color-accent)' }}>
+              {cost} pts
+            </p>
+          </div>
         </div>
 
         {/* Scrollable content */}

@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react'
-import type { Datasheet } from '@/types/gameData.types'
+import type { Datasheet, Enhancement } from '@/types/gameData.types'
 import { Button } from '@/components/ui/Button'
 import { sanitizeHtml } from '@/utils/sanitizeHtml'
 import { useCustomImage } from '@/hooks/useCustomImage'
@@ -26,9 +26,15 @@ function useLongPress(callback: () => void, ms = 500) {
   }
 }
 
+interface EnhancementGroup {
+  detachmentName: string
+  enhancements: Enhancement[]
+}
+
 interface UnitSheetProps {
   datasheet: Datasheet
   ownedCount?: number
+  enhancementGroups?: EnhancementGroup[]
   onAddToCollection?: () => void
   onUpdateQuantity?: (quantity: number) => void
   onAddToList?: () => void
@@ -49,7 +55,7 @@ function SectionTitle({ children }: { children: string }) {
   )
 }
 
-export function UnitSheet({ datasheet, ownedCount = 0, onAddToCollection, onUpdateQuantity, onAddToList }: UnitSheetProps) {
+export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddToCollection, onUpdateQuantity, onAddToList }: UnitSheetProps) {
   const rangedWeapons = datasheet.weapons.filter((w) => w.type === 'Ranged' || (w.range && w.range !== 'Melee'))
   const meleeWeapons = datasheet.weapons.filter((w) => w.type === 'Melee' || w.range === 'Melee')
   const { customImageUrl, save: saveCustomImage, remove: removeCustomImage } = useCustomImage(datasheet.id)
@@ -307,6 +313,62 @@ export function UnitSheet({ datasheet, ownedCount = 0, onAddToCollection, onUpda
                   style={{ color: 'var(--color-text-muted)' }}
                   dangerouslySetInnerHTML={{ __html: sanitizeHtml(a.description) }}
                 />
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Section 6b — Améliorations disponibles */}
+      {enhancementGroups && enhancementGroups.length > 0 && (
+        <>
+          <SectionTitle>Améliorations disponibles</SectionTitle>
+          <div className="flex flex-col gap-4">
+            {enhancementGroups.map((group) => (
+              <div key={group.detachmentName}>
+                <p
+                  className="text-xs font-medium mb-2"
+                  style={{ color: 'var(--color-accent)' }}
+                >
+                  {group.detachmentName}
+                </p>
+                <div className="flex flex-col gap-1.5">
+                  {group.enhancements.map((enh) => (
+                    <div
+                      key={enh.id}
+                      className="rounded-lg px-3 py-2"
+                      style={{ backgroundColor: 'var(--color-surface)' }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span
+                          className="text-sm font-medium"
+                          style={{ color: 'var(--color-text)' }}
+                        >
+                          {enh.name}
+                        </span>
+                        <span
+                          className="text-sm font-semibold shrink-0 ml-3"
+                          style={{ color: 'var(--color-accent)' }}
+                        >
+                          {enh.cost} pts
+                        </span>
+                      </div>
+                      {enh.legend && (
+                        <p
+                          className="text-xs italic mt-0.5"
+                          style={{ color: 'var(--color-text-muted)' }}
+                        >
+                          {enh.legend}
+                        </p>
+                      )}
+                      <p
+                        className="text-xs mt-1"
+                        style={{ color: 'var(--color-text-muted)' }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(enh.description) }}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
             ))}
           </div>
