@@ -168,7 +168,7 @@ export function GameModePage() {
   }
 
   // Find enhancement data from detachment
-  const findEnhancement = (listUnit: ListUnit, factionData: typeof faction) => {
+  const findEnhancement = (listUnit: ListUnit, factionData: typeof faction | null) => {
     if (!listUnit.enhancement || !factionData?.detachments) return undefined
     for (const det of factionData.detachments) {
       const enh = det.enhancements?.find((e) => e.id === listUnit.enhancement?.enhancementId || e.name === listUnit.enhancement?.enhancementName)
@@ -744,7 +744,7 @@ export function GameModePage() {
           defenderDatasheet={simTarget.ds}
           defenderCasualty={(hasSession ? opponentCasualties : casualties)[simTarget.unit.id] ?? null}
           attackerEnhancement={findEnhancement(attackingUnit.unit, faction)}
-          defenderEnhancement={findEnhancement(simTarget.unit, (hasSession ? opponentFaction : faction) ?? undefined)}
+          defenderEnhancement={findEnhancement(simTarget.unit, hasSession ? opponentFaction : faction)}
           attackerStratagems={detachment?.stratagems ?? []}
           defenderStratagems={hasSession
             ? (opponentFaction?.detachments?.find((d) => d.name === opponentList?.detachment)?.stratagems ?? [])

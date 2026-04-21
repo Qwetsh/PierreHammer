@@ -1,4 +1,4 @@
-import type { CombatInput, CombatResult, WeaponKeywords, AbilityEffect } from '@/types/combat.types'
+import type { CombatInput, CombatResult, AbilityEffect } from '@/types/combat.types'
 
 // ============================================================
 // Helpers
@@ -89,7 +89,7 @@ export function resolveCombat(input: CombatInput): CombatResult {
   const {
     weapon,
     weaponKeywords: kw,
-    attackerProfile,
+    attackerProfile: _attackerProfile,
     attackerCount,
     attackerEffects,
     defenderProfile,
