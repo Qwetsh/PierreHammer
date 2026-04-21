@@ -115,7 +115,7 @@ export function CatalogPage() {
             </p>
           )}
         </div>
-        <FactionPicker factions={factionIndex.factions} onSelect={loadFaction} />
+        <FactionPicker factions={factionIndex.factions} onSelect={(slug) => { if (slug) loadFaction(slug) }} />
       </div>
     )
   }

@@ -15,7 +15,7 @@ interface ListsState {
   addUnit: (listId: string, unit: ListUnit) => void
   removeUnit: (listId: string, unitIndex: number) => void
   updateUnit: (listId: string, unitIndex: number, updates: Partial<ListUnit>) => void
-  updateList: (listId: string, updates: Partial<Pick<ArmyList, 'name' | 'detachment' | 'pointsLimit'>>) => void
+  updateList: (listId: string, updates: Partial<Pick<ArmyList, 'name' | 'detachment' | 'detachmentId' | 'pointsLimit'>>) => void
   attachHero: (listId: string, heroIndex: number, squadId: string) => void
   detachHero: (listId: string, heroIndex: number) => void
   setEnhancement: (listId: string, unitIndex: number, enhancement: ListEnhancement | undefined) => void
