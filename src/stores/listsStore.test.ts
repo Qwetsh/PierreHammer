@@ -1,8 +1,26 @@
+import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { useListsStore } from './listsStore'
+
+// Mock the sync service to be a no-op in existing tests
+vi.mock('@/services/listsSyncService', () => ({
+  fetchRemoteLists: vi.fn().mockResolvedValue([]),
+  pushList: vi.fn().mockResolvedValue(null),
+  updateRemoteList: vi.fn().mockResolvedValue(true),
+  deleteRemoteList: vi.fn().mockResolvedValue(true),
+  setListPublic: vi.fn().mockResolvedValue(true),
+}))
+
+// Mock authStore — mutable for per-test override
+let mockAuthState = { user: null as { id: string } | null, isAuthenticated: false }
+vi.mock('@/stores/authStore', () => ({
+  useAuthStore: {
+    getState: () => ({ ...mockAuthState, loading: false, initialize: vi.fn(), signUp: vi.fn(), signIn: vi.fn(), signOut: vi.fn() }),
+  },
+}))
 
 describe('listsStore', () => {
   beforeEach(() => {
-    useListsStore.setState({ lists: {} })
+    useListsStore.setState({ lists: {}, syncing: false })
   })
 
   it('creates a list and returns its id', () => {
@@ -54,5 +72,66 @@ describe('listsStore', () => {
     const list = useListsStore.getState().getList(id)
     expect(list?.name).toBe('New Name')
     expect(list?.pointsLimit).toBe(3000)
+  })
+})
+
+describe('listsStore syncOnLogin', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useListsStore.setState({ lists: {}, syncing: false })
+    mockAuthState = { user: null, isAuthenticated: false }
+  })
+
+  it('merges remote lists on login', async () => {
+    useListsStore.setState({
+      lists: {
+        'local-1': {
+          id: 'local-1',
+          name: 'Local List',
+          factionId: 'orks',
+          detachment: 'Waaagh',
+          pointsLimit: 1000,
+          units: [],
+          createdAt: 1000,
+        },
+      },
+    })
+
+    mockAuthState = { user: { id: 'user-uuid' }, isAuthenticated: true }
+
+    const syncModule = await import('@/services/listsSyncService')
+    vi.mocked(syncModule.fetchRemoteLists).mockResolvedValue([
+      {
+        id: 'remote-uuid',
+        remoteId: 'remote-uuid',
+        name: 'Remote List',
+        factionId: 'space-marines',
+        detachment: 'Gladius',
+        pointsLimit: 2000,
+        units: [],
+        createdAt: 2000,
+        isPublic: false,
+      },
+    ])
+    vi.mocked(syncModule.pushList).mockResolvedValue('new-remote-uuid')
+
+    await useListsStore.getState().syncOnLogin()
+
+    const lists = useListsStore.getState().getAllLists()
+    expect(lists).toHaveLength(2)
+
+    const names = lists.map((l) => l.name)
+    expect(names).toContain('Remote List')
+    expect(names).toContain('Local List')
+
+    const localList = lists.find((l) => l.name === 'Local List')
+    expect(localList?.remoteId).toBe('new-remote-uuid')
+  })
+
+  it('does nothing if not authenticated', async () => {
+    mockAuthState = { user: null, isAuthenticated: false }
+
+    await useListsStore.getState().syncOnLogin()
+    expect(useListsStore.getState().syncing).toBe(false)
   })
 })

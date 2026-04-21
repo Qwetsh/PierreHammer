@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router'
 import { AnimatePresence, motion } from 'motion/react'
 import { AppShell } from '@/components/layout/AppShell'
@@ -10,6 +10,7 @@ import { OfflineBanner } from '@/components/ui/OfflineBanner'
 import { useGameDataStore } from '@/stores/gameDataStore'
 import { useOnlineStatus } from '@/hooks/useOnlineStatus'
 import { useColorVision } from '@/hooks/useColorVision'
+import { useAuthStore } from '@/stores/authStore'
 
 const CollectionPage = lazy(() => import('./pages/Collection/CollectionPage').then(m => ({ default: m.CollectionPage })))
 const ListsPage = lazy(() => import('./pages/Lists/ListsPage').then(m => ({ default: m.ListsPage })))
@@ -21,6 +22,10 @@ const ProfilePage = lazy(() => import('./pages/Profile/ProfilePage').then(m => (
 const GameModePage = lazy(() => import('./pages/GameMode/GameModePage').then(m => ({ default: m.GameModePage })))
 const ComparatorPage = lazy(() => import('./pages/Comparator/ComparatorPage').then(m => ({ default: m.ComparatorPage })))
 const CalculatorPage = lazy(() => import('./pages/Calculator/CalculatorPage').then(m => ({ default: m.CalculatorPage })))
+const FriendsPage = lazy(() => import('./pages/Friends/FriendsPage').then(m => ({ default: m.FriendsPage })))
+const FriendListsPage = lazy(() => import('./pages/Friends/FriendListsPage').then(m => ({ default: m.FriendListsPage })))
+const SimulatorPage = lazy(() => import('./pages/Simulator/SimulatorPage').then(m => ({ default: m.SimulatorPage })))
+const GameHistoryPage = lazy(() => import('./pages/Profile/GameHistoryPage').then(m => ({ default: m.GameHistoryPage })))
 
 function NotFoundPage() {
   const navigate = useNavigate()
@@ -74,7 +79,12 @@ function AnimatedRoutes() {
             <Route path="/compare" element={<ComparatorPage />} />
             <Route path="/calculator" element={<CalculatorPage />} />
             <Route path="/game-mode/:listId" element={<GameModePage />} />
+            <Route path="/simulate" element={<SimulatorPage />} />
+            <Route path="/simulate/:factionId/:datasheetId" element={<SimulatorPage />} />
+            <Route path="/friends" element={<FriendsPage />} />
+            <Route path="/friends/:friendId/lists" element={<FriendListsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/profile/history" element={<GameHistoryPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
@@ -105,6 +115,8 @@ function OfflineIndicator() {
 
 export function App() {
   useColorVision()
+  const initialize = useAuthStore((s) => s.initialize)
+  useEffect(() => { initialize() }, [initialize])
 
   return (
     <ErrorBoundary>

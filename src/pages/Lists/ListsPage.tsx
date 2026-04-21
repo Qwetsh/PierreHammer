@@ -5,6 +5,7 @@ import { useGameDataStore } from '@/stores/gameDataStore'
 import { useGameData } from '@/hooks/useGameData'
 import { useFactionTheme } from '@/hooks/useFactionTheme'
 import { calculateTotalPoints, countSquads } from '@/utils/pointsCalculator'
+import { useAuthStore } from '@/stores/authStore'
 import { FactionPicker } from '@/components/domain/FactionPicker'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -124,6 +125,9 @@ export function ListsPage() {
   const loadedFactions = useGameDataStore((s) => s.loadedFactions)
   const loadFaction = useGameDataStore((s) => s.loadFaction)
 
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const syncing = useListsStore((s) => s.syncing)
+
   useFactionTheme(null)
 
   const allListsForLoad = Object.values(lists)
@@ -190,7 +194,14 @@ export function ListsPage() {
   return (
     <div className="p-4">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="font-bold" style={{ fontSize: 'var(--text-xl)' }}>Mes Listes</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="font-bold" style={{ fontSize: 'var(--text-xl)' }}>Mes Listes</h1>
+          {isAuthenticated && syncing && (
+            <span className="text-xs px-2 py-0.5 rounded" style={{ backgroundColor: 'var(--color-accent)', color: '#fff', opacity: 0.8 }}>
+              Sync...
+            </span>
+          )}
+        </div>
         {!showForm && (
           <Button variant="primary" size="sm" onClick={() => setShowForm(true)}>
             + Nouvelle
@@ -272,7 +283,33 @@ export function ListsPage() {
           onTap={() => navigate(`/lists/${list.id}`)}
           onDelete={() => deleteList(list.id)}
         >
-          <h3 className="font-semibold" style={{ color: 'var(--color-text)' }}>{list.name}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold" style={{ color: 'var(--color-text)' }}>{list.name}</h3>
+            {isAuthenticated && (
+              <>
+                <span
+                  className="text-[10px] px-1.5 py-0.5 rounded"
+                  style={{
+                    backgroundColor: list.remoteId ? 'var(--color-success)' : 'var(--color-warning)',
+                    color: '#fff',
+                    opacity: 0.9,
+                  }}
+                  title={list.remoteId ? 'Synchronisée' : 'Locale uniquement'}
+                >
+                  {list.remoteId ? '☁' : '📱'}
+                </span>
+                {list.remoteId && (
+                  <span
+                    className="text-[10px] px-1 py-0.5 rounded"
+                    style={{ color: 'var(--color-text-muted)', opacity: 0.8 }}
+                    title={list.isPublic ? 'Publique' : 'Privée'}
+                  >
+                    {list.isPublic ? '🔓' : '🔒'}
+                  </span>
+                )}
+              </>
+            )}
+          </div>
           <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
             {list.factionId} · {list.detachment} · {countSquads(list.units)} escouade{countSquads(list.units) > 1 ? 's' : ''} · {totalPoints(list.id)}/{list.pointsLimit} pts
           </p>

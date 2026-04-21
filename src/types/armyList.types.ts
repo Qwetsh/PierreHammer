@@ -27,4 +27,6 @@ export interface ArmyList {
   pointsLimit: PointsLimit
   units: ListUnit[]
   createdAt: number
+  remoteId?: string
+  isPublic?: boolean
 }

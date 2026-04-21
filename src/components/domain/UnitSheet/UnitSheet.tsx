@@ -38,6 +38,7 @@ interface UnitSheetProps {
   onAddToCollection?: () => void
   onUpdateQuantity?: (quantity: number) => void
   onAddToList?: () => void
+  onSimulate?: () => void
 }
 
 function isEpicHero(datasheet: Datasheet): boolean {
@@ -55,7 +56,7 @@ function SectionTitle({ children }: { children: string }) {
   )
 }
 
-export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddToCollection, onUpdateQuantity, onAddToList }: UnitSheetProps) {
+export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddToCollection, onUpdateQuantity, onAddToList, onSimulate }: UnitSheetProps) {
   const rangedWeapons = datasheet.weapons.filter((w) => w.type === 'Ranged' || (w.range && w.range !== 'Melee'))
   const meleeWeapons = datasheet.weapons.filter((w) => w.type === 'Melee' || w.range === 'Melee')
   const { customImageUrl, save: saveCustomImage, remove: removeCustomImage } = useCustomImage(datasheet.id)
@@ -193,6 +194,11 @@ export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddT
         <Button variant="secondary" size="sm" disabled={!onAddToList} onClick={onAddToList}>
           Ajouter à une liste
         </Button>
+        {onSimulate && (
+          <Button variant="ghost" size="sm" onClick={onSimulate}>
+            Simuler
+          </Button>
+        )}
       </div>
 
       {/* Section 3 — Profil */}

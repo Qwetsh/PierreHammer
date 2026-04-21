@@ -14,6 +14,8 @@ import type { PointsLimit, ListUnit } from '@/types/armyList.types'
 import type { Datasheet, Detachment, Enhancement } from '@/types/gameData.types'
 import { isCharacter, canEquipEnhancement } from '@/utils/enhancementUtils'
 import { useFactionTheme } from '@/hooks/useFactionTheme'
+import { useAuthStore } from '@/stores/authStore'
+import { setListPublic } from '@/services/listsSyncService'
 
 export function ListDetailPage() {
   const { listId } = useParams<{ listId: string }>()
@@ -31,6 +33,7 @@ export function ListDetailPage() {
   const loadedFactions = useGameDataStore((s) => s.loadedFactions)
   const loadFaction = useGameDataStore((s) => s.loadFaction)
   const isOwned = useCollectionStore((s) => s.isOwned)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
 
   useEffect(() => {
     if (list) {
@@ -380,6 +383,22 @@ export function ListDetailPage() {
               + Ajouter
             </Button>
           </div>
+        )}
+
+        {/* Public/Private toggle — only for authenticated users with a synced list */}
+        {isAuthenticated && list.remoteId && (
+          <button
+            className="flex items-center gap-2 mb-4 text-sm bg-transparent border-none cursor-pointer"
+            style={{ color: 'var(--color-text-muted)' }}
+            onClick={() => {
+              const newPublic = !list.isPublic
+              updateList(safeListId, { isPublic: newPublic })
+              setListPublic(list.remoteId!, newPublic)
+            }}
+          >
+            <span>{list.isPublic ? '🔓' : '🔒'}</span>
+            <span>{list.isPublic ? 'Publique' : 'Privée'}</span>
+          </button>
         )}
 
         {list.units.length === 0 ? (

@@ -789,3 +789,66 @@ So that **je sache que cette app a été faite spécialement pour moi**.
 **Then** des easter eggs personnalisés se déclenchent (FR38)
 **And** les easter eggs ne gênent pas l'utilisation normale de l'app
 **And** les contenus personnalisés sont discrets mais chaleureux
+
+---
+
+## Epic 10 : Fondations Cloud (Supabase, Auth, Amis) *(Phase 3)*
+
+L'app devient connectée : les joueurs peuvent créer un compte, synchroniser leurs listes en ligne, ajouter des amis et consulter leurs listes publiques. Le mode offline reste fonctionnel à 100%.
+
+### Story 10.1 : Intégration Supabase et authentification
+Setup du client Supabase, auth email/password, authStore Zustand, UI connexion/inscription dans ProfilePage. Mode invité préservé.
+
+### Story 10.2 : Migration des army lists vers Supabase
+Tables SQL pour les listes, service de synchronisation local-first, migration des listes localStorage vers Supabase à la première connexion, fallback offline.
+
+### Story 10.3 : Système d'amis et listes partagées
+Tables profiles + friendships, recherche d'utilisateurs, demandes d'ami, page Amis, consultation des listes publiques des amis, toggle public/privé sur les listes.
+
+---
+
+## Epic 11 : Moteur de Combat W40K *(Phase 3)*
+
+Un moteur de simulation de combat qui calcule automatiquement les résultats statistiques (hits, wounds, saves, dégâts) à partir des données d'armes et de profils déjà en mémoire, sans aucune saisie manuelle.
+
+### Story 11.1 : Parser de keywords d'armes
+Parser le champ `Weapon.abilities` (texte brut) en données structurées `WeaponKeywords` (sustained hits, lethal hits, anti-X, melta, blast, etc.). ~46 keywords supportés.
+
+### Story 11.2 : Mapping des abilities et règles de combat
+Registre d'abilities qui mappe les noms d'abilities (Core, Faction, Datasheet) à des effets mécaniques typés (Feel No Pain, Stealth, damage reduction, etc.). Extracteur d'effets de combat pour un Datasheet complet.
+
+### Story 11.3 : Moteur de résolution de combat W40K 10e édition
+Pipeline complet : nombre d'attaques → hit roll → wound roll (table S vs T) → save roll (avec invuln) → dégâts → FnP. Application de tous les keywords d'armes et abilities.
+
+### Story 11.4 : UI de simulation de combat (mode solo)
+Interface pour simuler une attaque entre deux unités quelconques. Sélection d'arme, sélection de cible cross-faction, résultats détaillés par étape, toggles contextuels (demi-portée, charge, stationnaire).
+
+---
+
+## Epic 12 : Mode Partie Multijoueur *(Phase 3)*
+
+Les joueurs peuvent démarrer une session de jeu contre un ami, voir les listes de l'autre, tracker les pertes en temps réel, et simuler des attaques contextuelles en 2 taps.
+
+### Story 12.1 : Game sessions et sélection de l'adversaire
+Créer une session de jeu en sélectionnant un ami et sa liste. Table game_sessions, gameSessionStore, affichage de la liste adverse en lecture seule.
+
+### Story 12.2 : Tracking des pertes en temps réel
+Compteurs de modèles vivants et blessures par unité, synchronisés via Supabase Realtime entre les deux joueurs. Intégration avec le moteur de combat.
+
+### Story 12.3 : Simulation contextuelle en partie (attaque contre escouade adverse)
+"Attaquer..." → sélectionner une cible adverse → résultats automatiques. Arme présélectionnée intelligemment, pertes et enhancements pris en compte. Zero config, 2 taps.
+
+---
+
+## Epic 13 : Polish & Règles Avancées *(Phase 4)*
+
+Stratagèmes activables dans la simulation, profils dégradés, leaders attachés, et historique de parties.
+
+### Story 13.1 : Stratagèmes activables dans la simulation
+Activer un stratagème dans le simulateur, voir son effet en delta sur les résultats, stratagèmes défensifs adverses, filtrage par phase.
+
+### Story 13.2 : Profils dégradés et règles avancées
+Profils dégradés pour véhicules/monstres blessés, unités multi-profil, intégration du leader attaché (armes combinées).
+
+### Story 13.3 : Historique et résumé de partie
+Résumé auto-généré en fin de partie (durée, pertes, MVP), stocké en base, historique consultable depuis le profil.

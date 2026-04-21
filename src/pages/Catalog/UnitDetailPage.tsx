@@ -103,6 +103,7 @@ export function UnitDetailPage() {
         onAddToCollection={() => addItem(unitId, factionId)}
         onUpdateQuantity={handleUpdateQuantity}
         onAddToList={handleAddToList}
+        onSimulate={datasheet.weapons.length > 0 ? () => navigate(`/simulate/${factionId}/${unitId}`) : undefined}
       />
 
       {showListPicker && (
