@@ -11,7 +11,7 @@ export function EnhancementPickerModal({ enhancements, selectedEnhancement, onSe
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} onClick={onClose}>
       <div
-        className="w-full max-w-md rounded-xl p-5 max-h-[80vh] overflow-y-auto"
+        className="w-full max-w-md rounded-xl p-5 max-h-[80vh] lg:max-w-lg lg:p-6 overflow-y-auto"
         style={{ backgroundColor: 'var(--color-bg)' }}
         onClick={(e) => e.stopPropagation()}
       >

@@ -68,7 +68,7 @@ export function SimulatorCard({
     return (
       <>
         <button
-          className="w-full rounded-xl p-6 border-2 border-dashed cursor-pointer flex flex-col items-center justify-center gap-2 bg-transparent transition-colors min-h-[120px]"
+          className="w-full rounded-xl p-6 border-2 border-dashed cursor-pointer flex flex-col items-center justify-center gap-2 bg-transparent transition-colors min-h-[120px] lg:min-h-[240px] lg:flex-1"
           style={{ borderColor: 'var(--color-text-muted)', color: 'var(--color-text-muted)' }}
           onClick={() => setShowFactionPicker(true)}
         >
@@ -103,7 +103,7 @@ export function SimulatorCard({
   return (
     <>
       <div
-        className="w-full rounded-xl overflow-hidden flex flex-col"
+        className="w-full rounded-xl overflow-hidden flex flex-col lg:flex-1"
         style={{ backgroundColor: theme!.surface, border: `1px solid ${theme!.primary}` }}
       >
         {/* Faction header */}
@@ -111,14 +111,14 @@ export function SimulatorCard({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 min-w-0">
               <div
-                className="w-8 h-8 rounded flex items-center justify-center text-xs font-bold shrink-0"
+                className="w-8 h-8 rounded flex items-center justify-center text-xs font-bold shrink-0 lg:w-10 lg:h-10 lg:text-sm"
                 style={{ backgroundColor: theme!.primary, color: theme!.accent }}
               >
                 {factionName?.split(/[\s-]+/).filter((w) => w[0] === w[0]?.toUpperCase()).slice(0, 2).map((w) => w[0]).join('') ?? '?'}
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-bold truncate" style={{ color: theme!.accent }}>{factionName}</p>
-                <p className="text-[10px] truncate" style={{ color: 'var(--color-text-muted)' }}>{detachment?.name ?? ''}</p>
+                <p className="text-xs font-bold truncate lg:text-sm" style={{ color: theme!.accent }}>{factionName}</p>
+                <p className="text-[10px] truncate lg:text-xs" style={{ color: 'var(--color-text-muted)' }}>{detachment?.name ?? ''}</p>
               </div>
             </div>
             <button
@@ -149,7 +149,7 @@ export function SimulatorCard({
             >
               {/* Unit name + change */}
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium truncate" style={{ color: 'var(--color-text)' }}>
+                <span className="text-sm font-medium truncate lg:text-base" style={{ color: 'var(--color-text)' }}>
                   {datasheet.name}
                 </span>
                 <button

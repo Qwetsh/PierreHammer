@@ -227,7 +227,7 @@ export function SimulatorPage() {
   }
 
   return (
-    <div className="p-4 pb-24">
+    <div className="p-4 pb-24 lg:max-w-5xl lg:mx-auto lg:py-8">
       <button
         className="text-sm mb-3 bg-transparent border-none cursor-pointer"
         style={{ color: 'var(--color-accent)' }}
@@ -236,10 +236,10 @@ export function SimulatorPage() {
         ← Retour
       </button>
 
-      <h1 className="font-bold mb-4" style={{ fontSize: 'var(--text-xl)' }}>Simulateur de combat</h1>
+      <h1 className="font-bold mb-4 lg:text-2xl lg:mb-6" style={{ fontSize: 'var(--text-xl)' }}>Simulateur de combat</h1>
 
       {/* ===== CARDS: ATTACKER vs DEFENDER ===== */}
-      <div className="flex flex-col gap-3 mb-4">
+      <div className="flex flex-col gap-3 mb-4 lg:flex-row lg:items-stretch lg:gap-6">
         <SimulatorCard
           role="attacker"
           factions={factions}
@@ -272,8 +272,8 @@ export function SimulatorPage() {
           onReset={() => { setAttacker({ ...emptySide }); setActiveAttackerStrats(new Set()) }}
         />
 
-        <div className="flex justify-center">
-          <span className="text-lg font-bold" style={{ color: 'var(--color-text-muted)' }}>VS</span>
+        <div className="flex justify-center lg:items-center lg:shrink-0">
+          <span className="text-lg font-bold lg:text-2xl" style={{ color: 'var(--color-text-muted)' }}>VS</span>
         </div>
 
         <SimulatorCard
@@ -337,8 +337,8 @@ export function SimulatorPage() {
       {/* ===== STRATAGEMS ===== */}
       {(filteredAttackerStrats.length > 0 || filteredDefenderStrats.length > 0) && attacker.weapon && defender.datasheet && (
         <section className="mb-4">
-          <p className="text-xs font-medium mb-2" style={{ color: 'var(--color-text-muted)' }}>Stratagèmes</p>
-          <div className="flex flex-col gap-1">
+          <p className="text-xs font-medium mb-2 lg:text-sm" style={{ color: 'var(--color-text-muted)' }}>Stratagèmes</p>
+          <div className="flex flex-col gap-1 lg:grid lg:grid-cols-2 lg:gap-2">
             {filteredAttackerStrats.map((strat) => {
               const isActive = activeAttackerStrats.has(strat.id)
               const parsed = parseStratagemEffect(strat)
@@ -387,9 +387,10 @@ export function SimulatorPage() {
       {/* ===== RESULTS ===== */}
       {result && (
         <section>
-          <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--color-text-muted)' }}>Résultats</h2>
+          <h2 className="text-sm font-semibold mb-3 lg:text-base" style={{ color: 'var(--color-text-muted)' }}>Résultats</h2>
 
-          <div className="rounded-lg p-3 mb-3" style={{ backgroundColor: 'var(--color-surface)' }}>
+          <div className="lg:flex lg:gap-6 lg:items-start">
+          <div className="rounded-lg p-3 mb-3 lg:flex-1 lg:p-5" style={{ backgroundColor: 'var(--color-surface)' }}>
             <ResultBar
               label="Attaques"
               value={result.attacksTotal}
@@ -436,14 +437,15 @@ export function SimulatorPage() {
           </div>
 
           {/* Kills */}
-          <div className="rounded-lg p-4 text-center" style={{ backgroundColor: 'var(--color-surface)' }}>
+          <div className="rounded-lg p-4 text-center lg:w-48 lg:shrink-0 lg:p-6" style={{ backgroundColor: 'var(--color-surface)' }}>
             <p className="text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>Kills estimés</p>
-            <p className="text-3xl font-bold" style={{ color: 'var(--color-accent)' }}>
+            <p className="text-3xl font-bold lg:text-4xl" style={{ color: 'var(--color-accent)' }}>
               {round(result.estimatedKills)}
             </p>
             <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
               sur {defender.modelCount} modèle{defender.modelCount > 1 ? 's' : ''} ({defender.datasheet!.profiles[0]?.W}W)
             </p>
+          </div>
           </div>
         </section>
       )}
