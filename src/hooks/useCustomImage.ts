@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { getCustomImageUrl, saveCustomImage, deleteCustomImage } from '@/stores/customImageStore'
 import { uploadImage, deleteImage as deleteRemoteImage, downloadImage } from '@/services/customImageSyncService'
 import { useAuthStore } from '@/stores/authStore'
-import { saveCustomImageBlob, hasCustomImage } from '@/stores/customImageStore'
+import { saveCustomImageBlob } from '@/stores/customImageStore'
 
 /**
  * Hook to manage custom images for a datasheet.
