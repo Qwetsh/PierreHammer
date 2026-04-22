@@ -17,7 +17,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </a>
       <main
         id="main-content"
-        className="p-4"
+        className="p-4 lg:ml-[200px] lg:p-6"
         style={{ paddingBottom: 'calc(56px + env(safe-area-inset-bottom, 0px) + 16px)' }}
       >
         {children}

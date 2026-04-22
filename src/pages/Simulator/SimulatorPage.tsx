@@ -34,14 +34,14 @@ function ResultBar({ label, value, max, detail }: { label: string; value: number
   const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0
   return (
     <div className="mb-2">
-      <div className="flex justify-between text-xs mb-0.5">
+      <div className="flex justify-between text-xs mb-0.5 lg:text-sm">
         <span style={{ color: 'var(--color-text)' }}>{label}</span>
         <span style={{ color: 'var(--color-accent)' }}>
           {round(value)}
           {detail && <span style={{ color: 'var(--color-text-muted)' }}> {detail}</span>}
         </span>
       </div>
-      <div className="rounded-full h-2 overflow-hidden" style={{ backgroundColor: 'var(--color-surface)' }}>
+      <div className="rounded-full h-2 overflow-hidden lg:h-3" style={{ backgroundColor: 'var(--color-surface)' }}>
         <div className="h-full rounded-full transition-all duration-300" style={{ width: `${pct}%`, backgroundColor: 'var(--color-accent)' }} />
       </div>
     </div>
@@ -50,7 +50,7 @@ function ResultBar({ label, value, max, detail }: { label: string; value: number
 
 function KeywordBadge({ text }: { text: string }) {
   return (
-    <span className="text-[10px] px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: 'var(--color-primary)', color: '#fff' }}>
+    <span className="text-[10px] px-1.5 py-0.5 rounded font-medium lg:text-xs lg:px-2 lg:py-1" style={{ backgroundColor: 'var(--color-primary)', color: '#fff' }}>
       {text}
     </span>
   )
@@ -229,7 +229,7 @@ export function SimulatorPage() {
   return (
     <div className="p-4 pb-24 lg:max-w-5xl lg:mx-auto lg:py-8">
       <button
-        className="text-sm mb-3 bg-transparent border-none cursor-pointer"
+        className="text-sm mb-3 bg-transparent border-none cursor-pointer lg:text-base"
         style={{ color: 'var(--color-accent)' }}
         onClick={() => navigate(-1)}
       >
@@ -473,7 +473,7 @@ export function SimulatorPage() {
 function ToggleChip({ label, active, onToggle }: { label: string; active: boolean; onToggle: () => void }) {
   return (
     <button
-      className="text-xs px-3 py-1.5 rounded-full border-none cursor-pointer"
+      className="text-xs px-3 py-1.5 rounded-full border-none cursor-pointer lg:text-sm lg:px-4 lg:py-2"
       style={{
         backgroundColor: active ? 'var(--color-accent)' : 'var(--color-surface)',
         color: active ? '#fff' : 'var(--color-text-muted)',
@@ -495,7 +495,7 @@ function StratagemToggle({ strat, isActive, parsed, variant, onToggle }: {
   const activeColor = variant === 'attacker' ? 'var(--color-accent)' : 'var(--color-error, #ef4444)'
   return (
     <button
-      className="flex items-center justify-between text-xs px-2 py-1.5 rounded border-none cursor-pointer"
+      className="flex items-center justify-between text-xs px-2 py-1.5 rounded border-none cursor-pointer lg:text-sm lg:px-3 lg:py-2"
       style={{
         backgroundColor: isActive ? activeColor : 'var(--color-surface)',
         color: isActive ? '#fff' : variant === 'defender' ? 'var(--color-text-muted)' : 'var(--color-text)',

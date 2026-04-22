@@ -32,6 +32,6 @@ describe('AppShell', () => {
 
   it('renders BottomNav', () => {
     renderWithRouter()
-    expect(screen.getByRole('tablist')).toBeInTheDocument()
+    expect(screen.getAllByRole('tablist').length).toBeGreaterThanOrEqual(1)
   })
 })

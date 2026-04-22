@@ -90,47 +90,99 @@ export function BottomNav() {
   const visibleTabs = tabs.filter((tab) => !tab.authOnly || isAuthenticated)
 
   return (
-    <nav
-      role="tablist"
-      className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around"
-      style={{
-        height: 'calc(60px + env(safe-area-inset-bottom, 0px))',
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-        backgroundColor: 'color-mix(in srgb, var(--color-surface) 85%, transparent)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        borderTop: '1px solid color-mix(in srgb, var(--color-primary) 20%, transparent)',
-      }}
-    >
-      {visibleTabs.map((tab) => (
-        <NavLink
-          key={tab.to}
-          to={tab.to}
-          role="tab"
-          className="relative flex flex-1 flex-col items-center justify-center gap-1 py-2 no-underline transition-all duration-200"
-          style={({ isActive }) => ({
-            color: isActive ? 'var(--color-accent)' : 'var(--color-text-muted)',
-            transform: isActive ? 'translateY(-1px)' : 'none',
-          })}
-        >
-          {({ isActive }) => (
-            <>
-              {isActive && (
-                <span
-                  className="absolute top-0 left-1/2 -translate-x-1/2 rounded-full"
-                  style={{
-                    width: '24px',
-                    height: '3px',
-                    backgroundColor: 'var(--color-accent)',
-                  }}
-                />
+    <>
+      {/* Mobile: bottom nav bar */}
+      <nav
+        role="tablist"
+        className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around lg:hidden"
+        style={{
+          height: 'calc(60px + env(safe-area-inset-bottom, 0px))',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          backgroundColor: 'color-mix(in srgb, var(--color-surface) 85%, transparent)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          borderTop: '1px solid color-mix(in srgb, var(--color-primary) 20%, transparent)',
+        }}
+      >
+        {visibleTabs.map((tab) => (
+          <NavLink
+            key={tab.to}
+            to={tab.to}
+            role="tab"
+            className="relative flex flex-1 flex-col items-center justify-center gap-1 py-2 no-underline transition-all duration-200"
+            style={({ isActive }) => ({
+              color: isActive ? 'var(--color-accent)' : 'var(--color-text-muted)',
+              transform: isActive ? 'translateY(-1px)' : 'none',
+            })}
+          >
+            {({ isActive }) => (
+              <>
+                {isActive && (
+                  <span
+                    className="absolute top-0 left-1/2 -translate-x-1/2 rounded-full"
+                    style={{
+                      width: '24px',
+                      height: '3px',
+                      backgroundColor: 'var(--color-accent)',
+                    }}
+                  />
+                )}
+                {tab.icon}
+                <span className="text-xs font-medium">{tab.label}</span>
+              </>
+            )}
+          </NavLink>
+        ))}
+      </nav>
+
+      {/* Desktop: sidebar */}
+      <nav
+        role="tablist"
+        className="hidden lg:flex fixed top-0 left-0 bottom-0 z-50 flex-col w-[200px] pt-5 pb-4"
+        style={{
+          backgroundColor: 'color-mix(in srgb, var(--color-surface) 92%, transparent)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          borderRight: '1px solid color-mix(in srgb, var(--color-primary) 20%, transparent)',
+        }}
+      >
+        {/* App title */}
+        <div className="flex items-center px-5 pb-4 mb-3" style={{ borderBottom: '1px solid color-mix(in srgb, var(--color-primary) 15%, transparent)' }}>
+          <span className="text-lg font-bold" style={{ color: 'var(--color-accent)' }}>PierreHammer</span>
+        </div>
+
+        <div className="flex flex-col gap-1 px-2 flex-1">
+          {visibleTabs.map((tab) => (
+            <NavLink
+              key={tab.to}
+              to={tab.to}
+              role="tab"
+              className="relative flex items-center gap-3 px-3 py-2.5 rounded-lg no-underline transition-all duration-200"
+              style={({ isActive }) => ({
+                color: isActive ? 'var(--color-accent)' : 'var(--color-text-muted)',
+                backgroundColor: isActive ? 'color-mix(in srgb, var(--color-accent) 12%, transparent)' : 'transparent',
+              })}
+            >
+              {({ isActive }) => (
+                <>
+                  {isActive && (
+                    <span
+                      className="absolute left-0 top-1/2 -translate-y-1/2 rounded-r"
+                      style={{
+                        width: '3px',
+                        height: '20px',
+                        backgroundColor: 'var(--color-accent)',
+                      }}
+                    />
+                  )}
+                  {tab.icon}
+                  <span className="text-sm font-medium">{tab.label}</span>
+                </>
               )}
-              {tab.icon}
-              <span className="text-xs font-medium">{tab.label}</span>
-            </>
-          )}
-        </NavLink>
-      ))}
-    </nav>
+            </NavLink>
+          ))}
+        </div>
+      </nav>
+    </>
   )
 }

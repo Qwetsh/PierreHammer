@@ -11,29 +11,35 @@ function renderWithRouter(initialEntries = ['/collection']) {
 }
 
 describe('BottomNav', () => {
-  it('renders 5 tabs', () => {
+  it('renders 5 tabs per nav (mobile + desktop)', () => {
     renderWithRouter()
     const tabs = screen.getAllByRole('tab')
-    expect(tabs).toHaveLength(5)
+    // 5 tabs in mobile nav + 5 tabs in desktop sidebar = 10
+    expect(tabs).toHaveLength(10)
   })
 
   it('renders tab labels', () => {
     renderWithRouter()
-    expect(screen.getByText('Collection')).toBeInTheDocument()
-    expect(screen.getByText('Mes Listes')).toBeInTheDocument()
-    expect(screen.getByText('Catalogue')).toBeInTheDocument()
-    expect(screen.getByText('Calcul')).toBeInTheDocument()
-    expect(screen.getByText('Profil')).toBeInTheDocument()
+    // Each label appears twice (mobile + desktop)
+    expect(screen.getAllByText('Collection')).toHaveLength(2)
+    expect(screen.getAllByText('Mes Listes')).toHaveLength(2)
+    expect(screen.getAllByText('Catalogue')).toHaveLength(2)
+    expect(screen.getAllByText('Calcul')).toHaveLength(2)
+    expect(screen.getAllByText('Profil')).toHaveLength(2)
   })
 
-  it('has role="tablist" on nav element', () => {
+  it('has role="tablist" on nav elements', () => {
     renderWithRouter()
-    expect(screen.getByRole('tablist')).toBeInTheDocument()
+    const tablists = screen.getAllByRole('tablist')
+    expect(tablists).toHaveLength(2)
   })
 
   it('highlights the active tab', () => {
     renderWithRouter(['/catalog'])
-    const catalogTab = screen.getByText('Catalogue').closest('a')
-    expect(catalogTab).toHaveStyle({ color: 'var(--color-accent)' })
+    const catalogTabs = screen.getAllByText('Catalogue').map((el) => el.closest('a'))
+    // Both mobile and desktop should highlight active tab
+    catalogTabs.forEach((tab) => {
+      expect(tab).toHaveStyle({ color: 'var(--color-accent)' })
+    })
   })
 })

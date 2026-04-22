@@ -75,8 +75,8 @@ export function SimulatorCard({
           <span className="text-2xl">
             {role === 'attacker' ? '\u2694' : '\uD83D\uDEE1'}
           </span>
-          <span className="text-xs font-bold uppercase tracking-wider">{label}</span>
-          <span className="text-[10px]">Choisir une faction</span>
+          <span className="text-xs font-bold uppercase tracking-wider lg:text-base">{label}</span>
+          <span className="text-[10px] lg:text-sm">Choisir une faction</span>
         </button>
 
         {showFactionPicker && (
@@ -122,7 +122,7 @@ export function SimulatorCard({
               </div>
             </div>
             <button
-              className="text-[10px] bg-transparent border-none cursor-pointer shrink-0"
+              className="text-[10px] bg-transparent border-none cursor-pointer shrink-0 lg:text-xs"
               style={{ color: 'var(--color-text-muted)' }}
               onClick={onReset}
             >
@@ -139,8 +139,8 @@ export function SimulatorCard({
               style={{ borderColor: theme!.primary, color: 'var(--color-text-muted)' }}
               onClick={() => setShowUnitSearch(true)}
             >
-              <span className="text-sm font-medium">Unité</span>
-              <span className="text-[10px]">Choisir</span>
+              <span className="text-sm font-medium lg:text-base">Unité</span>
+              <span className="text-[10px] lg:text-sm">Choisir</span>
             </button>
           ) : (
             <div
@@ -153,7 +153,7 @@ export function SimulatorCard({
                   {datasheet.name}
                 </span>
                 <button
-                  className="text-[10px] bg-transparent border-none cursor-pointer shrink-0"
+                  className="text-[10px] bg-transparent border-none cursor-pointer shrink-0 lg:text-xs"
                   style={{ color: theme!.accent }}
                   onClick={() => setShowUnitSearch(true)}
                 >
@@ -163,7 +163,7 @@ export function SimulatorCard({
 
               {/* Weapon */}
               <button
-                className="text-left rounded px-2 py-1.5 border-none cursor-pointer text-xs"
+                className="text-left rounded px-2 py-1.5 border-none cursor-pointer text-xs lg:text-sm lg:py-2"
                 style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: 'var(--color-text)' }}
                 onClick={() => setShowWeaponPicker(true)}
               >
@@ -179,7 +179,7 @@ export function SimulatorCard({
               {/* Enhancement */}
               {enhancements.length > 0 && (
                 <button
-                  className="text-left rounded px-2 py-1.5 border-none cursor-pointer text-xs"
+                  className="text-left rounded px-2 py-1.5 border-none cursor-pointer text-xs lg:text-sm lg:py-2"
                   style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: 'var(--color-text)' }}
                   onClick={() => setShowEnhancementPicker(true)}
                 >
@@ -192,14 +192,14 @@ export function SimulatorCard({
 
               {/* Model count */}
               <div className="flex items-center gap-2">
-                <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>Modèles:</span>
+                <span className="text-[10px] lg:text-xs" style={{ color: 'var(--color-text-muted)' }}>Modèles:</span>
                 <input
                   type="number"
                   min={1}
                   max={30}
                   value={modelCount}
                   onChange={(e) => onModelCountChange(Math.max(1, Number(e.target.value)))}
-                  className="w-14 rounded px-2 py-1 text-xs text-center border-none outline-none"
+                  className="w-14 rounded px-2 py-1 text-xs text-center border-none outline-none lg:text-sm lg:w-16"
                   style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: 'var(--color-text)' }}
                 />
               </div>
