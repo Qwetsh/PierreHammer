@@ -11,6 +11,7 @@ import { useGameDataStore } from '@/stores/gameDataStore'
 import { useOnlineStatus } from '@/hooks/useOnlineStatus'
 import { useColorVision } from '@/hooks/useColorVision'
 import { useAuthStore } from '@/stores/authStore'
+import { useTranslationStore } from '@/stores/translationStore'
 
 const CollectionPage = lazy(() => import('./pages/Collection/CollectionPage').then(m => ({ default: m.CollectionPage })))
 const ListsPage = lazy(() => import('./pages/Lists/ListsPage').then(m => ({ default: m.ListsPage })))
@@ -116,7 +117,9 @@ function OfflineIndicator() {
 export function App() {
   useColorVision()
   const initialize = useAuthStore((s) => s.initialize)
+  const initTranslations = useTranslationStore((s) => s.initialize)
   useEffect(() => { initialize() }, [initialize])
+  useEffect(() => { initTranslations() }, [initTranslations])
 
   return (
     <ErrorBoundary>
