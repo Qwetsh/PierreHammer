@@ -131,102 +131,129 @@ export function UnitCard({ datasheet, owned, instances, onClick, selectable, sel
         </div>
       )}
 
-      {/* Top section: Avatar + Name */}
-      <div className="flex items-center gap-2.5 p-3 pb-2" style={{ position: 'relative', zIndex: 2 }}>
+      {/* Desktop: full-height image on the left */}
+      {hasImage && (
+        <div className="unit-card__image-panel">
+          <img
+            src={imageUrl}
+            alt={datasheet.name}
+            className="unit-card__image-panel-img"
+            onError={() => setImgError(true)}
+            loading="lazy"
+          />
+          <div className="unit-card__image-panel-fade" />
+        </div>
+      )}
+      {!hasImage && (
         <div
-          className={`unit-card__avatar ${hasImage ? 'unit-card__avatar--img' : ''}`}
-          style={hasImage ? {
-            boxShadow: `0 2px 8px ${style.glowColor}, inset 0 1px 0 rgba(255,255,255,0.15)`,
-          } : {
+          className="unit-card__image-panel unit-card__image-panel--initials"
+          style={{
             background: `linear-gradient(135deg, ${style.badgeBg}, color-mix(in srgb, ${style.badgeBg} 60%, #000))`,
-            boxShadow: `0 2px 8px ${style.glowColor}, inset 0 1px 0 rgba(255,255,255,0.15)`,
           }}
         >
-          {hasImage ? (
-            <img
-              src={imageUrl}
-              alt={datasheet.name}
-              className="unit-card__avatar-img"
-              onError={() => setImgError(true)}
-              loading="lazy"
-            />
-          ) : (
-            initials
-          )}
-        </div>
-        <div className="flex flex-col min-w-0 flex-1">
-          <T text={datasheet.name} category="unit" className="unit-card__name truncate" />
-          <div className="flex items-center gap-1.5 mt-0.5">
-            {points && (
-              <span className="unit-card__points">
-                {points} <span className="unit-card__points-label">PTS</span>
-              </span>
-            )}
-            {delta !== 0 && (
-              <span className={`unit-card__delta ${delta > 0 ? 'unit-card__delta--up' : 'unit-card__delta--down'}`}>
-                {delta > 0 ? `+${delta}` : delta}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Stat line — engraved plate */}
-      {profile && (
-        <div className="unit-card__stats">
-          {statLabels.map((stat) => {
-            const val = profile[stat]
-            if (!val) return null
-            return (
-              <div key={stat} className="flex flex-col items-center" style={{ minWidth: '20px' }}>
-                <span style={{ fontSize: '0.5rem', color: 'var(--color-text-muted)', letterSpacing: '0.05em', lineHeight: 1 }}>
-                  {stat}
-                </span>
-                <span className="font-bold" style={{ fontSize: '0.72rem', lineHeight: '1.3', color: 'var(--color-text)' }}>
-                  {val}
-                </span>
-              </div>
-            )
-          })}
+          <span className="unit-card__image-panel-letters">{initials}</span>
         </div>
       )}
 
-      {/* Footer: badges + ownership */}
-      <div className="flex items-center gap-1.5 px-3 py-2 flex-wrap" style={{ position: 'relative', zIndex: 2 }}>
-        {style.badge && (
-          <span
-            className="unit-card__type-badge"
-            style={{
-              background: `linear-gradient(135deg, ${style.badgeBg}, color-mix(in srgb, ${style.badgeBg} 50%, #000))`,
-              boxShadow: `0 1px 4px ${style.glowColor}`,
+      {/* Right side info wrapper (desktop) / full card content (mobile) */}
+      <div className="unit-card__info">
+        {/* Top section: Avatar + Name */}
+        <div className="flex items-center gap-2.5 p-3 pb-2" style={{ position: 'relative', zIndex: 2 }}>
+          <div
+            className={`unit-card__avatar ${hasImage ? 'unit-card__avatar--img' : ''}`}
+            style={hasImage ? {
+              boxShadow: `0 2px 8px ${style.glowColor}, inset 0 1px 0 rgba(255,255,255,0.15)`,
+            } : {
+              background: `linear-gradient(135deg, ${style.badgeBg}, color-mix(in srgb, ${style.badgeBg} 60%, #000))`,
+              boxShadow: `0 2px 8px ${style.glowColor}, inset 0 1px 0 rgba(255,255,255,0.15)`,
             }}
           >
-            <T text={style.badge} category="keyword" />
-          </span>
-        )}
-        {owned !== undefined && owned > 0 && (
-          <div className="flex items-center gap-1">
-            <span className="font-semibold" style={{ color: 'var(--color-success)', fontSize: '0.6rem' }}>
-              x{owned}
-            </span>
-            {instances && instances.length > 0 && (
-              <div className="flex items-center gap-0.5">
-                {instances.map((status, i) => (
-                  <span
-                    key={i}
-                    className="inline-block rounded-full"
-                    style={{
-                      width: '6px',
-                      height: '6px',
-                      backgroundColor: paintDotColors[status],
-                      boxShadow: `0 0 3px ${paintDotColors[status]}`,
-                    }}
-                  />
-                ))}
-              </div>
+            {hasImage ? (
+              <img
+                src={imageUrl}
+                alt={datasheet.name}
+                className="unit-card__avatar-img"
+                onError={() => setImgError(true)}
+                loading="lazy"
+              />
+            ) : (
+              initials
             )}
           </div>
+          <div className="flex flex-col min-w-0 flex-1">
+            <T text={datasheet.name} category="unit" className="unit-card__name truncate" />
+            <div className="flex items-center gap-1.5 mt-0.5">
+              {points && (
+                <span className="unit-card__points">
+                  {points} <span className="unit-card__points-label">PTS</span>
+                </span>
+              )}
+              {delta !== 0 && (
+                <span className={`unit-card__delta ${delta > 0 ? 'unit-card__delta--up' : 'unit-card__delta--down'}`}>
+                  {delta > 0 ? `+${delta}` : delta}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Stat line — engraved plate */}
+        {profile && (
+          <div className="unit-card__stats">
+            {statLabels.map((stat) => {
+              const val = profile[stat]
+              if (!val) return null
+              return (
+                <div key={stat} className="flex flex-col items-center" style={{ minWidth: '20px' }}>
+                  <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', letterSpacing: '0.05em', lineHeight: 1 }}>
+                    {stat}
+                  </span>
+                  <span className="font-bold" style={{ fontSize: '0.85rem', lineHeight: '1.3', color: 'var(--color-text)' }}>
+                    {val}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
         )}
+
+        {/* Footer: badges + ownership */}
+        <div className="flex items-center gap-1.5 px-3 py-2 flex-wrap" style={{ position: 'relative', zIndex: 2 }}>
+          {style.badge && (
+            <span
+              className="unit-card__type-badge"
+              style={{
+                background: `linear-gradient(135deg, ${style.badgeBg}, color-mix(in srgb, ${style.badgeBg} 50%, #000))`,
+                boxShadow: `0 1px 4px ${style.glowColor}`,
+              }}
+            >
+              <T text={style.badge} category="keyword" />
+            </span>
+          )}
+          {owned !== undefined && owned > 0 && (
+            <div className="flex items-center gap-1">
+              <span className="font-semibold" style={{ color: 'var(--color-success)', fontSize: '0.75rem' }}>
+                x{owned}
+              </span>
+              {instances && instances.length > 0 && (
+                <div className="flex items-center gap-0.5">
+                  {instances.map((status, i) => (
+                    <span
+                      key={i}
+                      className="inline-block rounded-full"
+                      style={{
+                        width: '6px',
+                        height: '6px',
+                        backgroundColor: paintDotColors[status],
+                        boxShadow: `0 0 3px ${paintDotColors[status]}`,
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </button>
   )

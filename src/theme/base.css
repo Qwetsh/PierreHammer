@@ -17,13 +17,13 @@
   --font-body: 'EB Garamond', serif;
   --font-mono: 'JetBrains Mono', monospace;
 
-  /* Typographic scale — 1.25 Major Third */
-  --text-sm: 0.8rem;
-  --text-base: 1rem;
-  --text-lg: 1.25rem;
-  --text-xl: 1.563rem;
-  --text-2xl: 1.953rem;
-  --text-3xl: 2.441rem;
+  /* Typographic scale — 1.25 Major Third (bumped +15%) */
+  --text-sm: 0.925rem;
+  --text-base: 1.1rem;
+  --text-lg: 1.4rem;
+  --text-xl: 1.75rem;
+  --text-2xl: 2.2rem;
+  --text-3xl: 2.75rem;
 
   /* Spacing — 4px system */
   --space-1: 4px;

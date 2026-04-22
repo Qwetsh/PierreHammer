@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>PierreHammer — Moteur de Simulation de Combat</title>
+<style>
+  @page { margin: 20mm; size: A4; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a2e; line-height: 1.6; padding: 40px; max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 28px; color: #0f3460; border-bottom: 3px solid #e94560; padding-bottom: 8px; margin-bottom: 24px; }
+  h2 { font-size: 20px; color: #0f3460; margin-top: 32px; margin-bottom: 12px; border-left: 4px solid #e94560; padding-left: 12px; }
+  h3 { font-size: 16px; color: #16213e; margin-top: 20px; margin-bottom: 8px; }
+  p, li { font-size: 14px; margin-bottom: 8px; }
+  ul, ol { padding-left: 24px; margin-bottom: 12px; }
+  code { background: #f0f0f5; padding: 2px 6px; border-radius: 3px; font-family: 'Consolas', 'Courier New', monospace; font-size: 13px; }
+  .formula-box { background: #f8f8fc; border: 1px solid #d0d0e0; border-radius: 8px; padding: 16px 20px; margin: 12px 0; font-family: 'Consolas', monospace; font-size: 14px; line-height: 1.8; }
+  .formula-box .comment { color: #6a6a8a; font-style: italic; }
+  .note { background: #fff8e1; border-left: 4px solid #ffc107; padding: 10px 16px; margin: 12px 0; border-radius: 0 6px 6px 0; font-size: 13px; }
+  .important { background: #fce4ec; border-left: 4px solid #e94560; padding: 10px 16px; margin: 12px 0; border-radius: 0 6px 6px 0; font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+  th { background: #0f3460; color: white; padding: 10px 12px; text-align: left; }
+  td { padding: 8px 12px; border-bottom: 1px solid #e0e0e0; }
+  tr:nth-child(even) { background: #f8f8fc; }
+  .step-num { display: inline-block; background: #e94560; color: white; width: 28px; height: 28px; border-radius: 50%; text-align: center; line-height: 28px; font-weight: bold; font-size: 14px; margin-right: 8px; }
+  .toc { background: #f0f4ff; padding: 20px 24px; border-radius: 8px; margin-bottom: 28px; }
+  .toc a { color: #0f3460; text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .toc li { margin-bottom: 4px; }
+  .header-meta { color: #6a6a8a; font-size: 13px; margin-bottom: 24px; }
+  .flow-diagram { background: #16213e; color: #e0e0e0; border-radius: 8px; padding: 20px; margin: 16px 0; font-family: monospace; font-size: 13px; line-height: 2; text-align: center; }
+  .flow-diagram .arrow { color: #e94560; font-weight: bold; }
+  .flow-diagram .box { background: #0f3460; padding: 4px 12px; border-radius: 4px; display: inline-block; margin: 2px; color: #fff; }
+</style>
+</head>
+<body>
+
+<h1>PierreHammer — Moteur de Simulation de Combat</h1>
+<p class="header-meta">Documentation technique du calcul probabiliste &bull; Warhammer 40K 10e &bull; Version avril 2026</p>
+
+<div class="toc">
+  <strong>Table des mati&egrave;res</strong>
+  <ol>
+    <li><a href="#overview">Vue d'ensemble du pipeline</a></li>
+    <li><a href="#helpers">Fonctions utilitaires</a></li>
+    <li><a href="#step1">Etape 1 — Nombre d'attaques</a></li>
+    <li><a href="#step2">Etape 2 — Jet de touche (Hit Roll)</a></li>
+    <li><a href="#step3">Etape 3 — Jet de blessure (Wound Roll)</a></li>
+    <li><a href="#step4">Etape 4 — Jet de sauvegarde (Save Roll)</a></li>
+    <li><a href="#step5">Etape 5 — Calcul des d&eacute;g&acirc;ts</a></li>
+    <li><a href="#step6">Etape 6 — Insensibilit&eacute; &agrave; la douleur (Feel No Pain)</a></li>
+    <li><a href="#step7">Etape 7 — Estimation des pertes</a></li>
+    <li><a href="#keywords">Mots-cl&eacute;s d'arme et leurs effets</a></li>
+    <li><a href="#modifiers">Syst&egrave;me de modificateurs</a></li>
+    <li><a href="#examples">Exemples concrets</a></li>
+  </ol>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="overview">1. Vue d'ensemble du pipeline</h2>
+
+<p>Le simulateur calcule l'<strong>esp&eacute;rance math&eacute;matique</strong> (moyenne statistique) des d&eacute;g&acirc;ts inflig&eacute;s par une unit&eacute; attaquante &agrave; une unit&eacute; d&eacute;fensive. Il ne fait pas de simulation Monte-Carlo (pas de lancers al&eacute;atoires) : chaque &eacute;tape multiplie une probabilit&eacute; pour obtenir le r&eacute;sultat moyen attendu.</p>
+
+<div class="flow-diagram">
+  <span class="box">Attaques</span>
+  <span class="arrow">&rarr;</span>
+  <span class="box">Touches</span>
+  <span class="arrow">&rarr;</span>
+  <span class="box">Blessures</span>
+  <span class="arrow">&rarr;</span>
+  <span class="box">Sauvegardes</span>
+  <span class="arrow">&rarr;</span>
+  <span class="box">D&eacute;g&acirc;ts</span>
+  <span class="arrow">&rarr;</span>
+  <span class="box">FnP</span>
+  <span class="arrow">&rarr;</span>
+  <span class="box">Pertes</span>
+</div>
+
+<p>Chaque &eacute;tape r&eacute;duit le flux en le multipliant par la probabilit&eacute; de r&eacute;ussite (ou d'&eacute;chec pour les sauvegardes). Les mots-cl&eacute;s d'arme et les capacit&eacute;s cr&eacute;ent des branches parall&egrave;les (ex : <em>Lethal Hits</em> contourne le jet de blessure, <em>Devastating Wounds</em> contourne la sauvegarde).</p>
+
+<!-- ============================================================ -->
+<h2 id="helpers">2. Fonctions utilitaires</h2>
+
+<h3>2.1 Notation de d&eacute;s &rarr; Valeur moyenne</h3>
+<p>Toutes les valeurs de jeu (Attaques, D&eacute;g&acirc;ts, etc.) sont converties en leur <strong>esp&eacute;rance math&eacute;matique</strong> :</p>
+
+<div class="formula-box">
+  <span class="comment">// Formule g&eacute;n&eacute;rale : NdS+B</span><br>
+  moyenne = N &times; (S + 1) / 2 + B<br><br>
+  <span class="comment">// Exemples :</span><br>
+  "3" &rarr; 3 &nbsp;&nbsp;&nbsp; "D6" &rarr; 3.5 &nbsp;&nbsp;&nbsp; "D3" &rarr; 2<br>
+  "2D6" &rarr; 7 &nbsp;&nbsp;&nbsp; "D6+1" &rarr; 4.5 &nbsp;&nbsp;&nbsp; "2D3+3" &rarr; 7
+</div>
+
+<h3>2.2 Probabilit&eacute; de r&eacute;ussite sur D6</h3>
+<p>Pour un seuil T (ex : 3+ signifie r&eacute;ussir sur 3, 4, 5 ou 6) :</p>
+
+<div class="formula-box">
+  P(r&eacute;ussite) = (7 &minus; T) / 6<br><br>
+  <span class="comment">// Le seuil est toujours born&eacute; &agrave; [2, 6]</span><br>
+  <span class="comment">// Un 1 naturel est toujours un &eacute;chec (seuil min = 2)</span><br>
+  <span class="comment">// Un 6 naturel est toujours une r&eacute;ussite (seuil max = 6)</span>
+</div>
+
+<table>
+  <tr><th>Seuil</th><th>Formule</th><th>Probabilit&eacute;</th><th>Pourcentage</th></tr>
+  <tr><td>2+</td><td>(7-2)/6</td><td>5/6</td><td>83.3%</td></tr>
+  <tr><td>3+</td><td>(7-3)/6</td><td>4/6</td><td>66.7%</td></tr>
+  <tr><td>4+</td><td>(7-4)/6</td><td>3/6</td><td>50.0%</td></tr>
+  <tr><td>5+</td><td>(7-5)/6</td><td>2/6</td><td>33.3%</td></tr>
+  <tr><td>6+</td><td>(7-6)/6</td><td>1/6</td><td>16.7%</td></tr>
+</table>
+
+<h3>2.3 Table Force vs Endurance</h3>
+<p>Le seuil de blessure est d&eacute;termin&eacute; par le rapport Force de l'arme (S) / Endurance de la cible (T) :</p>
+
+<table>
+  <tr><th>Condition</th><th>Seuil</th><th>Probabilit&eacute;</th></tr>
+  <tr><td>S &ge; 2&times;T</td><td>2+</td><td>83.3%</td></tr>
+  <tr><td>S &gt; T</td><td>3+</td><td>66.7%</td></tr>
+  <tr><td>S = T</td><td>4+</td><td>50.0%</td></tr>
+  <tr><td>S &lt; T</td><td>5+</td><td>33.3%</td></tr>
+  <tr><td>T &ge; 2&times;S</td><td>6+</td><td>16.7%</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="step1"><span class="step-num">1</span> Nombre d'attaques</h2>
+
+<div class="formula-box">
+  attaques = moy(arme.A) &times; nb_attaquants<br><br>
+  <span class="comment">// + Blast : +1 attaque par tranche de 5 figurines ennemies</span><br>
+  si Blast : attaques += &lfloor;nb_d&eacute;fenseurs / 5&rfloor; &times; nb_attaquants<br><br>
+  <span class="comment">// + Rapid Fire N : +N attaques &agrave; demi-port&eacute;e</span><br>
+  si Rapid Fire &amp;&amp; demi-port&eacute;e : attaques += N &times; nb_attaquants<br><br>
+  <span class="comment">// + Attaques bonus (capacit&eacute;s/am&eacute;liorations)</span><br>
+  attaques += attaques_bonus &times; nb_attaquants
+</div>
+
+<!-- ============================================================ -->
+<h2 id="step2"><span class="step-num">2</span> Jet de touche (Hit Roll)</h2>
+
+<h3>2.1 D&eacute;terminer le seuil de touche</h3>
+<div class="formula-box">
+  seuil = CT/CC de l'arme <span class="comment">// ex: "3+" &rarr; 3</span><br><br>
+  <span class="comment">// Modificateurs appliqu&eacute;s au seuil :</span><br>
+  si Heavy &amp;&amp; stationnaire : seuil &minus;= 1 <span class="comment">// plus facile</span><br>
+  si Stealth (d&eacute;fenseur) &amp;&amp; tir : seuil += 1 <span class="comment">// plus difficile</span><br>
+  seuil &minus;= modificateurs_attaquant(hit) <span class="comment">// ex: +1 to hit &rarr; seuil baisse</span><br>
+  seuil &minus;= modificateurs_d&eacute;fenseur(hit)<br><br>
+  seuil = clamp(seuil, 2, 6)
+</div>
+
+<h3>2.2 Cas sp&eacute;cial : Torrent</h3>
+<div class="note">Les armes <strong>Torrent</strong> touchent automatiquement : toutes les attaques sont des touches. Aucun d&eacute; n'est lanc&eacute;, donc <strong>aucun coup critique n'est g&eacute;n&eacute;r&eacute;</strong> (pas de Sustained Hits, pas de Lethal Hits).</div>
+
+<h3>2.3 Calcul des touches</h3>
+<div class="formula-box">
+  <span class="comment">// Probabilit&eacute; de coup critique (6 naturel)</span><br>
+  P_crit = 1/6<br><br>
+
+  touches = attaques &times; P(seuil)<br>
+  coups_critiques = attaques &times; P_crit<br><br>
+
+  <span class="comment">// Sustained Hits N : chaque critique g&eacute;n&egrave;re N touches suppl&eacute;mentaires</span><br>
+  si Sustained Hits : touches += coups_critiques &times; N<br><br>
+
+  <span class="comment">// Lethal Hits : les critiques deviennent des blessures automatiques</span><br>
+  si Lethal Hits :<br>
+  &nbsp;&nbsp;blessures_l&eacute;tales = coups_critiques<br>
+  &nbsp;&nbsp;touches &minus;= coups_critiques <span class="comment">// retir&eacute;es du flux normal</span>
+</div>
+
+<div class="important">
+  <strong>Lethal Hits</strong> retire les coups critiques du flux de touche et les injecte directement en blessures, contournant compl&egrave;tement l'&eacute;tape 3 (jet de blessure).
+</div>
+
+<!-- ============================================================ -->
+<h2 id="step3"><span class="step-num">3</span> Jet de blessure (Wound Roll)</h2>
+
+<h3>3.1 Seuil de blessure</h3>
+<div class="formula-box">
+  seuil_blessure = table_F_vs_E(Force_arme, Endurance_cible)<br><br>
+  <span class="comment">// Modificateurs :</span><br>
+  si Lance &amp;&amp; charge : seuil &minus;= 1<br>
+  seuil &minus;= modificateurs_attaquant(wound)<br>
+  seuil = clamp(seuil, 2, 6)
+</div>
+
+<h3>3.2 Anti-X (seuil critique modifi&eacute;)</h3>
+<div class="formula-box">
+  <span class="comment">// Normalement, un coup critique blessure = 6 naturel</span><br>
+  seuil_crit_blessure = 6<br><br>
+  <span class="comment">// Anti-X abaisse ce seuil (ex: Anti-Infantry 4+)</span><br>
+  si Anti-X : seuil_crit_blessure = min(6, meilleur_seuil_anti)<br><br>
+  P_crit_blessure = (7 &minus; seuil_crit_blessure) / 6
+</div>
+
+<h3>3.3 Twin-Linked (relance des &eacute;checs)</h3>
+<div class="formula-box">
+  P_blessure_base = (7 &minus; seuil) / 6<br><br>
+  <span class="comment">// Sans Twin-Linked :</span><br>
+  P_effective = P_blessure_base<br><br>
+  <span class="comment">// Avec Twin-Linked (relance tous les &eacute;checs) :</span><br>
+  P_&eacute;chec = 1 &minus; P_blessure_base<br>
+  P_effective = P_base + P_&eacute;chec &times; P_base<br>
+  P_effective = P_base &times; (2 &minus; P_base)
+</div>
+
+<table>
+  <tr><th>Seuil</th><th>P normale</th><th>P avec Twin-Linked</th></tr>
+  <tr><td>2+</td><td>83.3%</td><td>97.2%</td></tr>
+  <tr><td>3+</td><td>66.7%</td><td>88.9%</td></tr>
+  <tr><td>4+</td><td>50.0%</td><td>75.0%</td></tr>
+  <tr><td>5+</td><td>33.3%</td><td>55.6%</td></tr>
+  <tr><td>6+</td><td>16.7%</td><td>30.6%</td></tr>
+</table>
+
+<h3>3.4 Calcul des blessures</h3>
+<div class="formula-box">
+  blessures = touches &times; P_effective + blessures_l&eacute;tales<br><br>
+  <span class="comment">// Devastating Wounds : les critiques deviennent des blessures mortelles</span><br>
+  si Devastating Wounds :<br>
+  &nbsp;&nbsp;blessures_crit = touches &times; P_crit_blessure<br>
+  &nbsp;&nbsp;blessures_mortelles += blessures_crit &times; moy(D&eacute;g&acirc;ts_arme)<br>
+  &nbsp;&nbsp;blessures &minus;= blessures_crit <span class="comment">// retir&eacute;es du flux normal</span>
+</div>
+
+<div class="important">
+  <strong>Devastating Wounds</strong> convertit les blessures critiques en d&eacute;g&acirc;ts mortels qui contournent enti&egrave;rement l'&eacute;tape 4 (sauvegarde). Les d&eacute;g&acirc;ts mortels sont &eacute;gaux au nombre de blessures critiques &times; la valeur moyenne de d&eacute;g&acirc;ts de l'arme.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="step4"><span class="step-num">4</span> Jet de sauvegarde (Save Roll)</h2>
+
+<h3>4.1 Sauvegarde d'armure modifi&eacute;e</h3>
+<div class="formula-box">
+  svg_modifi&eacute;e = Svg + |PA|<br><br>
+  <span class="comment">// Couvert (tir uniquement, si l'arme n'ignore pas le couvert) :</span><br>
+  si couvert &amp;&amp; tir &amp;&amp; !ignore_couvert :<br>
+  &nbsp;&nbsp;svg_modifi&eacute;e &minus;= 1 <span class="comment">// am&eacute;liore la svg (plus bas = mieux)</span>
+</div>
+
+<h3>4.2 Sauvegarde invuln&eacute;rable</h3>
+<div class="formula-box">
+  <span class="comment">// La meilleure entre le profil et les capacit&eacute;s</span><br>
+  meilleure_invuln = min(invuln_profil, invuln_capacit&eacute;)<br><br>
+  <span class="comment">// On utilise la meilleure sauvegarde disponible</span><br>
+  si meilleure_invuln &gt; 0 ET meilleure_invuln &lt; svg_modifi&eacute;e :<br>
+  &nbsp;&nbsp;seuil_svg = meilleure_invuln <span class="comment">// l'invuln est meilleure</span><br>
+  sinon :<br>
+  &nbsp;&nbsp;seuil_svg = svg_modifi&eacute;e<br><br>
+  seuil_svg = clamp(seuil_svg, 2, 6)
+</div>
+
+<div class="note">
+  La sauvegarde invuln&eacute;rable <strong>n'est jamais modifi&eacute;e par la PA</strong>. C'est pour cela que les armes &agrave; forte PA rendent l'invuln plus int&eacute;ressante.
+</div>
+
+<h3>4.3 Blessures non sauvegard&eacute;es</h3>
+<div class="formula-box">
+  P_&eacute;chec_svg = 1 &minus; P(seuil_svg)<br>
+  blessures_non_svg = blessures &times; P_&eacute;chec_svg
+</div>
+
+<table>
+  <tr><th>Svg effective</th><th>P(&eacute;chec svg)</th><th>% blessures qui passent</th></tr>
+  <tr><td>2+</td><td>1/6</td><td>16.7%</td></tr>
+  <tr><td>3+</td><td>2/6</td><td>33.3%</td></tr>
+  <tr><td>4+</td><td>3/6</td><td>50.0%</td></tr>
+  <tr><td>5+</td><td>4/6</td><td>66.7%</td></tr>
+  <tr><td>6+</td><td>5/6</td><td>83.3%</td></tr>
+  <tr><td>&gt; 6 (pas de svg)</td><td>6/6</td><td>100%</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="step5"><span class="step-num">5</span> Calcul des d&eacute;g&acirc;ts</h2>
+
+<div class="formula-box">
+  d&eacute;g&acirc;ts_par_blessure = moy(arme.D)<br><br>
+  <span class="comment">// Melta N : +N d&eacute;g&acirc;ts &agrave; demi-port&eacute;e</span><br>
+  si Melta &amp;&amp; demi-port&eacute;e : d&eacute;g&acirc;ts_par_blessure += N<br><br>
+  <span class="comment">// R&eacute;duction de d&eacute;g&acirc;ts (capacit&eacute; du d&eacute;fenseur), minimum 1</span><br>
+  si r&eacute;duction : d&eacute;g&acirc;ts_par_blessure = max(1, d&eacute;g&acirc;ts &minus; r&eacute;duction)<br><br>
+  <strong>d&eacute;g&acirc;ts_totaux = blessures_non_svg &times; d&eacute;g&acirc;ts_par_blessure + blessures_mortelles</strong>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="step6"><span class="step-num">6</span> Insensibilit&eacute; &agrave; la douleur (Feel No Pain)</h2>
+
+<div class="formula-box">
+  <span class="comment">// Chaque point de d&eacute;g&acirc;t peut &ecirc;tre annul&eacute; individuellement</span><br>
+  si FnP &isin; [2, 6] :<br>
+  &nbsp;&nbsp;P_&eacute;chec_FnP = 1 &minus; P(seuil_FnP)<br>
+  &nbsp;&nbsp;<strong>d&eacute;g&acirc;ts_finaux = d&eacute;g&acirc;ts_totaux &times; P_&eacute;chec_FnP</strong><br><br>
+  sinon :<br>
+  &nbsp;&nbsp;d&eacute;g&acirc;ts_finaux = d&eacute;g&acirc;ts_totaux
+</div>
+
+<table>
+  <tr><th>FnP</th><th>% d&eacute;g&acirc;ts annul&eacute;s</th><th>% d&eacute;g&acirc;ts restants</th></tr>
+  <tr><td>4+</td><td>50.0%</td><td>50.0%</td></tr>
+  <tr><td>5+</td><td>33.3%</td><td>66.7%</td></tr>
+  <tr><td>6+</td><td>16.7%</td><td>83.3%</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="step7"><span class="step-num">7</span> Estimation des pertes</h2>
+
+<div class="formula-box">
+  PV_figurine = Endurance du profil d&eacute;fenseur (W)<br><br>
+  pertes_estim&eacute;es = min(nb_d&eacute;fenseurs, d&eacute;g&acirc;ts_finaux / PV_figurine)
+</div>
+
+<div class="note">
+  Le r&eacute;sultat est plafonn&eacute; au nombre de figurines dans l'unit&eacute; cible. Le simulateur suppose que les d&eacute;g&acirc;ts exc&eacute;dentaires sur une figurine tu&eacute;e ne sont pas perdus (moyenne statistique), ce qui est une simplification par rapport aux r&egrave;gles r&eacute;elles o&ugrave; l'overflow sur une figurine est perdu.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="keywords">8. Mots-cl&eacute;s d'arme et leurs effets</h2>
+
+<table>
+  <tr><th>Mot-cl&eacute;</th><th>Etape affect&eacute;e</th><th>Effet dans le calcul</th></tr>
+  <tr>
+    <td><strong>Torrent</strong></td>
+    <td>Touche</td>
+    <td>Toutes les attaques touchent automatiquement. Pas de critiques.</td>
+  </tr>
+  <tr>
+    <td><strong>Heavy</strong></td>
+    <td>Touche</td>
+    <td>Si stationnaire : seuil de touche &minus;1 (meilleur).</td>
+  </tr>
+  <tr>
+    <td><strong>Blast</strong></td>
+    <td>Attaques</td>
+    <td>+1 attaque par tranche de 5 figurines dans la cible.</td>
+  </tr>
+  <tr>
+    <td><strong>Rapid Fire N</strong></td>
+    <td>Attaques</td>
+    <td>+N attaques &agrave; demi-port&eacute;e.</td>
+  </tr>
+  <tr>
+    <td><strong>Sustained Hits N</strong></td>
+    <td>Touche</td>
+    <td>Chaque 6 naturel g&eacute;n&egrave;re N touches suppl&eacute;mentaires.</td>
+  </tr>
+  <tr>
+    <td><strong>Lethal Hits</strong></td>
+    <td>Touche &rarr; Blessure</td>
+    <td>Les 6 naturels deviennent des blessures automatiques (sautent le jet de blessure).</td>
+  </tr>
+  <tr>
+    <td><strong>Twin-Linked</strong></td>
+    <td>Blessure</td>
+    <td>Relance tous les jets de blessure rat&eacute;s. P<sub>eff</sub> = P(2 &minus; P).</td>
+  </tr>
+  <tr>
+    <td><strong>Anti-X N+</strong></td>
+    <td>Blessure</td>
+    <td>Les blessures critiques se d&eacute;clenchent sur N+ au lieu de 6+.</td>
+  </tr>
+  <tr>
+    <td><strong>Devastating Wounds</strong></td>
+    <td>Blessure &rarr; D&eacute;g&acirc;ts</td>
+    <td>Les blessures critiques deviennent des d&eacute;g&acirc;ts mortels (contournent la svg).</td>
+  </tr>
+  <tr>
+    <td><strong>Lance</strong></td>
+    <td>Blessure</td>
+    <td>Si charge : seuil de blessure &minus;1.</td>
+  </tr>
+  <tr>
+    <td><strong>Melta N</strong></td>
+    <td>D&eacute;g&acirc;ts</td>
+    <td>&Agrave; demi-port&eacute;e : +N d&eacute;g&acirc;ts par blessure.</td>
+  </tr>
+  <tr>
+    <td><strong>Ignores Cover</strong></td>
+    <td>Sauvegarde</td>
+    <td>Le d&eacute;fenseur ne b&eacute;n&eacute;ficie pas du bonus de couvert.</td>
+  </tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="modifiers">9. Syst&egrave;me de modificateurs</h2>
+
+<p>Les modificateurs proviennent de trois sources, fusionn&eacute;s avant le calcul :</p>
+
+<table>
+  <tr><th>Source</th><th>M&eacute;thode d'extraction</th></tr>
+  <tr><td>Capacit&eacute;s de datasheet</td><td>Registre de capacit&eacute;s connu + analyse regex des descriptions</td></tr>
+  <tr><td>Am&eacute;liorations (Enhancements)</td><td>Pattern matching sur la description anglaise</td></tr>
+  <tr><td>Stratag&egrave;mes</td><td>Pattern matching sur la description anglaise (apr&egrave;s nettoyage HTML)</td></tr>
+</table>
+
+<h3>9.1 Types de modificateurs</h3>
+<table>
+  <tr><th>Type</th><th>Exemples</th><th>R&egrave;gle de fusion</th></tr>
+  <tr><td>Modificateur de touche</td><td>+1 to hit rolls</td><td>Somme de toutes les sources</td></tr>
+  <tr><td>Modificateur de blessure</td><td>+1 to wound rolls</td><td>Somme de toutes les sources</td></tr>
+  <tr><td>Feel No Pain</td><td>Feel No Pain 5+</td><td>On garde le meilleur (le plus bas)</td></tr>
+  <tr><td>Sauvegarde invuln&eacute;rable</td><td>4+ invulnerable save</td><td>On garde le meilleur (le plus bas)</td></tr>
+  <tr><td>R&eacute;duction de d&eacute;g&acirc;ts</td><td>Reduce damage by 1</td><td>Somme de toutes les sources</td></tr>
+  <tr><td>Attaques suppl&eacute;mentaires</td><td>+1 to Attacks</td><td>Somme de toutes les sources</td></tr>
+  <tr><td>Stealth</td><td>&minus;1 to hit (tir)</td><td>Bool&eacute;en (un seul suffit)</td></tr>
+  <tr><td>Ignore couvert</td><td>Ignores cover</td><td>Bool&eacute;en (un seul suffit)</td></tr>
+</table>
+
+<h3>9.2 Conditions</h3>
+<p>Les modificateurs peuvent &ecirc;tre conditionnels :</p>
+<ul>
+  <li><code>ranged_only</code> — ne s'applique qu'aux armes de tir</li>
+  <li><code>melee_only</code> — ne s'applique qu'aux armes de m&ecirc;l&eacute;e</li>
+  <li><code>vs_keyword:X</code> — ne s'applique que contre les cibles avec le mot-cl&eacute; X</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="examples">10. Exemples concrets</h2>
+
+<h3>Exemple 1 : Bolters classiques contre Intercessors</h3>
+<div class="formula-box">
+  <span class="comment">// 10 Space Marines tirent avec des Bolt Rifles</span><br>
+  <span class="comment">// A:2, CT:3+, F:4, PA:-1, D:1 vs T:4, Svg:3+, PV:2</span><br><br>
+
+  <strong>Attaques :</strong> 2 &times; 10 = 20<br>
+  <strong>Touches :</strong> 20 &times; P(3+) = 20 &times; 4/6 = 13.33<br>
+  <strong>Blessures :</strong> F4 vs T4 &rarr; 4+ &rarr; 13.33 &times; 3/6 = 6.67<br>
+  <strong>Sauvegarde :</strong> Svg 3+ avec PA-1 &rarr; 4+ &rarr; P(&eacute;chec) = 3/6<br>
+  &nbsp;&nbsp;Non sauvegard&eacute;es : 6.67 &times; 3/6 = 3.33<br>
+  <strong>D&eacute;g&acirc;ts :</strong> 3.33 &times; 1 = 3.33<br>
+  <strong>Pertes :</strong> 3.33 / 2 = <strong>1.67 figurines</strong>
+</div>
+
+<h3>Exemple 2 : Lascannon avec Devastating Wounds</h3>
+<div class="formula-box">
+  <span class="comment">// 1 Lascannon : A:1, CT:3+, F:12, PA:-3, D:D6+1</span><br>
+  <span class="comment">// Devastating Wounds, vs T:10, Svg:2+, Invuln:4+, PV:14</span><br><br>
+
+  <strong>Attaques :</strong> 1<br>
+  <strong>Touches :</strong> 1 &times; 4/6 = 0.667<br>
+  &nbsp;&nbsp;Critiques : 1 &times; 1/6 = 0.167<br><br>
+
+  <strong>Blessures :</strong> F12 vs T10 &rarr; 3+ &rarr; P = 4/6<br>
+  &nbsp;&nbsp;Blessures normales : 0.667 &times; 4/6 = 0.444<br>
+  &nbsp;&nbsp;Blessures critiques (Devastating) : 0.667 &times; 1/6 = 0.111<br>
+  &nbsp;&nbsp;Blessures mortelles : 0.111 &times; moy(D6+1) = 0.111 &times; 4.5 = 0.50<br>
+  &nbsp;&nbsp;Blessures restantes : 0.444 &minus; 0.111 = 0.333<br><br>
+
+  <strong>Sauvegarde :</strong> Svg 2+ avec PA-3 &rarr; 5+, mais Invuln 4+ est meilleur<br>
+  &nbsp;&nbsp;Non sauvegard&eacute;es : 0.333 &times; 3/6 = 0.167<br><br>
+
+  <strong>D&eacute;g&acirc;ts :</strong> 0.167 &times; 4.5 + 0.50 = <strong>1.25 d&eacute;g&acirc;ts</strong><br>
+  <strong>Pertes :</strong> 1.25 / 14 = <strong>0.09 figurine</strong>
+</div>
+
+<h3>Exemple 3 : Twin-Linked + Anti-Infantry 4+</h3>
+<div class="formula-box">
+  <span class="comment">// Flamestorm cannon : A:D6, CT:N/A (Torrent), F:6, PA:-2, D:2</span><br>
+  <span class="comment">// Twin-Linked, Anti-Infantry 4+, vs T:3, Svg:5+, PV:1, 10 figurines</span><br><br>
+
+  <strong>Attaques :</strong> moy(D6) = 3.5<br>
+  <strong>Touches :</strong> Torrent &rarr; 3.5 (auto-touch&eacute;)<br>
+  &nbsp;&nbsp;Pas de critiques (Torrent = pas de d&eacute;)<br><br>
+
+  <strong>Blessures :</strong> F6 vs T3 &rarr; 2+ &rarr; P = 5/6<br>
+  &nbsp;&nbsp;Twin-Linked : P<sub>eff</sub> = 5/6 &times; (2 &minus; 5/6) = 5/6 &times; 7/6 = 35/36 = 97.2%<br>
+  &nbsp;&nbsp;Blessures : 3.5 &times; 35/36 = 3.40<br><br>
+
+  <strong>Sauvegarde :</strong> Svg 5+ avec PA-2 &rarr; 7+ (pas de svg possible)<br>
+  &nbsp;&nbsp;Non sauvegard&eacute;es : 3.40<br><br>
+
+  <strong>D&eacute;g&acirc;ts :</strong> 3.40 &times; 2 = 6.81<br>
+  <strong>Pertes :</strong> 6.81 / 1 = <strong>6.81 figurines</strong> (plafonn&eacute; &agrave; 10)
+</div>
+
+<br><br>
+<hr style="border: none; border-top: 2px solid #e94560; margin: 32px 0;">
+<p style="text-align: center; color: #6a6a8a; font-size: 12px;">
+  PierreHammer &bull; Documentation g&eacute;n&eacute;r&eacute;e automatiquement &bull; Source : <code>src/utils/combatEngine.ts</code>
+</p>
+
+</body>
+</html>

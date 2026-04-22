@@ -62,6 +62,7 @@ function useIsMobile(breakpoint = 1024) {
     typeof window !== 'undefined' ? window.innerWidth < breakpoint : true,
   )
   useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return
     const mql = window.matchMedia(`(max-width: ${breakpoint - 1}px)`)
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
     mql.addEventListener('change', handler)
@@ -150,15 +151,27 @@ export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddT
               {datasheet.pointOptions.map((p) => `${p.cost} pts (${p.models})`).join(' / ')}
             </p>
           )}
-          <p
-            className="text-sm mt-1"
-            style={{ color: ownedCount > 0 ? 'var(--color-success)' : 'var(--color-text-muted)' }}
-          >
-            {ownedCount > 0 ? `Possédé: ${ownedCount}` : 'Non possédé'}
-          </p>
+          <div className="flex items-center gap-3 mt-1">
+            <p
+              className="text-sm"
+              style={{ color: ownedCount > 0 ? 'var(--color-success)' : 'var(--color-text-muted)' }}
+            >
+              {ownedCount > 0 ? `Possédé: ${ownedCount}` : 'Non possédé'}
+            </p>
+            {/* Desktop photo button (visible on lg+) */}
+            {!isMobile && (
+              <button
+                className="text-xs px-2 py-1 rounded border-none cursor-pointer"
+                style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: 'var(--color-text)' }}
+                onClick={(e) => { e.stopPropagation(); setShowPhotoMenu(true) }}
+              >
+                {customImageUrl ? 'Changer la photo' : 'Ajouter une photo'}
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Photo menu (long-press) */}
+        {/* Photo menu (long-press on mobile, button on desktop) */}
         {showPhotoMenu && (
           <div
             className="absolute inset-0 z-20 flex items-center justify-center"

@@ -141,3 +141,24 @@ export async function clearAllCustomImages(): Promise<void> {
   const db = await getDb()
   await db.clear(STORE_NAME)
 }
+
+/** Get the raw blob for a datasheet (for sync). */
+export async function getCustomImageBlob(datasheetId: string): Promise<Blob | null> {
+  const db = await getDb()
+  const entry: CustomImageEntry | undefined = await db.get(STORE_NAME, datasheetId)
+  return entry?.blob ?? null
+}
+
+/** List all datasheet IDs that have custom images. */
+export async function listCustomImageIds(): Promise<string[]> {
+  const db = await getDb()
+  const keys = await db.getAllKeys(STORE_NAME)
+  return keys as string[]
+}
+
+/** Save a blob directly (for sync download, no resize needed). */
+export async function saveCustomImageBlob(datasheetId: string, blob: Blob): Promise<void> {
+  const db = await getDb()
+  const entry: CustomImageEntry = { datasheetId, blob, updatedAt: Date.now() }
+  await db.put(STORE_NAME, entry)
+}

@@ -209,6 +209,83 @@
 }
 
 
+/* === IMAGE PANEL (desktop full-height left image) === */
+.unit-card__image-panel {
+  display: none; /* hidden on mobile */
+}
+
+.unit-card__info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .unit-card {
+    flex-direction: row;
+    min-height: 120px;
+  }
+
+  .unit-card__image-panel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    width: 110px;
+    flex-shrink: 0;
+    overflow: hidden;
+    border-radius: 5px 0 0 5px;
+  }
+
+  .unit-card__image-panel-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
+    inset: 0;
+  }
+
+  .unit-card__image-panel-fade {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 60%,
+      color-mix(in srgb, var(--color-surface) 80%, transparent) 100%
+    );
+    pointer-events: none;
+  }
+
+  .unit-card__image-panel--initials {
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 1.5rem;
+    letter-spacing: 0.08em;
+  }
+
+  .unit-card__image-panel-letters {
+    position: relative;
+    z-index: 1;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Hide the small avatar on desktop — image panel replaces it */
+  .unit-card__avatar {
+    display: none;
+  }
+
+  /* Make stat bar vertical-friendly */
+  .unit-card__stats {
+    margin: 0 6px 4px;
+    padding: 4px 8px;
+  }
+
+  .unit-card__name {
+    font-size: 1rem;
+  }
+}
+
 /* === AVATAR BADGE === */
 .unit-card__avatar {
   display: flex;
@@ -218,7 +295,7 @@
   height: 42px;
   border-radius: 6px;
   font-weight: 800;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   letter-spacing: 0.05em;
   color: #ffffff;
   flex-shrink: 0;
@@ -291,7 +368,7 @@
   padding: 2px 8px;
   border-radius: 3px;
   font-weight: 700;
-  font-size: 0.5rem;
+  font-size: 0.65rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #ffffff;
@@ -313,18 +390,18 @@
 .unit-card__points {
   font-weight: 800;
   color: var(--color-accent);
-  font-size: 0.72rem;
+  font-size: 0.85rem;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .unit-card__points-label {
-  font-size: 0.5rem;
+  font-size: 0.65rem;
   opacity: 0.7;
 }
 
 .unit-card__delta {
   font-weight: 700;
-  font-size: 0.55rem;
+  font-size: 0.7rem;
   padding: 0 4px;
   border-radius: 3px;
   color: #ffffff;
@@ -344,7 +421,7 @@
 .unit-card__name {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 1rem;
   letter-spacing: 0.03em;
   line-height: 1.2;
   color: var(--color-text);

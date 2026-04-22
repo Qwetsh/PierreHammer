@@ -43,6 +43,16 @@ export const useAuthStore = create<AuthState>()((set) => ({
         import('@/stores/listsStore').then(({ useListsStore }) => {
           useListsStore.getState().syncOnLogin()
         })
+        // Sync custom images on login
+        import('@/services/customImageSyncService').then(async ({ syncLocalToRemote, syncRemoteToLocal }) => {
+          const { getCustomImageBlob, listCustomImageIds, hasCustomImage, saveCustomImageBlob } = await import('@/stores/customImageStore')
+          const userId = session!.user.id
+          // Upload local images missing on remote
+          const localIds = await listCustomImageIds()
+          await syncLocalToRemote(userId, getCustomImageBlob, localIds)
+          // Download remote images missing locally
+          await syncRemoteToLocal(userId, hasCustomImage, saveCustomImageBlob)
+        })
       }
     })
   },
