@@ -4,6 +4,7 @@ import type { PaintStatus } from '@/components/domain/PaintStatusBadge'
 import { usePointsHistoryStore } from '@/stores/pointsHistoryStore'
 import { useFavoritesStore } from '@/stores/favoritesStore'
 import { useCustomImage } from '@/hooks/useCustomImage'
+import { T } from '@/components/ui/TranslatableText'
 
 type UnitVariant = 'standard' | 'battleline' | 'epic-hero'
 
@@ -154,9 +155,7 @@ export function UnitCard({ datasheet, owned, instances, onClick, selectable, sel
           )}
         </div>
         <div className="flex flex-col min-w-0 flex-1">
-          <span className="unit-card__name truncate">
-            {datasheet.name}
-          </span>
+          <T text={datasheet.name} category="unit" className="unit-card__name truncate" />
           <div className="flex items-center gap-1.5 mt-0.5">
             {points && (
               <span className="unit-card__points">
@@ -202,7 +201,7 @@ export function UnitCard({ datasheet, owned, instances, onClick, selectable, sel
               boxShadow: `0 1px 4px ${style.glowColor}`,
             }}
           >
-            {style.badge}
+            <T text={style.badge} category="keyword" />
           </span>
         )}
         {owned !== undefined && owned > 0 && (

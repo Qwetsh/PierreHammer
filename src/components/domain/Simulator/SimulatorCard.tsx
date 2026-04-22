@@ -5,6 +5,7 @@ import { FactionPickerModal } from './FactionPickerModal'
 import { UnitSearchModal } from './UnitSearchModal'
 import { WeaponPickerModal } from './WeaponPickerModal'
 import { EnhancementPickerModal } from './EnhancementPickerModal'
+import { T } from '@/components/ui/TranslatableText'
 
 interface SimulatorCardProps {
   role: 'attacker' | 'defender'
@@ -117,8 +118,8 @@ export function SimulatorCard({
                 {factionName?.split(/[\s-]+/).filter((w) => w[0] === w[0]?.toUpperCase()).slice(0, 2).map((w) => w[0]).join('') ?? '?'}
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-bold truncate lg:text-sm" style={{ color: theme!.accent }}>{factionName}</p>
-                <p className="text-[10px] truncate lg:text-xs" style={{ color: 'var(--color-text-muted)' }}>{detachment?.name ?? ''}</p>
+                <p className="text-xs font-bold truncate lg:text-sm" style={{ color: theme!.accent }}>{factionName && <T text={factionName} category="faction" />}</p>
+                <p className="text-[10px] truncate lg:text-xs" style={{ color: 'var(--color-text-muted)' }}>{detachment && <T text={detachment.name} category="detachment" />}</p>
               </div>
             </div>
             <button
@@ -150,7 +151,7 @@ export function SimulatorCard({
               {/* Unit name + change */}
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium truncate lg:text-base" style={{ color: 'var(--color-text)' }}>
-                  {datasheet.name}
+                  <T text={datasheet.name} category="unit" />
                 </span>
                 <button
                   className="text-[10px] bg-transparent border-none cursor-pointer shrink-0 lg:text-xs"
@@ -168,7 +169,7 @@ export function SimulatorCard({
                 onClick={() => setShowWeaponPicker(true)}
               >
                 <span style={{ color: 'var(--color-text-muted)' }}>Arme: </span>
-                <span className="font-medium">{selectedWeapon?.name ?? 'Choisir'}</span>
+                <span className="font-medium">{selectedWeapon ? <T text={selectedWeapon.name} category="weapon" /> : 'Choisir'}</span>
                 {selectedWeapon && (
                   <span className="ml-1" style={{ opacity: 0.5 }}>
                     A:{selectedWeapon.A} S:{selectedWeapon.S} AP:{selectedWeapon.AP} D:{selectedWeapon.D}
@@ -185,7 +186,7 @@ export function SimulatorCard({
                 >
                   <span style={{ color: 'var(--color-text-muted)' }}>Amélioration: </span>
                   <span className="font-medium" style={{ color: enhancement ? theme!.accent : 'var(--color-text-muted)' }}>
-                    {enhancement?.name ?? 'Aucune'}
+                    {enhancement ? <T text={enhancement.name} category="enhancement" /> : 'Aucune'}
                   </span>
                 </button>
               )}

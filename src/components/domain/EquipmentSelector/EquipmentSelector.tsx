@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import type { Datasheet, Weapon } from '@/types/gameData.types'
 import { useCustomImage } from '@/hooks/useCustomImage'
 import { Button } from '@/components/ui/Button'
+import { T } from '@/components/ui/TranslatableText'
 
 interface EquipmentSelectorProps {
   datasheet: Datasheet
@@ -149,7 +150,7 @@ export function EquipmentSelector({
           </div>
           <div className="min-w-0">
             <h3 className="font-semibold truncate" style={{ color: 'var(--color-text)', fontSize: 'var(--text-lg)' }}>
-              {datasheet.name}
+              <T text={datasheet.name} category="unit" />
             </h3>
             <p className="text-sm" style={{ color: 'var(--color-accent)' }}>
               {cost} pts
@@ -209,7 +210,7 @@ export function EquipmentSelector({
                         className="accent-[var(--color-primary)]"
                       />
                       <span className="text-sm flex-1" style={{ color: 'var(--color-text)' }}>
-                        {w.name}
+                        <T text={w.name} category="weapon" />
                       </span>
                       <WeaponStats w={w} showRange />
                     </label>
@@ -241,7 +242,7 @@ export function EquipmentSelector({
                         className="accent-[var(--color-primary)]"
                       />
                       <span className="text-sm flex-1" style={{ color: 'var(--color-text)' }}>
-                        {w.name}
+                        <T text={w.name} category="weapon" />
                       </span>
                       <WeaponStats w={w} />
                     </label>

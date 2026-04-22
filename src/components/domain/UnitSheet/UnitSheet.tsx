@@ -3,6 +3,7 @@ import type { Datasheet, Enhancement } from '@/types/gameData.types'
 import { Button } from '@/components/ui/Button'
 import { sanitizeHtml } from '@/utils/sanitizeHtml'
 import { useCustomImage } from '@/hooks/useCustomImage'
+import { T } from '@/components/ui/TranslatableText'
 
 function useLongPress(callback: () => void, ms = 500) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -85,14 +86,14 @@ export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddT
         <div className="unit-sheet__header-content">
           <div className="flex items-start gap-2">
             <h1 className="font-bold flex-1" style={{ fontSize: 'var(--text-2xl)' }}>
-              {datasheet.name}
+              <T text={datasheet.name} category="unit" />
             </h1>
             {isEpicHero(datasheet) && (
               <span
                 className="text-xs px-2 py-1 rounded shrink-0"
                 style={{ backgroundColor: 'var(--color-card-epic)', color: '#fff' }}
               >
-                Epic Hero
+                <T text="Epic Hero" category="keyword" />
               </span>
             )}
           </div>
@@ -221,7 +222,7 @@ export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddT
               <tbody>
                 {datasheet.profiles.map((p, i) => (
                   <tr key={i} style={{ borderBottom: '1px solid var(--color-surface)' }}>
-                    <td className="py-1 pr-2 font-medium">{p.name}</td>
+                    <td className="py-1 pr-2 font-medium"><T text={p.name} category="unit" /></td>
                     <td className="text-center px-2">{p.M}</td>
                     <td className="text-center px-2">{p.T}</td>
                     <td className="text-center px-2">{p.Sv}</td>
@@ -256,7 +257,7 @@ export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddT
               <tbody>
                 {rangedWeapons.map((w, i) => (
                   <tr key={i} style={{ borderBottom: '1px solid var(--color-surface)' }}>
-                    <td className="py-1 pr-2 font-medium">{w.name}</td>
+                    <td className="py-1 pr-2 font-medium"><T text={w.name} category="weapon" /></td>
                     <td className="text-center px-1">{w.range}</td>
                     <td className="text-center px-1">{w.A}</td>
                     <td className="text-center px-1">{w.BS_WS}</td>
@@ -290,7 +291,7 @@ export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddT
               <tbody>
                 {meleeWeapons.map((w, i) => (
                   <tr key={i} style={{ borderBottom: '1px solid var(--color-surface)' }}>
-                    <td className="py-1 pr-2 font-medium">{w.name}</td>
+                    <td className="py-1 pr-2 font-medium"><T text={w.name} category="weapon" /></td>
                     <td className="text-center px-1">{w.A}</td>
                     <td className="text-center px-1">{w.BS_WS}</td>
                     <td className="text-center px-1">{w.S}</td>
@@ -312,7 +313,7 @@ export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddT
             {datasheet.abilities.map((a, i) => (
               <div key={`${a.id}-${i}`}>
                 <h3 className="font-semibold text-sm" style={{ color: 'var(--color-accent)' }}>
-                  {a.name}
+                  <T text={a.name} category="ability" />
                 </h3>
                 <p
                   className="text-sm mt-0.5"
@@ -336,7 +337,7 @@ export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddT
                   className="text-xs font-medium mb-2"
                   style={{ color: 'var(--color-accent)' }}
                 >
-                  {group.detachmentName}
+                  <T text={group.detachmentName} category="detachment" />
                 </p>
                 <div className="flex flex-col gap-1.5">
                   {group.enhancements.map((enh) => (
@@ -350,7 +351,7 @@ export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddT
                           className="text-sm font-medium"
                           style={{ color: 'var(--color-text)' }}
                         >
-                          {enh.name}
+                          <T text={enh.name} category="enhancement" />
                         </span>
                         <span
                           className="text-sm font-semibold shrink-0 ml-3"
@@ -395,7 +396,7 @@ export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddT
                   color: k.isFactionKeyword ? '#ffffff' : 'var(--color-text)',
                 }}
               >
-                {k.keyword}
+                <T text={k.keyword} category="keyword" />
               </span>
             ))}
           </div>

@@ -1,4 +1,5 @@
 import type { Enhancement } from '@/types/gameData.types'
+import { T } from '@/components/ui/TranslatableText'
 
 interface EnhancementPickerModalProps {
   enhancements: Enhancement[]
@@ -41,7 +42,7 @@ export function EnhancementPickerModal({ enhancements, selectedEnhancement, onSe
               onClick={() => { onSelect(enh); onClose() }}
             >
               <div className="flex items-center justify-between">
-                <span className="font-medium text-sm">{enh.name}</span>
+                <span className="font-medium text-sm"><T text={enh.name} category="enhancement" /></span>
                 <span className="text-xs" style={{ opacity: 0.7 }}>{enh.cost} pts</span>
               </div>
               <p className="text-xs mt-1 line-clamp-2" style={{ opacity: 0.7 }}>

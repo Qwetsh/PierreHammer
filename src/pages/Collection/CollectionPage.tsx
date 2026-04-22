@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { ProgressBar } from '@/components/ui/ProgressBar'
 import type { PaintStatus } from '@/components/domain/PaintStatusBadge'
 import type { Datasheet } from '@/types/gameData.types'
+import { T } from '@/components/ui/TranslatableText'
 
 interface DatasheetWithFaction extends Datasheet {
   factionSlug: string
@@ -272,7 +273,7 @@ export function CollectionPage() {
               }}
               onClick={() => setFactionFilter(f.slug)}
             >
-              {f.name}
+              <T text={f.name} category="faction" />
             </button>
           ))}
         </div>
@@ -376,7 +377,7 @@ export function CollectionPage() {
             <div className="px-4 pb-3 flex items-center justify-between">
               <div>
                 <h3 className="font-semibold" style={{ color: 'var(--color-text)', fontSize: 'var(--text-lg)' }}>
-                  {editingDatasheet.name}
+                  <T text={editingDatasheet.name} category="unit" />
                 </h3>
                 <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                   {editingItem.instances.length} exemplaire{editingItem.instances.length > 1 ? 's' : ''}

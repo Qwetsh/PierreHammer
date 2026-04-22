@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { FactionSummary, Detachment } from '@/types/gameData.types'
+import { T } from '@/components/ui/TranslatableText'
 
 interface FactionTheme {
   primary: string
@@ -85,7 +86,7 @@ export function FactionPickerModal({ factions, detachments, onFactionChosen, onS
               {getInitials(factionName)}
             </div>
             <div>
-              <h3 className="font-bold text-sm" style={{ color: 'var(--color-text)' }}>{factionName}</h3>
+              <h3 className="font-bold text-sm" style={{ color: 'var(--color-text)' }}><T text={factionName} category="faction" /></h3>
               <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Choisis un détachement</p>
             </div>
           </div>
@@ -98,7 +99,7 @@ export function FactionPickerModal({ factions, detachments, onFactionChosen, onS
                 style={{ backgroundColor: theme.surface, color: 'var(--color-text)' }}
                 onClick={() => onSelect(selectedFaction, det)}
               >
-                <span className="font-medium text-sm">{det.name}</span>
+                <span className="font-medium text-sm"><T text={det.name} category="detachment" /></span>
                 {det.rule && (
                   <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
                     {det.rule.name}
@@ -138,7 +139,7 @@ export function FactionPickerModal({ factions, detachments, onFactionChosen, onS
             >
               {getInitials(factionName)}
             </div>
-            <h3 className="font-bold text-sm" style={{ color: 'var(--color-text)' }}>{factionName}</h3>
+            <h3 className="font-bold text-sm" style={{ color: 'var(--color-text)' }}><T text={factionName} category="faction" /></h3>
           </div>
           <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Chargement des détachements...</p>
           <button
@@ -192,7 +193,7 @@ export function FactionPickerModal({ factions, detachments, onFactionChosen, onS
                 >
                   {getInitials(faction.name)}
                 </div>
-                <span className="text-xs font-medium truncate">{faction.name}</span>
+                <span className="text-xs font-medium truncate"><T text={faction.name} category="faction" /></span>
               </button>
             )
           })}

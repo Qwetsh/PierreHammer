@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { FactionSummary, Detachment } from '@/types/gameData.types'
+import { T } from '@/components/ui/TranslatableText'
 
 interface FactionPickerProps {
   factions: FactionSummary[]
@@ -93,7 +94,7 @@ export function FactionPicker({
               <div className="faction-tile__sigil">
                 {getInitials(faction.name)}
               </div>
-              <span className="faction-tile__name">{faction.name}</span>
+              <T text={faction.name} category="faction" className="faction-tile__name" />
               <span className="faction-tile__count">{faction.datasheetCount} unités</span>
               {isSelected && detachments.length > 0 && (
                 <button
@@ -130,7 +131,7 @@ export function FactionPicker({
                           setShowDetachments(false)
                         }}
                       >
-                        {det.name}
+                        <T text={det.name} category="detachment" />
                       </button>
                     ))}
                   </div>

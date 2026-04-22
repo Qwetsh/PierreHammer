@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { Datasheet } from '@/types/gameData.types'
+import { T } from '@/components/ui/TranslatableText'
 
 interface UnitSearchModalProps {
   datasheets: Datasheet[]
@@ -59,7 +60,7 @@ export function UnitSearchModal({ datasheets, onSelect, onClose }: UnitSearchMod
                 </div>
               )}
               <div className="min-w-0">
-                <p className="text-sm font-medium truncate">{ds.name}</p>
+                <p className="text-sm font-medium truncate"><T text={ds.name} category="unit" /></p>
                 <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                   {ds.profiles[0] && `T:${ds.profiles[0].T} Sv:${ds.profiles[0].Sv} W:${ds.profiles[0].W}`}
                 </p>

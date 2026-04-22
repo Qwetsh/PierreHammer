@@ -1,4 +1,5 @@
 import type { Weapon } from '@/types/gameData.types'
+import { T } from '@/components/ui/TranslatableText'
 
 interface WeaponPickerModalProps {
   weapons: Weapon[]
@@ -24,7 +25,7 @@ export function WeaponPickerModal({ weapons, selectedWeapon, onSelect, onClose }
         onClick={() => { onSelect(w); onClose() }}
       >
         <div className="flex items-center justify-between">
-          <span className="font-medium text-sm">{w.name}</span>
+          <span className="font-medium text-sm"><T text={w.name} category="weapon" /></span>
           {w.range !== 'Melee' && (
             <span className="text-xs" style={{ opacity: 0.7 }}>{w.range}</span>
           )}
