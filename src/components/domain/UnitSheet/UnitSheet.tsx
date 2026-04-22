@@ -1,9 +1,9 @@
 import { useState, useRef, useCallback } from 'react'
 import type { Datasheet, Enhancement } from '@/types/gameData.types'
 import { Button } from '@/components/ui/Button'
-import { sanitizeHtml } from '@/utils/sanitizeHtml'
 import { useCustomImage } from '@/hooks/useCustomImage'
 import { T } from '@/components/ui/TranslatableText'
+import { THtml } from '@/components/ui/TranslatableText'
 
 function useLongPress(callback: () => void, ms = 500) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -315,10 +315,11 @@ export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddT
                 <h3 className="font-semibold text-sm" style={{ color: 'var(--color-accent)' }}>
                   <T text={a.name} category="ability" />
                 </h3>
-                <p
+                <THtml
+                  html={a.description}
+                  category="ability"
                   className="text-sm mt-0.5"
                   style={{ color: 'var(--color-text-muted)' }}
-                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(a.description) }}
                 />
               </div>
             ))}
@@ -368,10 +369,11 @@ export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddT
                           {enh.legend}
                         </p>
                       )}
-                      <p
+                      <THtml
+                        html={enh.description}
+                        category="enhancement"
                         className="text-xs mt-1"
                         style={{ color: 'var(--color-text-muted)' }}
-                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(enh.description) }}
                       />
                     </div>
                   ))}
@@ -416,10 +418,11 @@ export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddT
       {datasheet.loadout && (
         <>
           <SectionTitle>Équipement</SectionTitle>
-          <p
+          <THtml
+            html={datasheet.loadout}
+            category="other"
             className="text-sm"
             style={{ color: 'var(--color-text-muted)' }}
-            dangerouslySetInnerHTML={{ __html: sanitizeHtml(datasheet.loadout) }}
           />
         </>
       )}
