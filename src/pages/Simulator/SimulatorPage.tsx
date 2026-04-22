@@ -2,21 +2,32 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import { useGameDataStore } from '@/stores/gameDataStore'
 import { useGameData } from '@/hooks/useGameData'
-import { useFactionTheme } from '@/hooks/useFactionTheme'
 import { resolveCombat } from '@/utils/combatEngine'
 import { parseWeaponKeywords } from '@/utils/weaponKeywordParser'
-import { extractCombatEffects } from '@/utils/combatEffectsExtractor'
-import type { Weapon, Datasheet } from '@/types/gameData.types'
-import type { CombatResult } from '@/types/combat.types'
+import { extractCombatEffects, extractEnhancementEffects } from '@/utils/combatEffectsExtractor'
+import { parseStratagemEffect, isStratagemRelevant } from '@/utils/stratagemEffectParser'
+import { SimulatorCard } from '@/components/domain/Simulator/SimulatorCard'
+import type { Weapon, Datasheet, Detachment, Enhancement, Stratagem } from '@/types/gameData.types'
+import type { CombatResult, AbilityEffect } from '@/types/combat.types'
 
-function StatBadge({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
-  return (
-    <div className="flex flex-col items-center rounded-lg px-2 py-1.5" style={{ backgroundColor: 'var(--color-surface)', minWidth: '60px' }}>
-      <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{label}</span>
-      <span className="font-bold text-sm" style={{ color: 'var(--color-accent)' }}>{value}</span>
-      {sub && <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>{sub}</span>}
-    </div>
-  )
+function mergeEffects(a: AbilityEffect, b: AbilityEffect): AbilityEffect {
+  return {
+    feelNoPain: a.feelNoPain && b.feelNoPain ? Math.min(a.feelNoPain, b.feelNoPain) : a.feelNoPain ?? b.feelNoPain,
+    stealth: a.stealth || b.stealth,
+    ignoresCover: a.ignoresCover || b.ignoresCover,
+    damageReduction: (a.damageReduction ?? 0) + (b.damageReduction ?? 0) || undefined,
+    extraAttacks: (a.extraAttacks ?? 0) + (b.extraAttacks ?? 0) || undefined,
+    invulnerable: a.invulnerable && b.invulnerable
+      ? { value: Math.min(a.invulnerable.value, b.invulnerable.value) }
+      : a.invulnerable ?? b.invulnerable,
+    modifiers: [...(a.modifiers ?? []), ...(b.modifiers ?? [])].length > 0
+      ? [...(a.modifiers ?? []), ...(b.modifiers ?? [])]
+      : undefined,
+  }
+}
+
+function round(n: number): string {
+  return (Math.round(n * 10) / 10).toString()
 }
 
 function ResultBar({ label, value, max, detail }: { label: string; value: number; max: number; detail?: string }) {
@@ -26,7 +37,7 @@ function ResultBar({ label, value, max, detail }: { label: string; value: number
       <div className="flex justify-between text-xs mb-0.5">
         <span style={{ color: 'var(--color-text)' }}>{label}</span>
         <span style={{ color: 'var(--color-accent)' }}>
-          {Math.round(value * 100) / 100}
+          {round(value)}
           {detail && <span style={{ color: 'var(--color-text-muted)' }}> {detail}</span>}
         </span>
       </div>
@@ -45,6 +56,17 @@ function KeywordBadge({ text }: { text: string }) {
   )
 }
 
+interface SideState {
+  factionSlug: string | null
+  detachment: Detachment | null
+  datasheet: Datasheet | null
+  weapon: Weapon | null
+  enhancement: Enhancement | null
+  modelCount: number
+}
+
+const emptySide: SideState = { factionSlug: null, detachment: null, datasheet: null, weapon: null, enhancement: null, modelCount: 5 }
+
 export function SimulatorPage() {
   const { factionId, datasheetId } = useParams<{ factionId?: string; datasheetId?: string }>()
   const navigate = useNavigate()
@@ -52,103 +74,139 @@ export function SimulatorPage() {
   const loadedFactions = useGameDataStore((s) => s.loadedFactions)
   const loadFaction = useGameDataStore((s) => s.loadFaction)
 
-  useFactionTheme(factionId ?? null)
+  const [attacker, setAttacker] = useState<SideState>({ ...emptySide, factionSlug: factionId ?? null })
+  const [defender, setDefender] = useState<SideState>({ ...emptySide })
 
-  // --- Attacker state ---
-  const [attackerFactionSlug, setAttackerFactionSlug] = useState<string | null>(factionId ?? null)
-  const [attackerDatasheet, setAttackerDatasheet] = useState<Datasheet | null>(null)
-  const [selectedWeapon, setSelectedWeapon] = useState<Weapon | null>(null)
-  const [attackerCount, setAttackerCount] = useState(5)
-
-  // --- Defender state ---
-  const [defenderFactionSlug, setDefenderFactionSlug] = useState<string | null>(null)
-  const [defenderDatasheet, setDefenderDatasheet] = useState<Datasheet | null>(null)
-  const [defenderCount, setDefenderCount] = useState(5)
-
-  // --- Toggles ---
+  // Toggles
   const [halfRange, setHalfRange] = useState(false)
   const [charged, setCharged] = useState(false)
   const [stationary, setStationary] = useState(true)
   const [inCover, setInCover] = useState(false)
 
-  // --- Search ---
-  const [attackerSearch, setAttackerSearch] = useState('')
-  const [defenderSearch, setDefenderSearch] = useState('')
+  // Stratagems
+  const [activeAttackerStrats, setActiveAttackerStrats] = useState<Set<string>>(new Set())
+  const [activeDefenderStrats, setActiveDefenderStrats] = useState<Set<string>>(new Set())
 
-  // Load initial faction
+  const factions = factionIndex?.factions ?? []
+
+  // Load factions when selected
   useEffect(() => {
-    if (factionId) loadFaction(factionId)
-  }, [factionId, loadFaction])
+    if (attacker.factionSlug) loadFaction(attacker.factionSlug)
+  }, [attacker.factionSlug, loadFaction])
 
-  // Set initial datasheet from URL params
+  useEffect(() => {
+    if (defender.factionSlug) loadFaction(defender.factionSlug)
+  }, [defender.factionSlug, loadFaction])
+
+  // Handle URL params (coming from a datasheet page)
   useEffect(() => {
     if (factionId && datasheetId && loadedFactions[factionId]) {
-      const ds = loadedFactions[factionId].datasheets.find((d) => d.id === datasheetId)
+      const faction = loadedFactions[factionId]
+      const ds = faction.datasheets.find((d) => d.id === datasheetId)
       if (ds) {
-        setAttackerDatasheet(ds)
-        const defaultCount = ds.pointOptions[0]?.models
-        if (defaultCount) setAttackerCount(parseInt(String(defaultCount), 10) || 5)
-        // Auto-select first weapon
-        if (ds.weapons.length > 0) setSelectedWeapon(ds.weapons[0])
+        const det = faction.detachments?.[0] ?? null
+        setAttacker({
+          factionSlug: factionId,
+          detachment: det,
+          datasheet: ds,
+          weapon: ds.weapons[0] ?? null,
+          enhancement: null,
+          modelCount: parseInt(String(ds.pointOptions[0]?.models), 10) || 5,
+        })
       }
     }
   }, [factionId, datasheetId, loadedFactions])
 
-  // Load faction on slug change
-  useEffect(() => {
-    if (attackerFactionSlug) loadFaction(attackerFactionSlug)
-  }, [attackerFactionSlug, loadFaction])
+  // Derived data
+  const attackerFaction = attacker.factionSlug ? loadedFactions[attacker.factionSlug] : null
+  const defenderFaction = defender.factionSlug ? loadedFactions[defender.factionSlug] : null
 
-  useEffect(() => {
-    if (defenderFactionSlug) loadFaction(defenderFactionSlug)
-  }, [defenderFactionSlug, loadFaction])
+  const attackerStratagems = attacker.detachment?.stratagems ?? []
+  const defenderStratagems = defender.detachment?.stratagems ?? []
 
-  // Faction datasheets
-  const attackerFaction = attackerFactionSlug ? loadedFactions[attackerFactionSlug] : null
-  const defenderFaction = defenderFactionSlug ? loadedFactions[defenderFactionSlug] : null
+  // Combat effects with enhancements
+  const attackerEffects = useMemo(() => {
+    if (!attacker.datasheet) return {}
+    let effects = extractCombatEffects(attacker.datasheet)
+    if (attacker.enhancement) {
+      effects = mergeEffects(effects, extractEnhancementEffects(attacker.enhancement))
+    }
+    for (const strat of attackerStratagems) {
+      if (activeAttackerStrats.has(strat.id)) {
+        const eff = parseStratagemEffect(strat)
+        if (eff) effects = mergeEffects(effects, eff)
+      }
+    }
+    return effects
+  }, [attacker.datasheet, attacker.enhancement, attackerStratagems, activeAttackerStrats])
 
-  const attackerDatasheets = useMemo(() => {
-    if (!attackerFaction) return []
-    const q = attackerSearch.toLowerCase()
-    return q ? attackerFaction.datasheets.filter((d) => d.name.toLowerCase().includes(q)) : attackerFaction.datasheets
-  }, [attackerFaction, attackerSearch])
+  const defenderEffects = useMemo(() => {
+    if (!defender.datasheet) return {}
+    let effects = extractCombatEffects(defender.datasheet)
+    if (defender.enhancement) {
+      effects = mergeEffects(effects, extractEnhancementEffects(defender.enhancement))
+    }
+    for (const strat of defenderStratagems) {
+      if (activeDefenderStrats.has(strat.id)) {
+        const eff = parseStratagemEffect(strat)
+        if (eff) effects = mergeEffects(effects, eff)
+      }
+    }
+    return effects
+  }, [defender.datasheet, defender.enhancement, defenderStratagems, activeDefenderStrats])
 
-  const defenderDatasheets = useMemo(() => {
-    if (!defenderFaction) return []
-    const q = defenderSearch.toLowerCase()
-    return q ? defenderFaction.datasheets.filter((d) => d.name.toLowerCase().includes(q)) : defenderFaction.datasheets
-  }, [defenderFaction, defenderSearch])
-
-  // Factions list
-  const factions = factionIndex?.factions ?? []
-
-  // --- Combat result ---
+  // Combat result
   const result: CombatResult | null = useMemo(() => {
-    if (!selectedWeapon || !attackerDatasheet || !defenderDatasheet) return null
-    const attackerProfile = attackerDatasheet.profiles[0]
-    const defenderProfile = defenderDatasheet.profiles[0]
+    if (!attacker.weapon || !attacker.datasheet || !defender.datasheet) return null
+    const attackerProfile = attacker.datasheet.profiles[0]
+    const defenderProfile = defender.datasheet.profiles[0]
     if (!attackerProfile || !defenderProfile) return null
-
     return resolveCombat({
-      weapon: selectedWeapon,
-      weaponKeywords: parseWeaponKeywords(selectedWeapon.abilities),
+      weapon: attacker.weapon,
+      weaponKeywords: parseWeaponKeywords(attacker.weapon.abilities),
       attackerProfile,
-      attackerCount,
-      attackerEffects: extractCombatEffects(attackerDatasheet),
+      attackerCount: attacker.modelCount,
+      attackerEffects,
       defenderProfile,
-      defenderEffects: extractCombatEffects(defenderDatasheet),
-      defenderCount,
-      halfRange,
-      charged,
-      stationary,
-      inCover,
+      defenderEffects,
+      defenderCount: defender.modelCount,
+      halfRange, charged, stationary, inCover,
     })
-  }, [selectedWeapon, attackerDatasheet, defenderDatasheet, attackerCount, defenderCount, halfRange, charged, stationary, inCover])
+  }, [attacker, defender, attackerEffects, defenderEffects, halfRange, charged, stationary, inCover])
 
-  const weaponKeywords = selectedWeapon ? parseWeaponKeywords(selectedWeapon.abilities) : null
-  const defenderEffects = defenderDatasheet ? extractCombatEffects(defenderDatasheet) : null
+  // Baseline (without strats) for delta
+  const baselineResult: CombatResult | null = useMemo(() => {
+    if (!attacker.weapon || !attacker.datasheet || !defender.datasheet) return null
+    if (activeAttackerStrats.size === 0 && activeDefenderStrats.size === 0) return null
+    const attackerProfile = attacker.datasheet.profiles[0]
+    const defenderProfile = defender.datasheet.profiles[0]
+    if (!attackerProfile || !defenderProfile) return null
+    let atkEff = extractCombatEffects(attacker.datasheet)
+    if (attacker.enhancement) atkEff = mergeEffects(atkEff, extractEnhancementEffects(attacker.enhancement))
+    let defEff = extractCombatEffects(defender.datasheet)
+    if (defender.enhancement) defEff = mergeEffects(defEff, extractEnhancementEffects(defender.enhancement))
+    return resolveCombat({
+      weapon: attacker.weapon,
+      weaponKeywords: parseWeaponKeywords(attacker.weapon.abilities),
+      attackerProfile,
+      attackerCount: attacker.modelCount,
+      attackerEffects: atkEff,
+      defenderProfile,
+      defenderEffects: defEff,
+      defenderCount: defender.modelCount,
+      halfRange, charged, stationary, inCover,
+    })
+  }, [attacker, defender, activeAttackerStrats.size, activeDefenderStrats.size, halfRange, charged, stationary, inCover])
 
-  // Active keyword labels for display
+  const damageDelta = result && baselineResult ? result.damageAfterFnp - baselineResult.damageAfterFnp : null
+
+  const weaponKeywords = attacker.weapon ? parseWeaponKeywords(attacker.weapon.abilities) : null
+  const weaponType: 'ranged' | 'melee' = attacker.weapon?.type === 'Melee' || attacker.weapon?.range === 'Melee' ? 'melee' : 'ranged'
+
+  const filteredAttackerStrats = attackerStratagems.filter((s) => isStratagemRelevant(s, weaponType))
+  const filteredDefenderStrats = defenderStratagems.filter((s) => isStratagemRelevant(s, weaponType))
+
+  // Active keywords for display
   const activeKeywords: string[] = []
   if (weaponKeywords) {
     if (weaponKeywords.sustainedHits) activeKeywords.push(`Sustained Hits ${weaponKeywords.sustainedHits}`)
@@ -180,224 +238,86 @@ export function SimulatorPage() {
 
       <h1 className="font-bold mb-4" style={{ fontSize: 'var(--text-xl)' }}>Simulateur de combat</h1>
 
-      {/* ===== ATTACKER ===== */}
-      <section className="mb-4">
-        <h2 className="text-sm font-semibold mb-2" style={{ color: 'var(--color-text-muted)' }}>Attaquant</h2>
+      {/* ===== CARDS: ATTACKER vs DEFENDER ===== */}
+      <div className="flex flex-col gap-3 mb-4">
+        <SimulatorCard
+          role="attacker"
+          factions={factions}
+          loadedFactions={loadedFactions}
+          factionSlug={attacker.factionSlug}
+          factionName={attackerFaction?.name ?? null}
+          detachment={attacker.detachment}
+          datasheet={attacker.datasheet}
+          selectedWeapon={attacker.weapon}
+          enhancement={attacker.enhancement}
+          modelCount={attacker.modelCount}
+          onLoadFaction={loadFaction}
+          onFactionSelect={(slug, det) => {
+            loadFaction(slug)
+            setAttacker({ ...emptySide, factionSlug: slug, detachment: det })
+            setActiveAttackerStrats(new Set())
+          }}
+          onUnitSelect={(ds) => {
+            setAttacker((prev) => ({
+              ...prev,
+              datasheet: ds,
+              weapon: ds.weapons[0] ?? null,
+              enhancement: null,
+              modelCount: parseInt(String(ds.pointOptions[0]?.models), 10) || 5,
+            }))
+          }}
+          onWeaponSelect={(w) => setAttacker((prev) => ({ ...prev, weapon: w }))}
+          onEnhancementSelect={(e) => setAttacker((prev) => ({ ...prev, enhancement: e }))}
+          onModelCountChange={(n) => setAttacker((prev) => ({ ...prev, modelCount: n }))}
+          onReset={() => { setAttacker({ ...emptySide }); setActiveAttackerStrats(new Set()) }}
+        />
 
-        {!attackerDatasheet ? (
-          <div className="rounded-lg p-3" style={{ backgroundColor: 'var(--color-surface)' }}>
-            {/* Faction picker */}
-            <p className="text-xs mb-2" style={{ color: 'var(--color-text-muted)' }}>Faction</p>
-            <div className="flex flex-wrap gap-1 mb-2">
-              {factions.map((f) => (
-                <button
-                  key={f.id}
-                  className="text-xs px-2 py-1 rounded border-none cursor-pointer"
-                  style={{
-                    backgroundColor: attackerFactionSlug === f.id ? 'var(--color-accent)' : 'var(--color-bg)',
-                    color: attackerFactionSlug === f.id ? '#fff' : 'var(--color-text)',
-                  }}
-                  onClick={() => { setAttackerFactionSlug(f.id); setAttackerDatasheet(null); setSelectedWeapon(null) }}
-                >
-                  {f.name}
-                </button>
-              ))}
-            </div>
+        <div className="flex justify-center">
+          <span className="text-lg font-bold" style={{ color: 'var(--color-text-muted)' }}>VS</span>
+        </div>
 
-            {attackerFactionSlug && (
-              <>
-                <input
-                  type="text"
-                  value={attackerSearch}
-                  onChange={(e) => setAttackerSearch(e.target.value)}
-                  placeholder="Rechercher une unité..."
-                  className="w-full rounded px-2 py-1.5 text-sm mb-2 border-none outline-none"
-                  style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)' }}
-                />
-                <div className="max-h-48 overflow-y-auto">
-                  {attackerDatasheets.slice(0, 30).map((ds) => (
-                    <button
-                      key={ds.id}
-                      className="block w-full text-left text-sm px-2 py-1.5 border-none cursor-pointer rounded mb-1"
-                      style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)' }}
-                      onClick={() => {
-                        setAttackerDatasheet(ds)
-                        setSelectedWeapon(ds.weapons[0] ?? null)
-                        const m = ds.pointOptions[0]?.models
-                        if (m) setAttackerCount(parseInt(String(m), 10) || 5)
-                      }}
-                    >
-                      {ds.name}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        ) : (
-          <div className="rounded-lg p-3" style={{ backgroundColor: 'var(--color-surface)' }}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-medium text-sm" style={{ color: 'var(--color-text)' }}>{attackerDatasheet.name}</span>
-              <button
-                className="text-xs bg-transparent border-none cursor-pointer"
-                style={{ color: 'var(--color-accent)' }}
-                onClick={() => { setAttackerDatasheet(null); setSelectedWeapon(null) }}
-              >
-                Changer
-              </button>
-            </div>
+        <SimulatorCard
+          role="defender"
+          factions={factions}
+          loadedFactions={loadedFactions}
+          factionSlug={defender.factionSlug}
+          factionName={defenderFaction?.name ?? null}
+          detachment={defender.detachment}
+          datasheet={defender.datasheet}
+          selectedWeapon={defender.weapon}
+          enhancement={defender.enhancement}
+          modelCount={defender.modelCount}
+          onLoadFaction={loadFaction}
+          onFactionSelect={(slug, det) => {
+            loadFaction(slug)
+            setDefender({ ...emptySide, factionSlug: slug, detachment: det })
+            setActiveDefenderStrats(new Set())
+          }}
+          onUnitSelect={(ds) => {
+            setDefender((prev) => ({
+              ...prev,
+              datasheet: ds,
+              weapon: ds.weapons[0] ?? null,
+              enhancement: null,
+              modelCount: parseInt(String(ds.pointOptions[0]?.models), 10) || 5,
+            }))
+          }}
+          onWeaponSelect={(w) => setDefender((prev) => ({ ...prev, weapon: w }))}
+          onEnhancementSelect={(e) => setDefender((prev) => ({ ...prev, enhancement: e }))}
+          onModelCountChange={(n) => setDefender((prev) => ({ ...prev, modelCount: n }))}
+          onReset={() => { setDefender({ ...emptySide }); setActiveDefenderStrats(new Set()) }}
+        />
+      </div>
 
-            {/* Attacker count */}
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Modèles :</span>
-              <input
-                type="number"
-                min={1}
-                max={30}
-                value={attackerCount}
-                onChange={(e) => setAttackerCount(Math.max(1, Number(e.target.value)))}
-                className="w-16 rounded px-2 py-1 text-sm text-center border-none outline-none"
-                style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)' }}
-              />
-            </div>
-
-            {/* Weapon selection */}
-            <p className="text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>Arme</p>
-            <div className="flex flex-col gap-1">
-              {attackerDatasheet.weapons.map((w, i) => (
-                <button
-                  key={`${w.name}-${i}`}
-                  className="flex items-center justify-between text-left text-xs px-2 py-1.5 rounded border-none cursor-pointer"
-                  style={{
-                    backgroundColor: selectedWeapon === w ? 'var(--color-accent)' : 'var(--color-bg)',
-                    color: selectedWeapon === w ? '#fff' : 'var(--color-text)',
-                  }}
-                  onClick={() => setSelectedWeapon(w)}
-                >
-                  <span>{w.name}</span>
-                  <span style={{ opacity: 0.7 }}>
-                    A:{w.A} S:{w.S} AP:{w.AP} D:{w.D}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            {/* Active keywords */}
-            {activeKeywords.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {activeKeywords.map((kw) => <KeywordBadge key={kw} text={kw} />)}
-              </div>
-            )}
-          </div>
-        )}
-      </section>
-
-      {/* ===== DEFENDER ===== */}
-      <section className="mb-4">
-        <h2 className="text-sm font-semibold mb-2" style={{ color: 'var(--color-text-muted)' }}>Cible</h2>
-
-        {!defenderDatasheet ? (
-          <div className="rounded-lg p-3" style={{ backgroundColor: 'var(--color-surface)' }}>
-            <p className="text-xs mb-2" style={{ color: 'var(--color-text-muted)' }}>Faction</p>
-            <div className="flex flex-wrap gap-1 mb-2">
-              {factions.map((f) => (
-                <button
-                  key={f.id}
-                  className="text-xs px-2 py-1 rounded border-none cursor-pointer"
-                  style={{
-                    backgroundColor: defenderFactionSlug === f.id ? 'var(--color-accent)' : 'var(--color-bg)',
-                    color: defenderFactionSlug === f.id ? '#fff' : 'var(--color-text)',
-                  }}
-                  onClick={() => { setDefenderFactionSlug(f.id); setDefenderDatasheet(null) }}
-                >
-                  {f.name}
-                </button>
-              ))}
-            </div>
-
-            {defenderFactionSlug && (
-              <>
-                <input
-                  type="text"
-                  value={defenderSearch}
-                  onChange={(e) => setDefenderSearch(e.target.value)}
-                  placeholder="Rechercher une unité..."
-                  className="w-full rounded px-2 py-1.5 text-sm mb-2 border-none outline-none"
-                  style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)' }}
-                />
-                <div className="max-h-48 overflow-y-auto">
-                  {defenderDatasheets.slice(0, 30).map((ds) => (
-                    <button
-                      key={ds.id}
-                      className="block w-full text-left text-sm px-2 py-1.5 border-none cursor-pointer rounded mb-1"
-                      style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)' }}
-                      onClick={() => {
-                        setDefenderDatasheet(ds)
-                        const m = ds.pointOptions[0]?.models
-                        if (m) setDefenderCount(parseInt(String(m), 10) || 5)
-                      }}
-                    >
-                      {ds.name}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        ) : (
-          <div className="rounded-lg p-3" style={{ backgroundColor: 'var(--color-surface)' }}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-medium text-sm" style={{ color: 'var(--color-text)' }}>{defenderDatasheet.name}</span>
-              <button
-                className="text-xs bg-transparent border-none cursor-pointer"
-                style={{ color: 'var(--color-accent)' }}
-                onClick={() => setDefenderDatasheet(null)}
-              >
-                Changer
-              </button>
-            </div>
-
-            {/* Defender count */}
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Modèles :</span>
-              <input
-                type="number"
-                min={1}
-                max={30}
-                value={defenderCount}
-                onChange={(e) => setDefenderCount(Math.max(1, Number(e.target.value)))}
-                className="w-16 rounded px-2 py-1 text-sm text-center border-none outline-none"
-                style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)' }}
-              />
-            </div>
-
-            {/* Defender profile */}
-            {defenderDatasheet.profiles[0] && (
-              <div className="flex flex-wrap gap-1.5">
-                <StatBadge label="T" value={defenderDatasheet.profiles[0].T} />
-                <StatBadge label="Sv" value={defenderDatasheet.profiles[0].Sv} />
-                <StatBadge label="W" value={defenderDatasheet.profiles[0].W} />
-                {defenderDatasheet.profiles[0].invSv !== '-' && (
-                  <StatBadge label="Inv" value={`${defenderDatasheet.profiles[0].invSv}+`} />
-                )}
-              </div>
-            )}
-
-            {/* Defender active abilities */}
-            {defenderEffects && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {defenderEffects.feelNoPain && <KeywordBadge text={`FnP ${defenderEffects.feelNoPain}+`} />}
-                {defenderEffects.stealth && <KeywordBadge text="Stealth" />}
-                {defenderEffects.damageReduction && <KeywordBadge text={`-${defenderEffects.damageReduction} Damage`} />}
-                {defenderEffects.invulnerable && <KeywordBadge text={`Invuln ${defenderEffects.invulnerable.value}+`} />}
-              </div>
-            )}
-          </div>
-        )}
-      </section>
+      {/* ===== WEAPON KEYWORDS ===== */}
+      {activeKeywords.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-3">
+          {activeKeywords.map((kw) => <KeywordBadge key={kw} text={kw} />)}
+        </div>
+      )}
 
       {/* ===== TOGGLES ===== */}
-      {selectedWeapon && defenderDatasheet && (
+      {attacker.weapon && defender.datasheet && (
         <section className="mb-4">
           <div className="flex flex-wrap gap-2">
             {(weaponKeywords?.rapidFire || weaponKeywords?.melta) && (
@@ -414,6 +334,56 @@ export function SimulatorPage() {
         </section>
       )}
 
+      {/* ===== STRATAGEMS ===== */}
+      {(filteredAttackerStrats.length > 0 || filteredDefenderStrats.length > 0) && attacker.weapon && defender.datasheet && (
+        <section className="mb-4">
+          <p className="text-xs font-medium mb-2" style={{ color: 'var(--color-text-muted)' }}>Stratagèmes</p>
+          <div className="flex flex-col gap-1">
+            {filteredAttackerStrats.map((strat) => {
+              const isActive = activeAttackerStrats.has(strat.id)
+              const parsed = parseStratagemEffect(strat)
+              return (
+                <StratagemToggle
+                  key={strat.id}
+                  strat={strat}
+                  isActive={isActive}
+                  parsed={!!parsed}
+                  variant="attacker"
+                  onToggle={() => {
+                    const next = new Set(activeAttackerStrats)
+                    isActive ? next.delete(strat.id) : next.add(strat.id)
+                    setActiveAttackerStrats(next)
+                  }}
+                />
+              )
+            })}
+            {filteredDefenderStrats.map((strat) => {
+              const isActive = activeDefenderStrats.has(strat.id)
+              const parsed = parseStratagemEffect(strat)
+              return (
+                <StratagemToggle
+                  key={`def-${strat.id}`}
+                  strat={strat}
+                  isActive={isActive}
+                  parsed={!!parsed}
+                  variant="defender"
+                  onToggle={() => {
+                    const next = new Set(activeDefenderStrats)
+                    isActive ? next.delete(strat.id) : next.add(strat.id)
+                    setActiveDefenderStrats(next)
+                  }}
+                />
+              )
+            })}
+          </div>
+          {damageDelta !== null && damageDelta !== 0 && (
+            <p className="text-xs mt-1 font-medium" style={{ color: damageDelta > 0 ? 'var(--color-success, #22c55e)' : 'var(--color-error, #ef4444)' }}>
+              {damageDelta > 0 ? '+' : ''}{round(damageDelta)} dégâts avec stratagèmes
+            </p>
+          )}
+        </section>
+      )}
+
       {/* ===== RESULTS ===== */}
       {result && (
         <section>
@@ -424,7 +394,7 @@ export function SimulatorPage() {
               label="Attaques"
               value={result.attacksTotal}
               max={result.attacksTotal}
-              detail={`(${attackerCount}× A:${selectedWeapon!.A})`}
+              detail={`(${attacker.modelCount}× A:${attacker.weapon!.A})`}
             />
             <ResultBar
               label="Hits"
@@ -448,7 +418,7 @@ export function SimulatorPage() {
               label="Dégâts"
               value={result.damageTotal}
               max={result.damageTotal}
-              detail={`(D:${selectedWeapon!.D} avg ${result.steps.avgDamagePerWound})`}
+              detail={`(D:${attacker.weapon!.D} avg ${result.steps.avgDamagePerWound})`}
             />
             {result.steps.fnpThreshold && (
               <ResultBar
@@ -459,8 +429,8 @@ export function SimulatorPage() {
               />
             )}
             {result.mortalWounds > 0 && (
-              <div className="text-xs mt-1" style={{ color: 'var(--color-warning)' }}>
-                dont {Math.round(result.mortalWounds * 100) / 100} mortal wounds
+              <div className="text-xs mt-1" style={{ color: 'var(--color-warning, #f59e0b)' }}>
+                dont {round(result.mortalWounds)} mortal wounds
               </div>
             )}
           </div>
@@ -469,24 +439,29 @@ export function SimulatorPage() {
           <div className="rounded-lg p-4 text-center" style={{ backgroundColor: 'var(--color-surface)' }}>
             <p className="text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>Kills estimés</p>
             <p className="text-3xl font-bold" style={{ color: 'var(--color-accent)' }}>
-              {Math.round(result.estimatedKills * 10) / 10}
+              {round(result.estimatedKills)}
             </p>
             <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-              sur {defenderCount} modèle{defenderCount > 1 ? 's' : ''} ({defenderDatasheet!.profiles[0]?.W}W)
+              sur {defender.modelCount} modèle{defender.modelCount > 1 ? 's' : ''} ({defender.datasheet!.profiles[0]?.W}W)
             </p>
           </div>
         </section>
       )}
 
-      {!selectedWeapon && attackerDatasheet && (
+      {/* ===== Hints ===== */}
+      {attacker.datasheet && !attacker.weapon && (
         <p className="text-sm text-center mt-4" style={{ color: 'var(--color-text-muted)' }}>
           Sélectionne une arme pour lancer la simulation
         </p>
       )}
-
-      {selectedWeapon && !defenderDatasheet && (
+      {attacker.weapon && !defender.datasheet && (
         <p className="text-sm text-center mt-4" style={{ color: 'var(--color-text-muted)' }}>
           Sélectionne une cible pour voir les résultats
+        </p>
+      )}
+      {!attacker.factionSlug && !defender.factionSlug && (
+        <p className="text-sm text-center mt-8" style={{ color: 'var(--color-text-muted)' }}>
+          Choisis un attaquant et une cible pour simuler un combat
         </p>
       )}
     </div>
@@ -504,6 +479,30 @@ function ToggleChip({ label, active, onToggle }: { label: string; active: boolea
       onClick={onToggle}
     >
       {label}
+    </button>
+  )
+}
+
+function StratagemToggle({ strat, isActive, parsed, variant, onToggle }: {
+  strat: Stratagem
+  isActive: boolean
+  parsed: boolean
+  variant: 'attacker' | 'defender'
+  onToggle: () => void
+}) {
+  const activeColor = variant === 'attacker' ? 'var(--color-accent)' : 'var(--color-error, #ef4444)'
+  return (
+    <button
+      className="flex items-center justify-between text-xs px-2 py-1.5 rounded border-none cursor-pointer"
+      style={{
+        backgroundColor: isActive ? activeColor : 'var(--color-surface)',
+        color: isActive ? '#fff' : variant === 'defender' ? 'var(--color-text-muted)' : 'var(--color-text)',
+        opacity: parsed ? 1 : 0.6,
+      }}
+      onClick={onToggle}
+    >
+      <span>{variant === 'defender' ? 'Def: ' : ''}{strat.name} {!parsed && '(lecture seule)'}</span>
+      <span style={{ opacity: 0.7 }}>{strat.cpCost} CP</span>
     </button>
   )
 }
