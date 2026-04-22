@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import type { Datasheet, Enhancement } from '@/types/gameData.types'
 import { Button } from '@/components/ui/Button'
 import { useCustomImage } from '@/hooks/useCustomImage'
@@ -57,9 +57,57 @@ function SectionTitle({ children }: { children: string }) {
   )
 }
 
+function useIsMobile(breakpoint = 1024) {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < breakpoint : true,
+  )
+  useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${breakpoint - 1}px)`)
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+    mql.addEventListener('change', handler)
+    return () => mql.removeEventListener('change', handler)
+  }, [breakpoint])
+  return isMobile
+}
+
+function MobileAccordion({
+  header,
+  children,
+  defaultOpen,
+}: {
+  header: React.ReactNode
+  children: React.ReactNode
+  defaultOpen: boolean
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div>
+      <button
+        className="w-full flex items-center justify-between border-none cursor-pointer py-1 px-0"
+        style={{ backgroundColor: 'transparent' }}
+        onClick={() => setOpen(!open)}
+      >
+        <div className="flex-1 text-left">{header}</div>
+        <span
+          className="text-xs shrink-0 ml-2 transition-transform"
+          style={{
+            color: 'var(--color-text-muted)',
+            transform: open ? 'rotate(90deg)' : 'rotate(0deg)',
+          }}
+        >
+          ▶
+        </span>
+      </button>
+      {open && children}
+    </div>
+  )
+}
+
 export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddToCollection, onUpdateQuantity, onAddToList, onSimulate }: UnitSheetProps) {
-  const rangedWeapons = datasheet.weapons.filter((w) => w.type === 'Ranged' || (w.range && w.range !== 'Melee'))
-  const meleeWeapons = datasheet.weapons.filter((w) => w.type === 'Melee' || w.range === 'Melee')
+  const isMobile = useIsMobile()
+  const isMelee = (w: { type: string; range: string }) => w.type === 'Melee' || w.range === 'Melee'
+  const meleeWeapons = datasheet.weapons.filter((w) => isMelee(w))
+  const rangedWeapons = datasheet.weapons.filter((w) => !isMelee(w))
   const { customImageUrl, save: saveCustomImage, remove: removeCustomImage } = useCustomImage(datasheet.id)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [imgError, setImgError] = useState(false)
@@ -310,19 +358,38 @@ export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddT
         <>
           <SectionTitle>Capacités</SectionTitle>
           <div className="flex flex-col gap-3">
-            {datasheet.abilities.map((a, i) => (
-              <div key={`${a.id}-${i}`}>
-                <h3 className="font-semibold text-sm" style={{ color: 'var(--color-accent)' }}>
-                  <T text={a.name} category="ability" />
-                </h3>
-                <THtml
-                  html={a.description}
-                  category="ability"
-                  className="text-sm mt-0.5"
-                  style={{ color: 'var(--color-text-muted)' }}
-                />
-              </div>
-            ))}
+            {datasheet.abilities.map((a, i) =>
+              isMobile ? (
+                <MobileAccordion
+                  key={`${a.id}-${i}`}
+                  defaultOpen={false}
+                  header={
+                    <h3 className="font-semibold text-sm" style={{ color: 'var(--color-accent)' }}>
+                      <T text={a.name} category="ability" />
+                    </h3>
+                  }
+                >
+                  <THtml
+                    html={a.description}
+                    category="ability"
+                    className="text-sm mt-0.5"
+                    style={{ color: 'var(--color-text-muted)' }}
+                  />
+                </MobileAccordion>
+              ) : (
+                <div key={`${a.id}-${i}`}>
+                  <h3 className="font-semibold text-sm" style={{ color: 'var(--color-accent)' }}>
+                    <T text={a.name} category="ability" />
+                  </h3>
+                  <THtml
+                    html={a.description}
+                    category="ability"
+                    className="text-sm mt-0.5"
+                    style={{ color: 'var(--color-text-muted)' }}
+                  />
+                </div>
+              ),
+            )}
           </div>
         </>
       )}
@@ -347,34 +414,55 @@ export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddT
                       className="rounded-lg px-3 py-2"
                       style={{ backgroundColor: 'var(--color-surface)' }}
                     >
-                      <div className="flex items-center justify-between">
-                        <span
-                          className="text-sm font-medium"
-                          style={{ color: 'var(--color-text)' }}
+                      {isMobile ? (
+                        <MobileAccordion
+                          defaultOpen={false}
+                          header={
+                            <div className="flex items-center justify-between w-full pr-1">
+                              <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                                <T text={enh.name} category="enhancement" />
+                              </span>
+                              <span className="text-sm font-semibold shrink-0 ml-3" style={{ color: 'var(--color-accent)' }}>
+                                {enh.cost} pts
+                              </span>
+                            </div>
+                          }
                         >
-                          <T text={enh.name} category="enhancement" />
-                        </span>
-                        <span
-                          className="text-sm font-semibold shrink-0 ml-3"
-                          style={{ color: 'var(--color-accent)' }}
-                        >
-                          {enh.cost} pts
-                        </span>
-                      </div>
-                      {enh.legend && (
-                        <p
-                          className="text-xs italic mt-0.5"
-                          style={{ color: 'var(--color-text-muted)' }}
-                        >
-                          <T text={enh.legend} category="enhancement" />
-                        </p>
+                          {enh.legend && (
+                            <p className="text-xs italic mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
+                              <T text={enh.legend} category="enhancement" />
+                            </p>
+                          )}
+                          <THtml
+                            html={enh.description}
+                            category="enhancement"
+                            className="text-xs mt-1"
+                            style={{ color: 'var(--color-text-muted)' }}
+                          />
+                        </MobileAccordion>
+                      ) : (
+                        <>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                              <T text={enh.name} category="enhancement" />
+                            </span>
+                            <span className="text-sm font-semibold shrink-0 ml-3" style={{ color: 'var(--color-accent)' }}>
+                              {enh.cost} pts
+                            </span>
+                          </div>
+                          {enh.legend && (
+                            <p className="text-xs italic mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
+                              <T text={enh.legend} category="enhancement" />
+                            </p>
+                          )}
+                          <THtml
+                            html={enh.description}
+                            category="enhancement"
+                            className="text-xs mt-1"
+                            style={{ color: 'var(--color-text-muted)' }}
+                          />
+                        </>
                       )}
-                      <THtml
-                        html={enh.description}
-                        category="enhancement"
-                        className="text-xs mt-1"
-                        style={{ color: 'var(--color-text-muted)' }}
-                      />
                     </div>
                   ))}
                 </div>

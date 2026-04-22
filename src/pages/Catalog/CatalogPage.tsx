@@ -21,6 +21,13 @@ const sortLabels: Record<SortKey, string> = {
   role: 'Rôle',
 }
 
+const LEGENDS_SOURCE_ID_THRESHOLD = 350
+
+function isLegendsUnit(ds: Datasheet): boolean {
+  const id = parseInt(ds.sourceId, 10)
+  return !isNaN(id) && id >= LEGENDS_SOURCE_ID_THRESHOLD
+}
+
 const extractSearchFields = (ds: Datasheet): string[] => [
   ds.name,
   ...ds.keywords.map((k) => k.keyword),
@@ -49,24 +56,65 @@ export function CatalogPage() {
   const [roleFilter, setRoleFilter] = useState<string | 'all'>('all')
   const [sortBy, setSortBy] = useState<SortKey>('name')
   const [compareMode, setCompareMode] = useState(false)
+  const [showLegends, setShowLegends] = useState(false)
+  const [selectedKeywords, setSelectedKeywords] = useState<Set<string>>(new Set())
+  const [keywordSearch, setKeywordSearch] = useState('')
+  const [keywordDropdownOpen, setKeywordDropdownOpen] = useState(false)
   const collectionItems = useCollectionStore((s) => s.items)
   const favorites = useFavoritesStore((s) => s.favorites)
   const { addUnit: addToCompare, removeUnit: removeFromCompare, isSelected, selectedIds, clear: clearCompare } = useComparatorStore()
 
   const datasheets = selectedFaction?.datasheets ?? []
 
+  // Count Legends units for this faction
+  const legendsCount = useMemo(
+    () => datasheets.filter(isLegendsUnit).length,
+    [datasheets],
+  )
+
+  // Filter out Legends first
+  const legendsFiltered = useMemo(() => {
+    if (showLegends) return datasheets
+    return datasheets.filter((ds) => !isLegendsUnit(ds))
+  }, [datasheets, showLegends])
+
   const roles = useMemo(() => {
-    const r = new Set(datasheets.map((ds) => ds.role).filter(Boolean))
+    const r = new Set(legendsFiltered.map((ds) => ds.role).filter(Boolean))
     return Array.from(r).sort()
-  }, [datasheets])
+  }, [legendsFiltered])
+
+  // Extract all non-faction keywords for filter chips
+  const allKeywords = useMemo(() => {
+    const kw = new Map<string, number>()
+    for (const ds of legendsFiltered) {
+      for (const k of ds.keywords) {
+        if (!k.isFactionKeyword) {
+          kw.set(k.keyword, (kw.get(k.keyword) ?? 0) + 1)
+        }
+      }
+    }
+    return Array.from(kw.entries())
+      .sort((a, b) => b[1] - a[1]) // sort by frequency
+      .map(([keyword]) => keyword)
+  }, [legendsFiltered])
 
   const roleFiltered = useMemo(() => {
-    if (roleFilter === 'all') return datasheets
-    return datasheets.filter((ds) => ds.role === roleFilter)
-  }, [datasheets, roleFilter])
+    if (roleFilter === 'all') return legendsFiltered
+    return legendsFiltered.filter((ds) => ds.role === roleFilter)
+  }, [legendsFiltered, roleFilter])
+
+  // Keyword filter
+  const keywordFiltered = useMemo(() => {
+    if (selectedKeywords.size === 0) return roleFiltered
+    return roleFiltered.filter((ds) =>
+      Array.from(selectedKeywords).every((kw) =>
+        ds.keywords.some((k) => k.keyword === kw),
+      ),
+    )
+  }, [roleFiltered, selectedKeywords])
 
   const extractFields = useCallback(extractSearchFields, [])
-  const searched = useSearch(roleFiltered, query, extractFields)
+  const searched = useSearch(keywordFiltered, query, extractFields)
   const sorted = useMemo(() => sortDatasheets(searched, sortBy), [searched, sortBy])
 
   // Separate favorites
@@ -78,6 +126,26 @@ export function CatalogPage() {
     () => sorted.filter((ds) => !favorites.includes(ds.id)),
     [sorted, favorites],
   )
+
+  const filteredKeywordSuggestions = useMemo(() => {
+    if (!keywordSearch.trim()) return allKeywords.filter((kw) => !selectedKeywords.has(kw)).slice(0, 8)
+    const q = keywordSearch.toLowerCase()
+    return allKeywords.filter((kw) => !selectedKeywords.has(kw) && kw.toLowerCase().includes(q)).slice(0, 8)
+  }, [allKeywords, keywordSearch, selectedKeywords])
+
+  const addKeyword = (kw: string) => {
+    setSelectedKeywords((prev) => new Set(prev).add(kw))
+    setKeywordSearch('')
+    setKeywordDropdownOpen(false)
+  }
+
+  const removeKeyword = (kw: string) => {
+    setSelectedKeywords((prev) => {
+      const next = new Set(prev)
+      next.delete(kw)
+      return next
+    })
+  }
 
   const toggleCompareMode = () => {
     if (compareMode) {
@@ -203,8 +271,8 @@ export function CatalogPage() {
           </div>
         )}
 
-        {/* Sort select */}
-        <div className="flex items-center gap-2 mb-4">
+        {/* Sort + Legends toggle row */}
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
           <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Trier par :</span>
           {(Object.keys(sortLabels) as SortKey[]).map((key) => (
             <button
@@ -219,7 +287,90 @@ export function CatalogPage() {
               {sortLabels[key]}
             </button>
           ))}
+
+          {legendsCount > 0 && (
+            <>
+              <span className="text-xs ml-auto" style={{ color: 'var(--color-text-muted)' }}>|</span>
+              <button
+                className="text-xs px-2.5 py-1 rounded cursor-pointer border-none min-h-[28px]"
+                style={{
+                  backgroundColor: showLegends ? 'var(--color-warning, #f59e0b)' : 'var(--color-surface)',
+                  color: showLegends ? '#ffffff' : 'var(--color-text-muted)',
+                }}
+                onClick={() => setShowLegends(!showLegends)}
+              >
+                Legends ({legendsCount})
+              </button>
+            </>
+          )}
         </div>
+
+        {/* Keyword filter */}
+        {allKeywords.length > 0 && (
+          <div className="mb-4">
+            {/* Selected keyword tags */}
+            {selectedKeywords.size > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {Array.from(selectedKeywords).map((kw) => (
+                  <button
+                    key={kw}
+                    className="text-xs px-2 py-1 rounded-full cursor-pointer border-none min-h-[28px] flex items-center gap-1"
+                    style={{ backgroundColor: 'var(--color-primary)', color: '#ffffff' }}
+                    onClick={() => removeKeyword(kw)}
+                  >
+                    {kw} <span style={{ opacity: 0.7 }}>&times;</span>
+                  </button>
+                ))}
+                <button
+                  className="text-xs px-2 py-1 rounded-full cursor-pointer border-none min-h-[28px]"
+                  style={{ backgroundColor: 'transparent', color: 'var(--color-error, #ef4444)' }}
+                  onClick={() => setSelectedKeywords(new Set())}
+                >
+                  Tout effacer
+                </button>
+              </div>
+            )}
+
+            {/* Keyword search input + dropdown */}
+            <div className="relative">
+              <input
+                type="text"
+                value={keywordSearch}
+                onChange={(e) => { setKeywordSearch(e.target.value); setKeywordDropdownOpen(true) }}
+                onFocus={() => setKeywordDropdownOpen(true)}
+                placeholder="Filtrer par mot-clé..."
+                className="w-full text-sm px-3 py-2 rounded-lg border-none outline-none"
+                style={{ backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+              />
+              {keywordDropdownOpen && filteredKeywordSuggestions.length > 0 && (
+                <>
+                  <div
+                    className="fixed inset-0"
+                    style={{ zIndex: 9 }}
+                    onClick={() => setKeywordDropdownOpen(false)}
+                  />
+                  <div
+                    className="absolute left-0 right-0 mt-1 rounded-lg overflow-hidden shadow-lg"
+                    style={{ backgroundColor: 'var(--color-surface)', zIndex: 10 }}
+                  >
+                    {filteredKeywordSuggestions.map((kw) => (
+                      <button
+                        key={kw}
+                        className="w-full text-left text-sm px-3 py-2 border-none cursor-pointer"
+                        style={{ backgroundColor: 'transparent', color: 'var(--color-text)' }}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-bg)')}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                        onClick={() => addKeyword(kw)}
+                      >
+                        {kw}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         {isLoading && <p style={{ color: 'var(--color-text-muted)' }}>Chargement...</p>}
 
