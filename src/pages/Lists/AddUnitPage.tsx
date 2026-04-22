@@ -13,6 +13,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { EquipmentSelector } from '@/components/domain/EquipmentSelector'
 import { calculateTotalPoints } from '@/utils/pointsCalculator'
 import { isCharacter, canEquipEnhancement } from '@/utils/enhancementUtils'
+import { T } from '@/components/ui/TranslatableText'
 import type { Datasheet, Enhancement } from '@/types/gameData.types'
 
 const extractSearchFields = (ds: Datasheet): string[] => [
@@ -286,14 +287,14 @@ export function AddUnitPage() {
                         className="text-sm font-medium block"
                         style={{ color: 'var(--color-text)' }}
                       >
-                        {enh.name}
+                        <T text={enh.name} category="enhancement" />
                       </span>
                       {enh.legend && (
                         <span
                           className="text-xs italic block mt-0.5"
                           style={{ color: 'var(--color-text-muted)' }}
                         >
-                          {enh.legend}
+                          <T text={enh.legend} category="enhancement" />
                         </span>
                       )}
                     </div>

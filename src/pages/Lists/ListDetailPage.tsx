@@ -13,6 +13,8 @@ import { validateArmyList } from '@/features/army-list/utils/validateArmyList'
 import type { PointsLimit, ListUnit } from '@/types/armyList.types'
 import type { Datasheet, Detachment, Enhancement } from '@/types/gameData.types'
 import { isCharacter, canEquipEnhancement } from '@/utils/enhancementUtils'
+import { T } from '@/components/ui/TranslatableText'
+import { THtml } from '@/components/ui/TranslatableText'
 import { useFactionTheme } from '@/hooks/useFactionTheme'
 import { useAuthStore } from '@/stores/authStore'
 import { setListPublic } from '@/services/listsSyncService'
@@ -182,7 +184,7 @@ export function ListDetailPage() {
               </span>
             )}
             <span className="font-medium text-sm" style={{ color: 'var(--color-text)' }}>
-              {unit.datasheetName}
+              <T text={unit.datasheetName} category="unit" />
             </span>
             <span className="text-xs ml-2" style={{ color: 'var(--color-accent)' }}>
               {resolveUnitPoints(unit, faction?.datasheets)} pts
@@ -365,7 +367,7 @@ export function ListDetailPage() {
                     setShowDetachmentModal(false)
                   }}
                 >
-                  {det.name}
+                  <T text={det.name} category="detachment" />
                 </button>
               ))}
             </div>
@@ -504,20 +506,21 @@ export function ListDetailPage() {
                     }}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-sm">{enh.name}</span>
+                      <span className="font-medium text-sm"><T text={enh.name} category="enhancement" /></span>
                       <span className="text-xs font-mono" style={{ color: 'var(--color-accent)' }}>
                         {enh.cost} pts
                       </span>
                     </div>
                     {enh.legend && (
                       <p className="text-xs italic mt-1" style={{ color: 'var(--color-text-muted)' }}>
-                        {enh.legend}
+                        <T text={enh.legend} category="enhancement" />
                       </p>
                     )}
-                    <div
+                    <THtml
+                      html={enh.description}
+                      category="enhancement"
                       className="text-xs mt-1 leading-relaxed"
                       style={{ color: 'var(--color-text-muted)' }}
-                      dangerouslySetInnerHTML={{ __html: enh.description }}
                     />
                   </button>
                 ))}
@@ -561,7 +564,7 @@ export function ListDetailPage() {
                     showToast('Héros attaché', 'success')
                   }}
                 >
-                  <span className="font-medium text-sm">{sq.datasheetName}</span>
+                  <span className="font-medium text-sm"><T text={sq.datasheetName} category="unit" /></span>
                   <span className="text-xs ml-2" style={{ color: 'var(--color-accent)' }}>
                     {resolveUnitPoints(sq, faction?.datasheets)} pts
                   </span>

@@ -14,6 +14,8 @@ import { ContextualSimulator } from '@/components/domain/ContextualSimulator/Con
 import { calculateTotalPoints, resolveUnitPoints } from '@/utils/pointsCalculator'
 import type { ArmyList } from '@/types/armyList.types'
 import type { Datasheet, Detachment } from '@/types/gameData.types'
+import { T } from '@/components/ui/TranslatableText'
+import { THtml } from '@/components/ui/TranslatableText'
 import type { ListUnit } from '@/types/armyList.types'
 import type { Profile } from '@/services/friendsService'
 
@@ -322,7 +324,7 @@ export function GameModePage() {
                           }}
                         >
                           <span className="font-medium text-sm" style={{ color: 'var(--color-text)', textDecoration: isDestroyed ? 'line-through' : 'none' }}>
-                            {listUnit.datasheetName}
+                            <T text={listUnit.datasheetName} category="unit" />
                           </span>
                           {listUnit.enhancement && (
                             <span className="text-xs" style={{ color: 'var(--color-accent)' }}>
@@ -441,17 +443,18 @@ export function GameModePage() {
                 style={{ backgroundColor: 'var(--color-surface)', borderLeft: '3px solid var(--color-accent)' }}
               >
                 <h3 className="font-bold text-sm mb-1" style={{ color: 'var(--color-accent)' }}>
-                  {detachment.rule.name}
+                  <T text={detachment.rule.name} category="detachment" />
                 </h3>
                 {detachment.rule.legend && (
                   <p className="text-xs italic mb-2" style={{ color: 'var(--color-text-muted)' }}>
-                    {detachment.rule.legend}
+                    <T text={detachment.rule.legend} category="detachment" />
                   </p>
                 )}
-                <div
+                <THtml
+                  html={detachment.rule.description}
+                  category="detachment"
                   className="text-xs leading-relaxed"
                   style={{ color: 'var(--color-text)' }}
-                  dangerouslySetInnerHTML={{ __html: detachment.rule.description }}
                 />
               </div>
             )}
@@ -471,7 +474,7 @@ export function GameModePage() {
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-bold text-sm" style={{ color: 'var(--color-text)' }}>
-                      {strat.name}
+                      <T text={strat.name} category="stratagem" />
                     </span>
                     <span
                       className="text-xs font-mono px-2 py-0.5 rounded"
@@ -487,13 +490,14 @@ export function GameModePage() {
                   </div>
                   {strat.legend && (
                     <p className="text-xs italic mb-1" style={{ color: 'var(--color-text-muted)' }}>
-                      {strat.legend}
+                      <T text={strat.legend} category="stratagem" />
                     </p>
                   )}
-                  <div
+                  <THtml
+                    html={strat.description}
+                    category="stratagem"
                     className="text-xs leading-relaxed"
                     style={{ color: 'var(--color-text)' }}
-                    dangerouslySetInnerHTML={{ __html: strat.description }}
                   />
                   {isUsed && (
                     <span className="text-xs mt-1 block" style={{ color: 'var(--color-text-muted)' }}>
@@ -532,7 +536,7 @@ export function GameModePage() {
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col">
                       <span className="font-medium text-sm" style={{ color: 'var(--color-text)', textDecoration: oppDestroyed ? 'line-through' : 'none' }}>
-                        {unit.datasheetName}
+                        <T text={unit.datasheetName} category="unit" />
                       </span>
                       {ds?.profiles[0] && (
                         <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>

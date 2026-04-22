@@ -366,7 +366,7 @@ export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddT
                           className="text-xs italic mt-0.5"
                           style={{ color: 'var(--color-text-muted)' }}
                         >
-                          {enh.legend}
+                          <T text={enh.legend} category="enhancement" />
                         </p>
                       )}
                       <THtml
@@ -410,7 +410,7 @@ export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddT
         <>
           <SectionTitle>Composition</SectionTitle>
           <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-            {datasheet.unitComposition}
+            <T text={datasheet.unitComposition} category="other" />
           </p>
         </>
       )}

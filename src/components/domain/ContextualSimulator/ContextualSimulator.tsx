@@ -10,6 +10,7 @@ import { findBestWeapon } from '@/utils/findBestWeapon'
 import { parseStratagemEffect, isStratagemRelevant } from '@/utils/stratagemEffectParser'
 import { resolveActiveProfile, getCombinedWeapons } from '@/utils/profileResolver'
 import { Button } from '@/components/ui/Button'
+import { T } from '@/components/ui/TranslatableText'
 
 function mergeEffects(a: AbilityEffect, b: AbilityEffect): AbilityEffect {
   return {
@@ -204,7 +205,7 @@ export function ContextualSimulator({
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-bold text-sm" style={{ color: 'var(--color-text)' }}>
-            {attackerUnit.datasheetName} → {defenderUnit.datasheetName}
+            <T text={attackerUnit.datasheetName} category="unit" /> → <T text={defenderUnit.datasheetName} category="unit" />
           </h3>
           <button
             className="text-xs bg-transparent border-none cursor-pointer"
@@ -241,12 +242,12 @@ export function ContextualSimulator({
           <div className="flex flex-wrap gap-1 mb-3">
             {attackerEnhancement && (
               <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--color-primary)', color: '#fff' }}>
-                {attackerEnhancement.name}
+                <T text={attackerEnhancement.name} category="enhancement" />
               </span>
             )}
             {defenderEnhancement && (
               <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}>
-                Def: {defenderEnhancement.name}
+                Def: <T text={defenderEnhancement.name} category="enhancement" />
               </span>
             )}
           </div>
@@ -270,7 +271,7 @@ export function ContextualSimulator({
               >
                 <span>
                   {cw.fromLeader && <span style={{ opacity: 0.7 }}>[Leader] </span>}
-                  {cw.weapon.name}
+                  <T text={cw.weapon.name} category="weapon" />
                   {cw.weapon === bestWeapon && <span style={{ opacity: 0.7 }}> *</span>}
                 </span>
                 <span style={{ opacity: 0.7 }}>A:{cw.weapon.A} S:{cw.weapon.S} AP:{cw.weapon.AP} D:{cw.weapon.D}</span>
@@ -302,7 +303,7 @@ export function ContextualSimulator({
                       setActiveAttackerStrats(next)
                     }}
                   >
-                    <span>{strat.name} {!parsed && '(lecture seule)'}</span>
+                    <span><T text={strat.name} category="stratagem" /> {!parsed && '(lecture seule)'}</span>
                     <span style={{ opacity: 0.7 }}>{strat.cpCost} CP</span>
                   </button>
                 )
@@ -325,7 +326,7 @@ export function ContextualSimulator({
                       setActiveDefenderStrats(next)
                     }}
                   >
-                    <span>Def: {strat.name} {!parsed && '(lecture seule)'}</span>
+                    <span>Def: <T text={strat.name} category="stratagem" /> {!parsed && '(lecture seule)'}</span>
                     <span style={{ opacity: 0.7 }}>{strat.cpCost} CP</span>
                   </button>
                 )
