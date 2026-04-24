@@ -90,6 +90,49 @@ export async function deleteCollectionItem(userId: string, datasheetId: string):
   }
 }
 
+type RealtimePayload = {
+  eventType: 'INSERT' | 'UPDATE' | 'DELETE'
+  new: RemoteCollectionItem
+  old: { id: string; datasheet_id: string }
+}
+
+type CollectionChangeCallback = (
+  event: 'upsert' | 'delete',
+  item: CollectionItem | null,
+  datasheetId: string,
+) => void
+
+export function subscribeToCollection(
+  userId: string,
+  callback: CollectionChangeCallback,
+): () => void {
+  if (!isSupabaseConfigured || !supabase) return () => {}
+
+  const channel = supabase
+    .channel(`ph_collection:${userId}`)
+    .on(
+      'postgres_changes' as never,
+      {
+        event: '*',
+        schema: 'public',
+        table: 'ph_collection_items',
+        filter: `user_id=eq.${userId}`,
+      },
+      ((payload: RealtimePayload) => {
+        if (payload.eventType === 'DELETE') {
+          callback('delete', null, payload.old.datasheet_id)
+        } else {
+          callback('upsert', toLocal(payload.new), payload.new.datasheet_id)
+        }
+      }) as never,
+    )
+    .subscribe()
+
+  return () => {
+    supabase!.removeChannel(channel)
+  }
+}
+
 export async function pushFullCollection(
   items: Record<string, CollectionItem>,
   userId: string,

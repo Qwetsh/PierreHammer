@@ -32,6 +32,8 @@ function syncDeleteInBackground(datasheetId: string) {
   syncService.deleteCollectionItem(auth.userId, datasheetId).catch((e) => console.error('Collection sync error:', e))
 }
 
+let unsubscribeRealtime: (() => void) | null = null
+
 interface CollectionState {
   items: Record<string, CollectionItem>
   syncing: boolean
@@ -191,6 +193,21 @@ export const useCollectionStore = create<CollectionState>()(
           }
 
           set({ items: merged, syncing: false })
+
+          // Subscribe to realtime changes
+          if (unsubscribeRealtime) unsubscribeRealtime()
+          unsubscribeRealtime = syncService.subscribeToCollection(auth.userId, (event, item, datasheetId) => {
+            if (event === 'delete') {
+              set((state) => {
+                const { [datasheetId]: _, ...rest } = state.items
+                return { items: rest }
+              })
+            } else if (item) {
+              set((state) => ({
+                items: { ...state.items, [datasheetId]: item },
+              }))
+            }
+          })
         } catch (e) {
           console.error('syncOnLogin collection error:', e)
           set({ syncing: false })
