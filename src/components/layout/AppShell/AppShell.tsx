@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, type ReactNode } from 'react'
+import { useState, useRef, useEffect, type ReactNode } from 'react'
 import { BottomNav } from '@/components/ui/BottomNav'
 import { CalculatorModal } from '@/components/ui/CalculatorModal/CalculatorModal'
 import { usePreferencesStore } from '@/stores/preferencesStore'
