@@ -22,7 +22,6 @@ const CatalogPage = lazy(() => import('./pages/Catalog/CatalogPage').then(m => (
 const UnitDetailPage = lazy(() => import('./pages/Catalog/UnitDetailPage').then(m => ({ default: m.UnitDetailPage })))
 const ProfilePage = lazy(() => import('./pages/Profile/ProfilePage').then(m => ({ default: m.ProfilePage })))
 const GameModePage = lazy(() => import('./pages/GameMode/GameModePage').then(m => ({ default: m.GameModePage })))
-const ComparatorPage = lazy(() => import('./pages/Comparator/ComparatorPage').then(m => ({ default: m.ComparatorPage })))
 const FriendsPage = lazy(() => import('./pages/Friends/FriendsPage').then(m => ({ default: m.FriendsPage })))
 const FriendListsPage = lazy(() => import('./pages/Friends/FriendListsPage').then(m => ({ default: m.FriendListsPage })))
 const SimulatorPage = lazy(() => import('./pages/Simulator/SimulatorPage').then(m => ({ default: m.SimulatorPage })))
@@ -78,7 +77,6 @@ function AnimatedRoutes() {
             <Route path="/catalog" element={<CatalogPage />} />
             <Route path="/catalog/:factionId" element={<CatalogPage />} />
             <Route path="/catalog/:factionId/:unitId" element={<UnitDetailPage />} />
-            <Route path="/compare" element={<ComparatorPage />} />
             <Route path="/game-mode/:listId" element={<GameModePage />} />
             <Route path="/simulate" element={<SimulatorPage />} />
             <Route path="/simulate/:factionId/:datasheetId" element={<SimulatorPage />} />

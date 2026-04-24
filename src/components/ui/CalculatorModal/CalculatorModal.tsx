@@ -322,6 +322,7 @@ export function CalculatorModal({ open, onClose }: { open: boolean; onClose: () 
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
+            data-scroll-lock
             className="fixed inset-0 z-[60]"
             style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
             onClick={onClose}

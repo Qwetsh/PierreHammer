@@ -697,7 +697,7 @@ export function ProfilePage() {
       </div>
       {/* Faction picker modal */}
       {factionPickerOpen && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} onClick={() => setFactionPickerOpen(false)}>
+        <div data-scroll-lock className="fixed inset-0 z-[80] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} onClick={() => setFactionPickerOpen(false)}>
           <div
             className="w-full max-w-md p-5 max-h-[80vh] overflow-y-auto"
             style={{ backgroundColor: 'var(--color-bg)', border: '1px solid var(--color-border)' }}

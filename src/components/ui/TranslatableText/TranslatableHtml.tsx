@@ -88,6 +88,7 @@ export function THtml({ html, category, className, style }: TranslatableHtmlProp
           dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }}
         />
         <div
+          data-scroll-lock
           className="fixed inset-0 z-[90] flex items-center justify-center p-4"
           style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
           onClick={() => setEditing(false)}

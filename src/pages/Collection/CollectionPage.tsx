@@ -317,6 +317,7 @@ export function CollectionPage() {
         {/* Desktop instance editor — side panel */}
         {editingId && editingItem && editingDatasheet && (
           <div
+            data-scroll-lock
             className="fixed inset-0"
             style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 60 }}
             onClick={() => setEditingId(null)}
@@ -480,6 +481,7 @@ export function CollectionPage() {
         {/* Mobile instance editor — bottom sheet HUD */}
         {editingId && editingItem && editingDatasheet && (
           <div
+            data-scroll-lock
             className="fixed left-0 right-0 top-0 flex items-end justify-center"
             style={{
               backgroundColor: 'rgba(0,0,0,0.6)',

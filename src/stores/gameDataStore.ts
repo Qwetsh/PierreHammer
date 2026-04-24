@@ -16,6 +16,7 @@ interface GameDataState {
   dataWasUpdated: boolean
   loadFactionIndex: () => Promise<void>
   loadFaction: (slug: string) => Promise<void>
+  preloadAllFactions: () => Promise<void>
   selectFaction: (slug: string | null) => void
   dismissDataNotification: () => void
   isLoading: boolean
@@ -83,6 +84,30 @@ export const useGameDataStore = create<GameDataState>((set, get) => ({
         return { error: msg, loadingFactions: loading, failedFactions: failed }
       })
     }
+  },
+
+  preloadAllFactions: async () => {
+    const state = get()
+    const index = state.factionIndex
+    if (!index) return
+    const toLoad = index.factions
+      .map((f) => f.slug)
+      .filter((slug) => !state.loadedFactions[slug] && !state.failedFactions.has(slug) && !state.loadingFactions.has(slug))
+    if (toLoad.length === 0) return
+    const results = await Promise.allSettled(
+      toLoad.map(async (slug) => {
+        const faction = await loadJSON<Faction>(`${import.meta.env.BASE_URL}data/${slug}.json`)
+        usePointsHistoryStore.getState().recordFaction(faction, get().dataWasUpdated)
+        return { slug, faction }
+      }),
+    )
+    const newFactions: Record<string, Faction> = {}
+    for (const r of results) {
+      if (r.status === 'fulfilled') newFactions[r.value.slug] = r.value.faction
+    }
+    set((s) => ({
+      loadedFactions: { ...s.loadedFactions, ...newFactions },
+    }))
   },
 
   selectFaction: (slug: string | null) => {

@@ -7,6 +7,7 @@ import { useListsStore } from '@/stores/listsStore'
 import { useFactionTheme } from '@/hooks/useFactionTheme'
 import { isCharacter, canEquipEnhancement } from '@/utils/enhancementUtils'
 import { UnitSheet } from '@/components/domain/UnitSheet'
+import { CompareModal } from '@/components/domain/CompareModal'
 import { Button } from '@/components/ui/Button'
 
 export function UnitDetailPage() {
@@ -32,6 +33,7 @@ export function UnitDetailPage() {
   const addUnit = useListsStore((s) => s.addUnit)
 
   const [showListPicker, setShowListPicker] = useState(false)
+  const [compareOpen, setCompareOpen] = useState(false)
 
   const faction = factionId ? loadedFactions[factionId] : undefined
   const datasheet = faction?.datasheets.find((ds) => ds.id === unitId)
@@ -104,10 +106,19 @@ export function UnitDetailPage() {
         onUpdateQuantity={handleUpdateQuantity}
         onAddToList={handleAddToList}
         onSimulate={datasheet.weapons.length > 0 ? () => navigate(`/simulate/${factionId}/${unitId}`) : undefined}
+        onCompare={() => setCompareOpen(true)}
+      />
+
+      <CompareModal
+        open={compareOpen}
+        onClose={() => setCompareOpen(false)}
+        sourceDatasheet={datasheet}
+        sourceFactionName={faction?.name ?? ''}
       />
 
       {showListPicker && (
         <div
+          data-scroll-lock
           className="fixed inset-0 z-50 flex items-end justify-center"
           style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
           onClick={() => setShowListPicker(false)}

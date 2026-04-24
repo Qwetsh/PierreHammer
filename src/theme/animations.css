@@ -67,6 +67,27 @@
   z-index: 3;
 }
 
+/* Spinner for loading states */
+@keyframes compare-spin {
+  to { transform: rotate(360deg); }
+}
+
+.compare-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: compare-spin 0.6s linear infinite;
+}
+
+/* Modal slide-up for inline modals */
+@keyframes modal-slide-up {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
 /* Party mode — enlarged text for tabletop readability */
 .party-mode-text {
   font-size: 1.25rem;

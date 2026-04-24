@@ -6,12 +6,11 @@ import { FactionPicker } from '@/components/domain/FactionPicker'
 import { UnitCard } from '@/components/domain/UnitCard'
 import { UnitSheet } from '@/components/domain/UnitSheet'
 import { InlineSimulator } from '@/components/domain/Simulator/InlineSimulator'
+import { CompareModal } from '@/components/domain/CompareModal'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { CompareBar } from '@/components/domain/CompareBar'
 import { HudTopBar, HudSearch, HudChip, HudBtn, MTopBar } from '@/components/ui/Hud'
 import { useCollectionStore } from '@/stores/collectionStore'
 import { useFavoritesStore } from '@/stores/favoritesStore'
-import { useComparatorStore } from '@/stores/comparatorStore'
 import { useListsStore } from '@/stores/listsStore'
 import { isCharacter, canEquipEnhancement } from '@/utils/enhancementUtils'
 import { usePreferencesStore } from '@/stores/preferencesStore'
@@ -58,7 +57,6 @@ export function CatalogPage() {
   const [query, setQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState<string | 'all'>('all')
   const [sortBy, setSortBy] = useState<SortKey>('name')
-  const [compareMode, setCompareMode] = useState(false)
   const [showLegends, setShowLegends] = useState(false)
   const [selectedKeywords, setSelectedKeywords] = useState<Set<string>>(new Set())
   const [keywordSearch, setKeywordSearch] = useState('')
@@ -69,7 +67,6 @@ export function CatalogPage() {
   const addInstance = useCollectionStore((s) => s.addInstance)
   const removeInstance = useCollectionStore((s) => s.removeInstance)
   const favorites = useFavoritesStore((s) => s.favorites)
-  const { addUnit: addToCompare, removeUnit: removeFromCompare, isSelected, selectedIds, clear: clearCompare } = useComparatorStore()
   const allLists = useListsStore((s) => s.getAllLists)
   const addUnitToList = useListsStore((s) => s.addUnit)
 
@@ -167,13 +164,6 @@ export function CatalogPage() {
     })
   }
 
-  const toggleCompareMode = () => {
-    if (compareMode) {
-      clearCompare()
-    }
-    setCompareMode(!compareMode)
-  }
-
   if (error) {
     return (
       <div className="p-4" style={{ color: 'var(--color-error)' }}>
@@ -235,15 +225,6 @@ export function CatalogPage() {
             owned={collectionItems[ds.id]?.instances?.length}
             instances={collectionItems[ds.id]?.instances}
             onClick={() => setModalUnit(ds)}
-            selectable={compareMode}
-            selected={isSelected(ds.id)}
-            onToggleSelect={() => {
-              if (isSelected(ds.id)) {
-                removeFromCompare(ds.id)
-              } else {
-                addToCompare(ds.id, selectedFactionSlug ?? '')
-              }
-            }}
           />
         ))}
       </div>
@@ -275,7 +256,6 @@ export function CatalogPage() {
             {nonFavoriteDatasheets.length > 0 && renderGrid(nonFavoriteDatasheets)}
           </>
         )}
-        {compareMode && selectedIds.length > 0 && <CompareBar />}
       </>
     )
 
@@ -291,9 +271,6 @@ export function CatalogPage() {
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-text-muted)' }}>
                   {sorted.length} unité{sorted.length !== 1 ? 's' : ''}
                 </span>
-                <HudBtn variant={compareMode ? 'accent' : 'ghost'} onClick={toggleCompareMode}>
-                  {compareMode ? 'Annuler' : 'Comparer'}
-                </HudBtn>
                 <HudBtn variant="ghost" onClick={() => selectFaction(null)}>Changer</HudBtn>
               </div>
             }
@@ -387,12 +364,7 @@ export function CatalogPage() {
             title={selectedFaction.name}
             sub="Codex"
             actions={
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <HudBtn variant={compareMode ? 'accent' : 'ghost'} onClick={toggleCompareMode} style={{ padding: '4px 8px', fontSize: 9 }}>
-                  {compareMode ? 'Annuler' : 'Comp.'}
-                </HudBtn>
-                <HudBtn variant="ghost" onClick={() => selectFaction(null)} style={{ padding: '4px 8px', fontSize: 9 }}>Changer</HudBtn>
-              </div>
+              <HudBtn variant="ghost" onClick={() => selectFaction(null)} style={{ padding: '4px 8px', fontSize: 9 }}>Changer</HudBtn>
             }
           />
           <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -534,6 +506,7 @@ function UnitDetailModal({
   const navigate = useNavigate()
   const [showListPicker, setShowListPicker] = useState(false)
   const [simMode, setSimMode] = useState(false)
+  const [compareOpen, setCompareOpen] = useState(false)
 
   const ownedCount = collectionItems[datasheet.id]?.instances?.length ?? 0
   const points = datasheet.pointOptions.length > 0 ? datasheet.pointOptions[0].cost : 0
@@ -589,6 +562,7 @@ function UnitDetailModal({
 
   return (
     <div
+      data-scroll-lock
       className="fixed inset-0 z-50 flex items-center justify-center"
       style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
       onClick={onClose}
@@ -654,13 +628,22 @@ function UnitDetailModal({
                 setSimMode(true)
               }
             } : undefined}
+            onCompare={() => setCompareOpen(true)}
             forceAccordion
           />
         )}
 
+        <CompareModal
+          open={compareOpen}
+          onClose={() => setCompareOpen(false)}
+          sourceDatasheet={datasheet}
+          sourceFactionName={faction?.name ?? ''}
+        />
+
         {/* List picker sub-modal */}
         {showListPicker && (
           <div
+            data-scroll-lock
             className="fixed inset-0 z-50 flex items-end justify-center"
             style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
             onClick={() => setShowListPicker(false)}

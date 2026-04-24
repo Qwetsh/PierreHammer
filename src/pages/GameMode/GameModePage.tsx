@@ -203,6 +203,7 @@ export function GameModePage() {
 
   return (
     <motion.div
+      data-scroll-lock
       className="fixed inset-0 z-50 flex flex-col overflow-y-auto"
       style={{ backgroundColor: 'var(--color-bg)' }}
       initial={{ opacity: 0, scale: 0.95 }}
@@ -603,6 +604,7 @@ export function GameModePage() {
       {/* Opponent picker modal */}
       {showOpponentPicker && (
         <div
+          data-scroll-lock
           className="fixed inset-0 z-[60] flex items-end justify-center"
           style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
           onClick={() => { setShowOpponentPicker(false); setSelectedFriend(null); setFriendLists([]) }}
@@ -678,6 +680,7 @@ export function GameModePage() {
       {/* Target picker for contextual simulation */}
       {showTargetPicker && attackingUnit && (
         <div
+          data-scroll-lock
           className="fixed inset-0 z-[60] flex items-end justify-center"
           style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
           onClick={() => { setShowTargetPicker(false); setAttackingUnit(null) }}

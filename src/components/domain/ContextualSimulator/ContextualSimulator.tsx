@@ -193,6 +193,7 @@ export function ContextualSimulator({
 
   return (
     <div
+      data-scroll-lock
       className="fixed inset-0 z-[70] flex items-end justify-center"
       style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
       onClick={onClose}

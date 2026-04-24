@@ -72,7 +72,7 @@ export function FactionPickerModal({ factions, detachments, onFactionChosen, onS
     const factionName = factions.find((f) => f.slug === selectedFaction)?.name ?? selectedFaction
 
     return (
-      <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} onClick={onClose}>
+      <div data-scroll-lock className="fixed inset-0 z-[80] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} onClick={onClose}>
         <div
           className="w-full max-w-md p-5 max-h-[80vh] lg:max-w-lg lg:p-6 overflow-y-auto"
           style={{ backgroundColor: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
@@ -133,7 +133,7 @@ export function FactionPickerModal({ factions, detachments, onFactionChosen, onS
   if (selectedFaction && detachments.length === 0) {
     const factionName = factions.find((f) => f.slug === selectedFaction)?.name ?? selectedFaction
     return (
-      <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} onClick={onClose}>
+      <div data-scroll-lock className="fixed inset-0 z-[80] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} onClick={onClose}>
         <div
           className="w-full max-w-md p-5 text-center"
           style={{ backgroundColor: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
@@ -157,7 +157,7 @@ export function FactionPickerModal({ factions, detachments, onFactionChosen, onS
 
   // Step 1: faction selection
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} onClick={onClose}>
+    <div data-scroll-lock className="fixed inset-0 z-[80] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} onClick={onClose}>
       <div
         className="w-full max-w-md p-5 max-h-[80vh] lg:max-w-lg lg:p-6 overflow-y-auto"
         style={{ backgroundColor: 'var(--color-bg)', border: '1px solid var(--color-border)' }}

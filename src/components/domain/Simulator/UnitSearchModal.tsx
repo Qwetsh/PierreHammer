@@ -18,7 +18,7 @@ export function UnitSearchModal({ datasheets, onSelect, onClose }: UnitSearchMod
   }, [datasheets, search])
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} onClick={onClose}>
+    <div data-scroll-lock className="fixed inset-0 z-[80] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} onClick={onClose}>
       <div
         className="w-full max-w-md rounded-xl p-5 max-h-[80vh] lg:max-w-lg lg:p-6 flex flex-col"
         style={{ backgroundColor: 'var(--color-bg)' }}

@@ -470,6 +470,7 @@ export function ListDetailPage() {
       {/* Enhancement picker modal */}
       {enhancementUnitIndex !== null && (
         <div
+          data-scroll-lock
           className="fixed inset-0 z-50 flex items-end justify-center"
           style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
           onClick={() => setEnhancementUnitIndex(null)}
@@ -540,6 +541,7 @@ export function ListDetailPage() {
       {/* Attach hero modal */}
       {attachingHeroIndex !== null && (
         <div
+          data-scroll-lock
           className="fixed inset-0 z-50 flex items-end justify-center"
           style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
           onClick={() => setAttachingHeroIndex(null)}

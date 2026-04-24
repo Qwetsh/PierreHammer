@@ -40,6 +40,7 @@ interface UnitSheetProps {
   onUpdateQuantity?: (quantity: number) => void
   onAddToList?: () => void
   onSimulate?: () => void
+  onCompare?: () => void
   forceAccordion?: boolean
 }
 
@@ -105,7 +106,7 @@ function MobileAccordion({
   )
 }
 
-export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddToCollection, onUpdateQuantity, onAddToList, onSimulate, forceAccordion }: UnitSheetProps) {
+export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddToCollection, onUpdateQuantity, onAddToList, onSimulate, onCompare, forceAccordion }: UnitSheetProps) {
   const isMobileScreen = useIsMobile()
   const isMobile = forceAccordion || isMobileScreen
   const isMelee = (w: { type: string; range: string }) => w.type === 'Melee' || w.range === 'Melee'
@@ -261,6 +262,11 @@ export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddT
         {onSimulate && (
           <Button variant="ghost" size="sm" onClick={onSimulate}>
             Simuler
+          </Button>
+        )}
+        {onCompare && (
+          <Button variant="ghost" size="sm" onClick={onCompare}>
+            Comparer
           </Button>
         )}
       </div>
