@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { PaintStatus } from '@/components/domain/PaintStatusBadge'
 import type { CollectionItem } from '@/types/collection.types'
+import { useAuthStore } from '@/stores/authStore'
+import * as syncService from '@/services/collectionSyncService'
 
 export interface ProgressStats {
   total: number
@@ -12,8 +14,27 @@ export interface ProgressStats {
   percentComplete: number
 }
 
+function getAuthContext(): { userId: string } | null {
+  const { user, isAuthenticated } = useAuthStore.getState()
+  if (!isAuthenticated || !user) return null
+  return { userId: user.id }
+}
+
+function syncItemInBackground(item: CollectionItem) {
+  const auth = getAuthContext()
+  if (!auth) return
+  syncService.upsertCollectionItem(item, auth.userId).catch((e) => console.error('Collection sync error:', e))
+}
+
+function syncDeleteInBackground(datasheetId: string) {
+  const auth = getAuthContext()
+  if (!auth) return
+  syncService.deleteCollectionItem(auth.userId, datasheetId).catch((e) => console.error('Collection sync error:', e))
+}
+
 interface CollectionState {
   items: Record<string, CollectionItem>
+  syncing: boolean
   addItem: (datasheetId: string, factionId: string) => void
   removeItem: (datasheetId: string) => void
   removeInstance: (datasheetId: string, instanceIndex: number) => void
@@ -23,6 +44,7 @@ interface CollectionState {
   getOwnedCount: (datasheetId: string) => number
   isOwned: (datasheetId: string) => boolean
   getProgressStats: () => ProgressStats
+  syncOnLogin: () => Promise<void>
 }
 
 // Migrate old format { quantity, paintStatus } to new { instances }
@@ -41,35 +63,35 @@ export const useCollectionStore = create<CollectionState>()(
   persist(
     (set, get) => ({
       items: {},
+      syncing: false,
 
       addItem: (datasheetId, factionId) => {
         set((state) => {
           const existing = state.items[datasheetId]
           if (existing) {
+            const updated = {
+              ...existing,
+              instances: [...existing.instances, 'unassembled' as PaintStatus],
+            }
+            syncItemInBackground(updated)
             return {
-              items: {
-                ...state.items,
-                [datasheetId]: {
-                  ...existing,
-                  instances: [...existing.instances, 'unassembled'],
-                },
-              },
+              items: { ...state.items, [datasheetId]: updated },
             }
           }
+          const newItem: CollectionItem = {
+            datasheetId,
+            factionId,
+            instances: ['unassembled'],
+          }
+          syncItemInBackground(newItem)
           return {
-            items: {
-              ...state.items,
-              [datasheetId]: {
-                datasheetId,
-                factionId,
-                instances: ['unassembled'],
-              },
-            },
+            items: { ...state.items, [datasheetId]: newItem },
           }
         })
       },
 
       removeItem: (datasheetId) => {
+        syncDeleteInBackground(datasheetId)
         set((state) => {
           const { [datasheetId]: _, ...rest } = state.items
           return { items: rest }
@@ -84,10 +106,12 @@ export const useCollectionStore = create<CollectionState>()(
           get().removeItem(datasheetId)
           return
         }
+        const updated = { ...item, instances: newInstances }
+        syncItemInBackground(updated)
         set((state) => ({
           items: {
             ...state.items,
-            [datasheetId]: { ...item, instances: newInstances },
+            [datasheetId]: updated,
           },
         }))
       },
@@ -95,13 +119,15 @@ export const useCollectionStore = create<CollectionState>()(
       addInstance: (datasheetId) => {
         const item = get().items[datasheetId]
         if (!item) return
+        const updated = {
+          ...item,
+          instances: [...item.instances, 'unassembled' as PaintStatus],
+        }
+        syncItemInBackground(updated)
         set((state) => ({
           items: {
             ...state.items,
-            [datasheetId]: {
-              ...item,
-              instances: [...item.instances, 'unassembled'],
-            },
+            [datasheetId]: updated,
           },
         }))
       },
@@ -111,10 +137,12 @@ export const useCollectionStore = create<CollectionState>()(
         if (!item || instanceIndex < 0 || instanceIndex >= item.instances.length) return
         const newInstances = [...item.instances]
         newInstances[instanceIndex] = status
+        const updated = { ...item, instances: newInstances }
+        syncItemInBackground(updated)
         set((state) => ({
           items: {
             ...state.items,
-            [datasheetId]: { ...item, instances: newInstances },
+            [datasheetId]: updated,
           },
         }))
       },
@@ -134,6 +162,39 @@ export const useCollectionStore = create<CollectionState>()(
         const completed = allInstances.filter((s) => s === 'done').length
         const percentComplete = Math.round((completed / total) * 100)
         return { total, unassembled, assembled, inProgress, completed, percentComplete }
+      },
+
+      syncOnLogin: async () => {
+        const auth = getAuthContext()
+        if (!auth) return
+        set({ syncing: true })
+        try {
+          const remoteItems = await syncService.fetchRemoteCollection(auth.userId)
+          const localItems = get().items
+
+          // Merge: remote wins for existing keys, local-only items get pushed
+          const merged: Record<string, CollectionItem> = { ...remoteItems }
+          const localOnly: CollectionItem[] = []
+
+          for (const [key, localItem] of Object.entries(localItems)) {
+            if (!merged[key]) {
+              merged[key] = localItem
+              localOnly.push(localItem)
+            }
+          }
+
+          // Push local-only items to remote
+          if (localOnly.length > 0) {
+            for (const item of localOnly) {
+              await syncService.upsertCollectionItem(item, auth.userId)
+            }
+          }
+
+          set({ items: merged, syncing: false })
+        } catch (e) {
+          console.error('syncOnLogin collection error:', e)
+          set({ syncing: false })
+        }
       },
     }),
     {

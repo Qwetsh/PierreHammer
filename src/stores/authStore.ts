@@ -38,10 +38,13 @@ export const useAuthStore = create<AuthState>()((set) => ({
         isAuthenticated: !!session?.user,
         loading: false,
       })
-      // Trigger list sync on login (lazy import to avoid circular deps)
+      // Trigger sync on login (lazy imports to avoid circular deps)
       if (!wasAuthenticated && session?.user) {
         import('@/stores/listsStore').then(({ useListsStore }) => {
           useListsStore.getState().syncOnLogin()
+        })
+        import('@/stores/collectionStore').then(({ useCollectionStore }) => {
+          useCollectionStore.getState().syncOnLogin()
         })
         // Sync custom images on login
         import('@/services/customImageSyncService').then(async ({ syncLocalToRemote, syncRemoteToLocal }) => {
