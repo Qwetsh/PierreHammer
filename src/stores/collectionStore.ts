@@ -180,24 +180,9 @@ export const useCollectionStore = create<CollectionState>()(
         set({ syncing: true })
         try {
           const remoteItems = await syncService.fetchRemoteCollection(auth.userId)
-          const localItems = get().items
-          const hasRemote = Object.keys(remoteItems).length > 0
-          const hasLocal = Object.keys(localItems).length > 0
 
-          let merged: Record<string, CollectionItem>
-
-          if (hasRemote) {
-            // Remote is source of truth — replace local entirely
-            merged = remoteItems
-          } else if (hasLocal) {
-            // First sync: no remote data, push local items up
-            merged = localItems
-            await syncService.pushFullCollection(localItems, auth.userId)
-          } else {
-            merged = {}
-          }
-
-          set({ items: merged, syncing: false })
+          // Remote is always source of truth
+          set({ items: remoteItems, syncing: false })
 
           // Subscribe to realtime changes
           if (unsubscribeRealtime) unsubscribeRealtime()
