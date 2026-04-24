@@ -20,19 +20,27 @@ function getAuthContext(): { userId: string } | null {
   return { userId: user.id }
 }
 
+function withSuppressedRealtime(fn: () => Promise<unknown>) {
+  suppressRealtime = true
+  fn()
+    .catch((e) => console.error('Collection sync error:', e))
+    .finally(() => { suppressRealtime = false })
+}
+
 function syncItemInBackground(item: CollectionItem) {
   const auth = getAuthContext()
   if (!auth) return
-  syncService.upsertCollectionItem(item, auth.userId).catch((e) => console.error('Collection sync error:', e))
+  withSuppressedRealtime(() => syncService.upsertCollectionItem(item, auth.userId))
 }
 
 function syncDeleteInBackground(datasheetId: string) {
   const auth = getAuthContext()
   if (!auth) return
-  syncService.deleteCollectionItem(auth.userId, datasheetId).catch((e) => console.error('Collection sync error:', e))
+  withSuppressedRealtime(() => syncService.deleteCollectionItem(auth.userId, datasheetId))
 }
 
 let unsubscribeRealtime: (() => void) | null = null
+let suppressRealtime = false
 
 interface CollectionState {
   items: Record<string, CollectionItem>
@@ -197,8 +205,10 @@ export const useCollectionStore = create<CollectionState>()(
           // Subscribe to realtime changes
           if (unsubscribeRealtime) unsubscribeRealtime()
           unsubscribeRealtime = syncService.subscribeToCollection(auth.userId, (event, item, datasheetId) => {
+            if (suppressRealtime || !datasheetId) return
             if (event === 'delete') {
               set((state) => {
+                if (!(datasheetId in state.items)) return state
                 const { [datasheetId]: _, ...rest } = state.items
                 return { items: rest }
               })
