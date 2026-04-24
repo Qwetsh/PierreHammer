@@ -4,12 +4,11 @@ import { useCollectionStore } from '@/stores/collectionStore'
 import { useGameDataStore } from '@/stores/gameDataStore'
 import { useFavoritesStore } from '@/stores/favoritesStore'
 import { useSearch } from '@/hooks/useSearch'
-import { CollectionToggle } from '@/components/domain/CollectionToggle'
-import type { CollectionView } from '@/components/domain/CollectionToggle'
 import { UnitCard } from '@/components/domain/UnitCard'
 import { SearchBar } from '@/components/ui/SearchBar'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ProgressBar } from '@/components/ui/ProgressBar'
+import { HudPanel, HudChip, HudSearch, HudSegmentedBar, HudTopBar, MTopBar } from '@/components/ui/Hud'
 import type { PaintStatus } from '@/components/domain/PaintStatusBadge'
 import type { Datasheet } from '@/types/gameData.types'
 import { T } from '@/components/ui/TranslatableText'
@@ -68,7 +67,6 @@ export function CollectionPage() {
   const addInstance = useCollectionStore((s) => s.addInstance)
   const removeInstance = useCollectionStore((s) => s.removeInstance)
 
-  const [view, setView] = useState<CollectionView>('owned')
   const [query, setQuery] = useState('')
   const [factionFilter, setFactionFilter] = useState<string | 'all'>('all')
   const [paintFilter, setPaintFilter] = useState<PaintStatus | 'all'>('all')
@@ -99,9 +97,8 @@ export function CollectionPage() {
   }, [loadedFactions])
 
   const toggleFiltered = useMemo(() => {
-    if (view === 'all') return allDatasheets
     return allDatasheets.filter((ds) => ds.id in collectionItems)
-  }, [allDatasheets, view, collectionItems])
+  }, [allDatasheets, collectionItems])
 
   const factionFiltered = useMemo(() => {
     if (factionFilter === 'all') return toggleFiltered
@@ -142,7 +139,6 @@ export function CollectionPage() {
     })
   }, [searched, sortBy, collectionItems])
 
-  // Separate favorites
   const favoriteDatasheets = useMemo(
     () => sortedDatasheets.filter((ds) => favorites.includes(ds.id)),
     [sortedDatasheets, favorites],
@@ -180,8 +176,10 @@ export function CollectionPage() {
   const editingItem = editingId ? collectionItems[editingId] : null
   const editingDatasheet = editingId ? sortedDatasheets.find((ds) => ds.id === editingId) ?? allDatasheets.find((ds) => ds.id === editingId) : null
 
+  const stats = getProgressStats()
+
   const renderGrid = (items: DatasheetWithFaction[]) => (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
       {items.map((ds) => (
         <UnitCard
           key={ds.id}
@@ -189,7 +187,7 @@ export function CollectionPage() {
           owned={collectionItems[ds.id]?.instances.length}
           instances={collectionItems[ds.id]?.instances}
           onClick={() => {
-            if (view === 'owned' && collectionItems[ds.id]) {
+            if (collectionItems[ds.id]) {
               setEditingId(ds.id)
             } else {
               navigate(`/catalog/${ds.factionSlug}/${ds.id}`)
@@ -200,11 +198,10 @@ export function CollectionPage() {
     </div>
   )
 
-  if (view === 'owned' && !hasCollection) {
+  if (!hasCollection) {
     return (
       <div className="p-4">
         <h1 className="text-2xl font-bold mb-4" style={{ fontSize: 'var(--text-2xl)' }}>Collection</h1>
-        <CollectionToggle value={view} onChange={setView} />
         <div className="mt-8">
           <EmptyState
             title="Aucune figurine"
@@ -218,201 +215,167 @@ export function CollectionPage() {
   }
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4" style={{ fontSize: 'var(--text-2xl)' }}>Collection</h1>
-
-      <div className="flex items-center gap-3 mb-4 flex-wrap">
-        <CollectionToggle value={view} onChange={setView} />
-        <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-          {sortedDatasheets.length} unité{sortedDatasheets.length !== 1 ? 's' : ''}
-        </span>
-      </div>
-
-      {view === 'owned' && hasCollection && (() => {
-        const stats = getProgressStats()
-        return (
-          <div className="mb-4">
-            <ProgressBar
-              variant="segmented"
-              value={stats.percentComplete}
-              segments={[
-                { value: stats.unassembled, color: 'var(--color-text-muted)', label: 'Non montée' },
-                { value: stats.assembled, color: 'var(--color-warning)', label: 'Montée' },
-                { value: stats.inProgress, color: 'var(--color-accent)', label: 'En cours' },
-                { value: stats.completed, color: 'var(--color-success)', label: 'Terminée' },
-              ]}
-            />
-          </div>
-        )
-      })()}
-
-      <div className="mb-3">
-        <SearchBar value={query} onChange={setQuery} placeholder="Rechercher une unité..." />
-      </div>
-
-      {/* Faction filter chips */}
-      {availableFactions.length > 1 && (
-        <div className="flex flex-wrap gap-2 mb-3">
-          <button
-            className="text-xs px-2.5 py-1 rounded-full cursor-pointer border-none min-h-[32px]"
-            style={{
-              backgroundColor: factionFilter === 'all' ? 'var(--color-primary)' : 'var(--color-surface)',
-              color: factionFilter === 'all' ? '#ffffff' : 'var(--color-text)',
-            }}
-            onClick={() => setFactionFilter('all')}
-          >
-            Toutes
-          </button>
-          {availableFactions.map((f) => (
-            <button
-              key={f.slug}
-              className="text-xs px-2.5 py-1 rounded-full cursor-pointer border-none min-h-[32px]"
-              style={{
-                backgroundColor: factionFilter === f.slug ? 'var(--color-primary)' : 'var(--color-surface)',
-                color: factionFilter === f.slug ? '#ffffff' : 'var(--color-text)',
-              }}
-              onClick={() => setFactionFilter(f.slug)}
-            >
-              <T text={f.name} category="faction" />
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Paint status filter chips */}
-      {view === 'owned' && (
-        <div className="flex flex-wrap gap-2 mb-3">
-          {paintStatusOptions.map((opt) => (
-            <button
-              key={opt.value}
-              className="text-xs px-2.5 py-1 rounded-full cursor-pointer border-none min-h-[32px]"
-              style={{
-                backgroundColor: paintFilter === opt.value ? 'var(--color-primary)' : 'var(--color-surface)',
-                color: paintFilter === opt.value ? '#ffffff' : 'var(--color-text)',
-              }}
-              onClick={() => setPaintFilter(opt.value)}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Sort controls */}
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Trier par :</span>
-        {(Object.keys(sortLabels) as SortKey[]).map((key) => {
-          if (key === 'paintStatus' && view !== 'owned') return null
-          return (
-            <button
-              key={key}
-              className="text-xs px-2 py-1 rounded cursor-pointer border-none min-h-[28px]"
-              style={{
-                backgroundColor: sortBy === key ? 'var(--color-accent)' : 'var(--color-surface)',
-                color: sortBy === key ? '#ffffff' : 'var(--color-text)',
-              }}
-              onClick={() => setSortBy(key)}
-            >
-              {sortLabels[key]}
-            </button>
-          )
-        })}
-      </div>
-
-      {sortedDatasheets.length === 0 && hasFilters ? (
-        <EmptyState
-          title="Aucune figurine ne correspond"
-          description="Essaie d'ajuster tes filtres pour trouver ce que tu cherches."
-          actionLabel="Réinitialiser les filtres"
-          onAction={resetFilters}
+    <>
+      {/* ══════ DESKTOP HUD LAYOUT ══════ */}
+      <div className="hidden lg:block">
+        <HudTopBar
+          title="Collection"
+          sub="Arsenal"
+          actions={
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-text-muted)' }}>
+              {sortedDatasheets.length} unité{sortedDatasheets.length !== 1 ? 's' : ''}
+            </span>
+          }
         />
-      ) : (
-        <>
-          {/* Favorites section */}
-          {favoriteDatasheets.length > 0 && (
-            <div className="mb-6">
-              <h2 className="text-sm font-semibold mb-2" style={{ color: 'var(--color-warning, #f59e0b)' }}>
-                Favoris ({favoriteDatasheets.length})
-              </h2>
-              {renderGrid(favoriteDatasheets)}
-            </div>
-          )}
 
-          {/* Main grid */}
-          {nonFavoriteDatasheets.length > 0 && (
+        <div style={{ padding: '16px 24px 24px' }}>
+          {/* Paint progression + search row */}
+          <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
+            {/* Paint progress panel */}
+            {hasCollection && (
+              <HudPanel title="Progression" style={{ width: 280, flexShrink: 0 }}>
+                <div style={{ padding: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 18, fontWeight: 600, color: 'var(--color-accent)' }}>
+                      {stats.percentComplete}%
+                    </span>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-text-muted)' }}>
+                      {stats.completed}/{stats.total}
+                    </span>
+                  </div>
+                  <HudSegmentedBar
+                    height={6}
+                    segments={[
+                      { value: stats.completed, color: 'var(--color-success)' },
+                      { value: stats.inProgress, color: 'var(--color-accent)' },
+                      { value: stats.assembled, color: 'var(--color-warning)' },
+                      { value: stats.unassembled, color: '#536577' },
+                    ]}
+                  />
+                </div>
+              </HudPanel>
+            )}
+
+            {/* Search + filters */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <HudSearch value={query} onChange={setQuery} placeholder="Rechercher une unité..." />
+              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
+                {/* Faction chips */}
+                {availableFactions.length > 1 && (
+                  <>
+                    <HudChip active={factionFilter === 'all'} onClick={() => setFactionFilter('all')}>Toutes</HudChip>
+                    {availableFactions.map((f) => (
+                      <HudChip key={f.slug} active={factionFilter === f.slug} onClick={() => setFactionFilter(f.slug)}>
+                        <T text={f.name} category="faction" />
+                      </HudChip>
+                    ))}
+                    <span style={{ width: 1, height: 24, background: 'var(--color-border)', margin: '0 4px' }} />
+                  </>
+                )}
+                {/* Paint status chips */}
+                {paintStatusOptions.map((opt) => (
+                  <HudChip key={opt.value} active={paintFilter === opt.value} onClick={() => setPaintFilter(opt.value)}>
+                    {opt.label}
+                  </HudChip>
+                ))}
+              </div>
+              {/* Sort */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 9, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)', letterSpacing: 1.5, textTransform: 'uppercase' as const }}>
+                  Tri
+                </span>
+                {(Object.keys(sortLabels) as SortKey[]).map((key) => (
+                    <HudChip key={key} active={sortBy === key} onClick={() => setSortBy(key)}>
+                      {sortLabels[key]}
+                    </HudChip>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Grid */}
+          {sortedDatasheets.length === 0 && hasFilters ? (
+            <EmptyState
+              title="Aucune figurine ne correspond"
+              description="Essaie d'ajuster tes filtres pour trouver ce que tu cherches."
+              actionLabel="Réinitialiser les filtres"
+              onAction={resetFilters}
+            />
+          ) : (
             <>
               {favoriteDatasheets.length > 0 && (
-                <h2 className="text-sm font-semibold mb-2" style={{ color: 'var(--color-text-muted)' }}>
-                  Toutes les unités
-                </h2>
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ fontSize: 10, color: 'var(--color-gold)', fontFamily: 'var(--font-mono)', letterSpacing: 1.5, textTransform: 'uppercase' as const, marginBottom: 8 }}>
+                    {'\u2605'} Favoris ({favoriteDatasheets.length})
+                  </div>
+                  {renderGrid(favoriteDatasheets)}
+                </div>
               )}
-              {renderGrid(nonFavoriteDatasheets)}
+              {nonFavoriteDatasheets.length > 0 && renderGrid(nonFavoriteDatasheets)}
             </>
           )}
-        </>
-      )}
+        </div>
 
-      {/* Instance editor modal */}
-      {editingId && editingItem && editingDatasheet && (
-        <div
-          className="fixed left-0 right-0 top-0 flex items-end justify-center"
-          style={{
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            zIndex: 60,
-            bottom: 'calc(60px + env(safe-area-inset-bottom, 0px))',
-          }}
-          onClick={() => setEditingId(null)}
-        >
+        {/* Desktop instance editor — side panel */}
+        {editingId && editingItem && editingDatasheet && (
           <div
-            className="w-full max-w-lg rounded-t-2xl"
-            style={{ backgroundColor: 'var(--color-surface)', maxHeight: '70%', display: 'flex', flexDirection: 'column' }}
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0"
+            style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 60 }}
+            onClick={() => setEditingId(null)}
           >
-            {/* Handle bar */}
-            <div className="flex justify-center pt-3 pb-1">
-              <div className="w-10 h-1 rounded-full" style={{ backgroundColor: 'var(--color-text-muted)', opacity: 0.4 }} />
-            </div>
-
-            {/* Header */}
-            <div className="px-4 pb-3 flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold" style={{ color: 'var(--color-text)', fontSize: 'var(--text-lg)' }}>
-                  <T text={editingDatasheet.name} category="unit" />
-                </h3>
-                <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                  {editingItem.instances.length} exemplaire{editingItem.instances.length > 1 ? 's' : ''}
-                </p>
+            <div
+              className="fixed top-0 right-0 bottom-0"
+              style={{ width: 380, background: 'var(--color-bg-elevated)', borderLeft: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-text)' }}>
+                    <T text={editingDatasheet.name} category="unit" />
+                  </div>
+                  <div style={{ fontSize: 10, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)', marginTop: 2 }}>
+                    {editingItem.instances.length} exemplaire{editingItem.instances.length > 1 ? 's' : ''}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    style={{ padding: '5px 12px', fontSize: 11, fontFamily: 'var(--font-mono)', background: 'color-mix(in srgb, var(--color-accent) 10%, transparent)', color: 'var(--color-accent)', border: '1px solid var(--color-accent)', cursor: 'pointer' }}
+                    onClick={() => addInstance(editingId)}
+                  >
+                    + Ajouter
+                  </button>
+                  <button
+                    style={{ padding: '5px 10px', fontSize: 11, background: 'transparent', color: 'var(--color-text-muted)', border: '1px solid var(--color-border)', cursor: 'pointer' }}
+                    onClick={() => setEditingId(null)}
+                  >
+                    {'\u2715'}
+                  </button>
+                </div>
               </div>
-              <button
-                className="text-xs px-3 py-1.5 rounded-lg border-none cursor-pointer min-h-[36px]"
-                style={{ backgroundColor: 'var(--color-primary)', color: '#ffffff' }}
-                onClick={() => addInstance(editingId)}
-              >
-                + Ajouter
-              </button>
-            </div>
-
-            {/* Instances list */}
-            <div className="px-4 pb-4 overflow-y-auto scrollbar-thin" style={{ flex: '1 1 auto', minHeight: 0 }}>
-              <div className="flex flex-col gap-2">
+              <div style={{ flex: 1, overflow: 'auto', padding: '12px 20px' }}>
                 {editingItem.instances.map((status, i) => (
                   <div
                     key={i}
-                    className="flex items-center gap-2 rounded-lg px-3 py-2"
-                    style={{ backgroundColor: 'var(--color-bg)' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid var(--color-border)' }}
                   >
-                    <span className="text-xs font-medium shrink-0" style={{ color: 'var(--color-text-muted)', width: '20px' }}>
+                    <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', width: 20 }}>
                       #{i + 1}
                     </span>
-                    <div className="flex gap-1 flex-1">
+                    <div style={{ display: 'flex', gap: 4, flex: 1 }}>
                       {paintCycle.map((s) => (
                         <button
                           key={s}
-                          className="text-xs px-2 py-1 rounded border-none cursor-pointer min-h-[32px]"
                           style={{
-                            backgroundColor: status === s ? paintDotColors[s] : 'var(--color-surface)',
-                            color: status === s ? '#ffffff' : 'var(--color-text-muted)',
-                            flex: '1 1 0',
+                            flex: 1,
+                            padding: '4px 0',
+                            fontSize: 9,
+                            fontFamily: 'var(--font-mono)',
+                            letterSpacing: 0.5,
+                            textTransform: 'uppercase' as const,
+                            background: status === s ? `color-mix(in srgb, ${paintDotColors[s]} 20%, transparent)` : 'transparent',
+                            color: status === s ? paintDotColors[s] : 'var(--color-text-muted)',
+                            border: `1px solid ${status === s ? paintDotColors[s] : 'var(--color-border)'}`,
+                            cursor: 'pointer',
                           }}
                           onClick={() => updateInstanceStatus(editingId, i, s)}
                         >
@@ -421,23 +384,189 @@ export function CollectionPage() {
                       ))}
                     </div>
                     <button
-                      className="text-xs px-1.5 py-1 rounded border-none cursor-pointer min-h-[32px]"
-                      style={{ backgroundColor: 'transparent', color: 'var(--color-error)' }}
+                      style={{ background: 'transparent', border: 'none', color: 'var(--color-error)', cursor: 'pointer', fontSize: 11, padding: '4px 6px' }}
                       onClick={() => {
                         removeInstance(editingId, i)
                         if (editingItem.instances.length <= 1) setEditingId(null)
                       }}
-                      aria-label={`Retirer exemplaire ${i + 1}`}
                     >
-                      ✕
+                      {'\u2715'}
                     </button>
                   </div>
                 ))}
               </div>
             </div>
           </div>
+        )}
+      </div>
+
+      {/* ══════ MOBILE HUD LAYOUT ══════ */}
+      <div className="lg:hidden">
+        <MTopBar
+          title="Collection"
+          sub="Arsenal"
+          actions={
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--color-text-muted)' }}>
+              {sortedDatasheets.length} unité{sortedDatasheets.length !== 1 ? 's' : ''}
+            </span>
+          }
+        />
+        <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {hasCollection && (
+            <HudSegmentedBar
+              height={6}
+              segments={[
+                { value: stats.completed, color: 'var(--color-success)' },
+                { value: stats.inProgress, color: 'var(--color-accent)' },
+                { value: stats.assembled, color: 'var(--color-warning)' },
+                { value: stats.unassembled, color: '#536577' },
+              ]}
+            />
+          )}
+
+          <HudSearch value={query} onChange={setQuery} placeholder="Rechercher une unité..." />
+
+          {/* Faction chips — horizontal scroll */}
+          {availableFactions.length > 1 && (
+            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
+              <HudChip active={factionFilter === 'all'} onClick={() => setFactionFilter('all')}>Toutes</HudChip>
+              {availableFactions.map((f) => (
+                <HudChip key={f.slug} active={factionFilter === f.slug} onClick={() => setFactionFilter(f.slug)}>
+                  <T text={f.name} category="faction" />
+                </HudChip>
+              ))}
+            </div>
+          )}
+
+          {/* Paint status chips */}
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {paintStatusOptions.map((opt) => (
+              <HudChip key={opt.value} active={paintFilter === opt.value} onClick={() => setPaintFilter(opt.value)}>
+                {opt.label}
+              </HudChip>
+            ))}
+          </div>
+
+          {/* Sort */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 9, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)', letterSpacing: 1.5, textTransform: 'uppercase' }}>Tri</span>
+            {(Object.keys(sortLabels) as SortKey[]).map((key) => {
+              if (false) return null
+              return <HudChip key={key} active={sortBy === key} onClick={() => setSortBy(key)}>{sortLabels[key]}</HudChip>
+            })}
+          </div>
+
+          {/* Grid */}
+          {sortedDatasheets.length === 0 && hasFilters ? (
+            <EmptyState
+              title="Aucune figurine ne correspond"
+              description="Essaie d'ajuster tes filtres pour trouver ce que tu cherches."
+              actionLabel="Réinitialiser les filtres"
+              onAction={resetFilters}
+            />
+          ) : (
+            <>
+              {favoriteDatasheets.length > 0 && (
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 10, color: 'var(--color-gold, #f0b540)', fontFamily: 'var(--font-mono)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 }}>
+                    {'\u2605'} Favoris ({favoriteDatasheets.length})
+                  </div>
+                  {renderGrid(favoriteDatasheets)}
+                </div>
+              )}
+              {nonFavoriteDatasheets.length > 0 && renderGrid(nonFavoriteDatasheets)}
+            </>
+          )}
         </div>
-      )}
-    </div>
+
+        {/* Mobile instance editor — bottom sheet HUD */}
+        {editingId && editingItem && editingDatasheet && (
+          <div
+            className="fixed left-0 right-0 top-0 flex items-end justify-center"
+            style={{
+              backgroundColor: 'rgba(0,0,0,0.6)',
+              zIndex: 60,
+              bottom: 'calc(60px + env(safe-area-inset-bottom, 0px))',
+            }}
+            onClick={() => setEditingId(null)}
+          >
+            <div
+              className="w-full max-w-lg"
+              style={{ backgroundColor: 'var(--color-surface)', maxHeight: '70%', display: 'flex', flexDirection: 'column' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)' }}>
+                    <T text={editingDatasheet.name} category="unit" />
+                  </div>
+                  <div style={{ fontSize: 10, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)', marginTop: 2 }}>
+                    {editingItem.instances.length} exemplaire{editingItem.instances.length > 1 ? 's' : ''}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button
+                    style={{ padding: '5px 10px', fontSize: 10, fontFamily: 'var(--font-mono)', background: 'color-mix(in srgb, var(--color-accent) 10%, transparent)', color: 'var(--color-accent)', border: '1px solid var(--color-accent)', cursor: 'pointer' }}
+                    onClick={() => addInstance(editingId)}
+                  >
+                    + AJOUTER
+                  </button>
+                  <button
+                    style={{ padding: '5px 8px', fontSize: 10, background: 'transparent', color: 'var(--color-text-muted)', border: '1px solid var(--color-border)', cursor: 'pointer' }}
+                    onClick={() => setEditingId(null)}
+                  >
+                    {'\u2715'}
+                  </button>
+                </div>
+              </div>
+              <div style={{ flex: '1 1 auto', minHeight: 0, overflow: 'auto', padding: '8px 16px' }}>
+                {editingItem.instances.map((status, i) => (
+                  <div
+                    key={i}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 0', borderBottom: '1px solid var(--color-border)' }}
+                  >
+                    <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', width: 20 }}>
+                      #{i + 1}
+                    </span>
+                    <div style={{ display: 'flex', gap: 4, flex: 1 }}>
+                      {paintCycle.map((s) => (
+                        <button
+                          key={s}
+                          style={{
+                            flex: 1,
+                            padding: '4px 0',
+                            fontSize: 9,
+                            fontFamily: 'var(--font-mono)',
+                            letterSpacing: 0.5,
+                            textTransform: 'uppercase',
+                            background: status === s ? `color-mix(in srgb, ${paintDotColors[s]} 20%, transparent)` : 'transparent',
+                            color: status === s ? paintDotColors[s] : 'var(--color-text-muted)',
+                            border: `1px solid ${status === s ? paintDotColors[s] : 'var(--color-border)'}`,
+                            cursor: 'pointer',
+                          }}
+                          onClick={() => updateInstanceStatus(editingId, i, s)}
+                        >
+                          {paintLabels[s]}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      style={{ background: 'transparent', border: 'none', color: 'var(--color-error)', cursor: 'pointer', fontSize: 10, padding: '4px 6px' }}
+                      onClick={() => {
+                        removeInstance(editingId, i)
+                        if (editingItem.instances.length <= 1) setEditingId(null)
+                      }}
+                      aria-label={`Retirer exemplaire ${i + 1}`}
+                    >
+                      {'\u2715'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
   )
 }

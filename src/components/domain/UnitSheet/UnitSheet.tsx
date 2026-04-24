@@ -40,6 +40,7 @@ interface UnitSheetProps {
   onUpdateQuantity?: (quantity: number) => void
   onAddToList?: () => void
   onSimulate?: () => void
+  forceAccordion?: boolean
 }
 
 function isEpicHero(datasheet: Datasheet): boolean {
@@ -104,8 +105,9 @@ function MobileAccordion({
   )
 }
 
-export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddToCollection, onUpdateQuantity, onAddToList, onSimulate }: UnitSheetProps) {
-  const isMobile = useIsMobile()
+export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddToCollection, onUpdateQuantity, onAddToList, onSimulate, forceAccordion }: UnitSheetProps) {
+  const isMobileScreen = useIsMobile()
+  const isMobile = forceAccordion || isMobileScreen
   const isMelee = (w: { type: string; range: string }) => w.type === 'Melee' || w.range === 'Melee'
   const meleeWeapons = datasheet.weapons.filter((w) => isMelee(w))
   const rangedWeapons = datasheet.weapons.filter((w) => !isMelee(w))

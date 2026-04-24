@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { getCustomImageUrl, saveCustomImage, deleteCustomImage } from '@/stores/customImageStore'
-import { uploadImage, deleteImage as deleteRemoteImage, downloadImage } from '@/services/customImageSyncService'
+import { uploadImage, deleteImage as deleteRemoteImage, downloadImage, hasRemoteImage } from '@/services/customImageSyncService'
 import { useAuthStore } from '@/stores/authStore'
 import { saveCustomImageBlob } from '@/stores/customImageStore'
 
@@ -31,8 +31,8 @@ export function useCustomImage(datasheetId: string) {
         return
       }
 
-      // If not local but user is connected, try remote
-      if (user) {
+      // If not local but user is connected, try remote (only if image exists)
+      if (user && await hasRemoteImage(user.id, datasheetId)) {
         const blob = await downloadImage(user.id, datasheetId)
         if (blob && !revoked) {
           await saveCustomImageBlob(datasheetId, blob)

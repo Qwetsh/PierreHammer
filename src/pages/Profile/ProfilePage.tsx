@@ -4,11 +4,16 @@ import { useExportImport } from '@/hooks/useExportImport'
 import { useCollectionStore } from '@/stores/collectionStore'
 import { useListsStore } from '@/stores/listsStore'
 import { usePreferencesStore, type ColorVisionMode } from '@/stores/preferencesStore'
+import type { FactionSummary } from '@/types/gameData.types'
+import { T } from '@/components/ui/TranslatableText'
 import { useAuthStore } from '@/stores/authStore'
 import { useFriendsStore } from '@/stores/friendsStore'
 import { isSupabaseConfigured } from '@/lib/supabase'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
+import { HudTopBar, HudPanel, HudStat, HudBtn, HudBar, MTopBar, MSection } from '@/components/ui/Hud'
+import { useAchievements } from '@/hooks/useAchievements'
+import { useGameDataStore } from '@/stores/gameDataStore'
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_-]{3,20}$/
 
@@ -238,17 +243,99 @@ function AuthSection() {
   )
 }
 
+function AchievementsGrid() {
+  const achievements = useAchievements()
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+      {achievements.map((a) => (
+        <div
+          key={a.id}
+          style={{
+            border: `1px solid ${a.unlocked ? 'var(--color-accent)' : 'var(--color-border)'}`,
+            background: a.unlocked ? 'color-mix(in srgb, var(--color-accent) 6%, transparent)' : 'var(--color-surface)',
+            padding: '10px 6px',
+            textAlign: 'center',
+            opacity: a.unlocked ? 1 : 0.4,
+          }}
+        >
+          <div style={{ fontSize: 20, lineHeight: 1 }}>{a.icon}</div>
+          <div style={{ fontSize: 8, fontFamily: 'var(--font-mono)', color: a.unlocked ? 'var(--color-accent)' : 'var(--color-text-muted)', letterSpacing: 0.5, marginTop: 4, textTransform: 'uppercase' }}>
+            {a.label}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function PaintDonut({ size = 120 }: { size?: number }) {
+  const getProgressStats = useCollectionStore((s) => s.getProgressStats)
+  const stats = getProgressStats()
+  const total = stats.total || 1
+  const segments = [
+    { value: stats.completed, color: 'var(--color-success)' },
+    { value: stats.inProgress, color: 'var(--color-accent)' },
+    { value: stats.assembled, color: 'var(--color-warning)' },
+    { value: stats.unassembled, color: '#536577' },
+  ]
+
+  const r = (size - 12) / 2
+  const cx = size / 2
+  const cy = size / 2
+  const circumference = 2 * Math.PI * r
+  let offset = 0
+
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--color-border)" strokeWidth={10} />
+      {segments.map((seg, i) => {
+        const pct = seg.value / total
+        const dash = pct * circumference
+        const el = (
+          <circle
+            key={i}
+            cx={cx}
+            cy={cy}
+            r={r}
+            fill="none"
+            stroke={seg.color}
+            strokeWidth={10}
+            strokeDasharray={`${dash} ${circumference - dash}`}
+            strokeDashoffset={-offset}
+            transform={`rotate(-90 ${cx} ${cy})`}
+          />
+        )
+        offset += dash
+        return el
+      })}
+      <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central" fill="var(--color-accent)" fontFamily="var(--font-mono)" fontSize={22} fontWeight={700}>
+        {stats.percentComplete}%
+      </text>
+    </svg>
+  )
+}
+
 export function ProfilePage() {
   const navigate = useNavigate()
   const { exportData, importData } = useExportImport()
   const { showToast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const profile = useFriendsStore((s) => s.profile)
+  const loadFactionIndex = useGameDataStore((s) => s.loadFactionIndex)
+  useEffect(() => { loadFactionIndex() }, [loadFactionIndex])
 
-  const collectionCount = Object.keys(useCollectionStore((s) => s.items)).length
+  const collectionItems = useCollectionStore((s) => s.items)
+  const collectionCount = Object.keys(collectionItems).length
   const listsCount = Object.keys(useListsStore((s) => s.lists)).length
   const colorVisionMode = usePreferencesStore((s) => s.colorVisionMode)
   const setColorVisionMode = usePreferencesStore((s) => s.setColorVisionMode)
+  const favoriteFactionSlug = usePreferencesStore((s) => s.favoriteFactionSlug)
+  const setFavoriteFaction = usePreferencesStore((s) => s.setFavoriteFaction)
+  const factionIndex = useGameDataStore((s) => s.factionIndex)
+  const factions: FactionSummary[] = factionIndex?.factions ?? []
+  const favoriteFactionName = favoriteFactionSlug ? factions.find((f) => f.slug === favoriteFactionSlug)?.name ?? null : null
+  const [factionPickerOpen, setFactionPickerOpen] = useState(false)
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -272,101 +359,339 @@ export function ProfilePage() {
   }
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-6" style={{ fontSize: 'var(--text-2xl)' }}>Profil</h1>
+    <>
+      {/* ══════ DESKTOP HUD ══════ */}
+      <div className="hidden lg:block">
+        <HudTopBar title="Profil" sub="Commandant" />
+        <div style={{ padding: '16px 24px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          {/* Left column */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <AuthSection />
 
-      <AuthSection />
+            <HudPanel title="Données">
+              <div style={{ padding: 16, display: 'flex', gap: 24 }}>
+                <HudStat label="Collection" value={collectionCount} unit={collectionCount !== 1 ? 'unités' : 'unité'} />
+                <HudStat label="Listes" value={listsCount} unit={listsCount !== 1 ? 'listes' : 'liste'} />
+              </div>
+            </HudPanel>
 
-      {isAuthenticated && (
-        <div className="mb-4">
-          <Button variant="secondary" onClick={() => navigate('/profile/history')}>
-            Historique des parties
-          </Button>
-        </div>
-      )}
+            {isAuthenticated && (
+              <HudPanel title="Parties">
+                <div style={{ padding: 12 }}>
+                  <button
+                    style={{ background: 'transparent', border: '1px solid var(--color-border)', color: 'var(--color-accent)', padding: '8px 16px', fontFamily: 'var(--font-mono)', fontSize: 11, cursor: 'pointer', letterSpacing: 0.5 }}
+                    onClick={() => navigate('/profile/history')}
+                  >
+                    HISTORIQUE DES PARTIES {'\u25b8'}
+                  </button>
+                </div>
+              </HudPanel>
+            )}
 
-      <div className="mb-4">
-        <Button variant="secondary" onClick={() => navigate('/simulate')}>
-          Simulateur de combat
-        </Button>
-      </div>
+            <HudPanel title="Badges">
+              <div style={{ padding: 12 }}>
+                <AchievementsGrid />
+              </div>
+            </HudPanel>
 
-      <div className="flex flex-col gap-4 mb-8">
-        <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--color-surface)' }}>
-          <h2 className="font-semibold mb-2" style={{ color: 'var(--color-text)' }}>Mes données</h2>
-          <p className="text-sm mb-1" style={{ color: 'var(--color-text-muted)' }}>
-            {collectionCount} unité{collectionCount !== 1 ? 's' : ''} dans ma collection
-          </p>
-          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-            {listsCount} liste{listsCount !== 1 ? 's' : ''} d'armée
-          </p>
-        </div>
-      </div>
+            <div style={{ padding: '12px 16px', border: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text)' }}>PierreHammer</div>
+              <div style={{ fontSize: 9, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)', marginTop: 2 }}>
+                Companion Warhammer 40K {'\u00b7'} Par Thomas pour Pierre
+              </div>
+            </div>
+          </div>
 
-      <div className="mb-8">
-        <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--color-surface)' }}>
-          <h2 className="font-semibold mb-1" style={{ color: 'var(--color-text)' }}>Accessibilité</h2>
-          <p className="text-xs mb-3" style={{ color: 'var(--color-text-muted)' }}>
-            Adapte les couleurs pour les personnes daltoniennes.
-          </p>
-          <div className="flex flex-col gap-1.5">
-            {COLOR_VISION_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-left border-none cursor-pointer min-h-[44px]"
-                style={{
-                  backgroundColor: colorVisionMode === opt.value ? 'var(--color-primary)' : 'var(--color-bg)',
-                  color: colorVisionMode === opt.value ? '#ffffff' : 'var(--color-text)',
-                }}
-                onClick={() => setColorVisionMode(opt.value)}
-              >
-                <span
-                  className="w-4 h-4 rounded-full shrink-0 border-2"
-                  style={{
-                    borderColor: colorVisionMode === opt.value ? '#ffffff' : 'var(--color-text-muted)',
-                    backgroundColor: colorVisionMode === opt.value ? '#ffffff' : 'transparent',
-                  }}
-                />
-                <span className="flex flex-col">
-                  <span className="text-sm font-medium">{opt.label}</span>
-                  <span className="text-xs" style={{ opacity: 0.7 }}>{opt.description}</span>
-                </span>
-              </button>
-            ))}
+          {/* Right column */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <HudPanel title="Préférences">
+              <div style={{ padding: 12 }}>
+                {/* Favorite faction toggle */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: favoriteFactionSlug ? 8 : 0 }}>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--color-text)' }}>Faction favorite</div>
+                    <div style={{ fontSize: 9, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>
+                      Ouvre le Codex directement sur ta faction
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (favoriteFactionSlug) {
+                        setFavoriteFaction(null)
+                      } else {
+                        setFactionPickerOpen(true)
+                      }
+                    }}
+                    style={{
+                      width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer', position: 'relative',
+                      backgroundColor: favoriteFactionSlug ? 'var(--color-accent)' : 'var(--color-border)',
+                      transition: 'background-color 0.2s',
+                    }}
+                  >
+                    <span style={{
+                      position: 'absolute', top: 2, width: 16, height: 16, borderRadius: 8,
+                      backgroundColor: 'var(--color-bg)', transition: 'left 0.2s',
+                      left: favoriteFactionSlug ? 18 : 2,
+                    }} />
+                  </button>
+                </div>
+                {favoriteFactionSlug && favoriteFactionName && (
+                  <button
+                    onClick={() => setFactionPickerOpen(true)}
+                    style={{
+                      width: '100%', padding: '8px 12px', textAlign: 'left', cursor: 'pointer',
+                      backgroundColor: 'color-mix(in srgb, var(--color-accent) 8%, transparent)',
+                      border: '1px solid var(--color-accent)', color: 'var(--color-accent)',
+                      fontSize: 11, fontFamily: 'var(--font-mono)',
+                    }}
+                  >
+                    <T text={favoriteFactionName} category="faction" />
+                    <span style={{ float: 'right', fontSize: 9, color: 'var(--color-text-muted)' }}>Changer</span>
+                  </button>
+                )}
+              </div>
+            </HudPanel>
+
+            <HudPanel title="Accessibilité">
+              <div style={{ padding: 12 }}>
+                <p style={{ fontSize: 10, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)', marginBottom: 10 }}>
+                  Adapte les couleurs pour les daltoniens
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {COLOR_VISION_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        padding: '8px 12px',
+                        background: colorVisionMode === opt.value ? 'color-mix(in srgb, var(--color-accent) 10%, transparent)' : 'transparent',
+                        border: `1px solid ${colorVisionMode === opt.value ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                        color: colorVisionMode === opt.value ? 'var(--color-accent)' : 'var(--color-text-dim)',
+                        cursor: 'pointer',
+                        textAlign: 'left' as const,
+                      }}
+                      onClick={() => setColorVisionMode(opt.value)}
+                    >
+                      <span style={{ width: 10, height: 10, border: `2px solid ${colorVisionMode === opt.value ? 'var(--color-accent)' : 'var(--color-text-muted)'}`, background: colorVisionMode === opt.value ? 'var(--color-accent)' : 'transparent', flexShrink: 0 }} />
+                      <span>
+                        <span style={{ fontSize: 12, fontWeight: 500, display: 'block' }}>{opt.label}</span>
+                        <span style={{ fontSize: 9, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>{opt.description}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </HudPanel>
+
+            <HudPanel title="Sauvegarde">
+              <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    style={{ flex: 1, padding: '8px 12px', background: 'transparent', border: '1px solid var(--color-border)', color: 'var(--color-text-dim)', fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: 0.5, cursor: 'pointer', textTransform: 'uppercase' as const }}
+                    onClick={exportData}
+                  >
+                    Exporter
+                  </button>
+                  <button
+                    style={{ flex: 1, padding: '8px 12px', background: 'transparent', border: '1px solid var(--color-border)', color: 'var(--color-text-dim)', fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: 0.5, cursor: 'pointer', textTransform: 'uppercase' as const }}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    Importer
+                  </button>
+                </div>
+                <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleImport} aria-label="Importer un fichier JSON" />
+                <p style={{ fontSize: 9, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>
+                  L'import remplace toutes les données existantes.
+                </p>
+              </div>
+            </HudPanel>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-col gap-3">
-        <h2 className="font-semibold" style={{ color: 'var(--color-text)' }}>Sauvegarde</h2>
-        <Button variant="secondary" onClick={exportData}>
-          Exporter mes données
-        </Button>
-        <Button variant="secondary" onClick={() => fileInputRef.current?.click()}>
-          Importer mes données
-        </Button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".json"
-          className="hidden"
-          onChange={handleImport}
-          aria-label="Importer un fichier JSON"
-        />
-        <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-          L'import remplace toutes les données existantes. Exporte d'abord si tu veux garder tes données actuelles.
-        </p>
-      </div>
+      {/* ══════ MOBILE HUD ══════ */}
+      <div className="lg:hidden">
+        <MTopBar title="Profil" sub="Commandant" />
+        <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* Identity sigil */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{
+              width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              border: '1px solid var(--color-accent)', background: 'color-mix(in srgb, var(--color-accent) 8%, transparent)',
+              fontFamily: 'var(--font-mono)', fontSize: 18, fontWeight: 700, color: 'var(--color-accent)',
+            }}>
+              {(profile?.username || 'C')[0].toUpperCase()}
+            </div>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-text)' }}>
+                {profile?.username || 'Commandant'}
+              </div>
+              <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', letterSpacing: 1 }}>
+                {collectionCount} unités {'\u00b7'} {listsCount} listes
+              </div>
+            </div>
+          </div>
 
-      <div className="mt-8 rounded-lg p-4" style={{ backgroundColor: 'var(--color-surface)' }}>
-        <h2 className="font-semibold mb-2" style={{ color: 'var(--color-text)' }}>À propos</h2>
-        <p className="text-sm mb-1" style={{ color: 'var(--color-text-muted)' }}>
-          PierreHammer — Companion app Warhammer 40K
-        </p>
-        <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-          Créé avec amour par Thomas pour Pierre.
-        </p>
+          {/* Donut SVG */}
+          {collectionCount > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <PaintDonut size={120} />
+            </div>
+          )}
+
+          {/* Auth */}
+          <AuthSection />
+
+          {isAuthenticated && (
+            <HudBtn variant="ghost" onClick={() => navigate('/profile/history')} style={{ width: '100%', justifyContent: 'center' }}>
+              HISTORIQUE DES PARTIES {'\u25b8'}
+            </HudBtn>
+          )}
+
+          {/* Achievements */}
+          <MSection>Badges</MSection>
+          <AchievementsGrid />
+
+          {/* Favorite faction */}
+          <MSection>Préférences</MSection>
+          <div style={{ padding: '10px 12px', border: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: favoriteFactionSlug ? 8 : 0 }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--color-text)' }}>Faction favorite</div>
+                <div style={{ fontSize: 9, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>
+                  Ouvre le Codex directement sur ta faction
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  if (favoriteFactionSlug) {
+                    setFavoriteFaction(null)
+                  } else {
+                    setFactionPickerOpen(true)
+                  }
+                }}
+                style={{
+                  width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer', position: 'relative',
+                  backgroundColor: favoriteFactionSlug ? 'var(--color-accent)' : 'var(--color-border)',
+                  transition: 'background-color 0.2s',
+                }}
+              >
+                <span style={{
+                  position: 'absolute', top: 2, width: 16, height: 16, borderRadius: 8,
+                  backgroundColor: 'var(--color-bg)', transition: 'left 0.2s',
+                  left: favoriteFactionSlug ? 18 : 2,
+                }} />
+              </button>
+            </div>
+            {favoriteFactionSlug && favoriteFactionName && (
+              <button
+                onClick={() => setFactionPickerOpen(true)}
+                style={{
+                  width: '100%', padding: '8px 12px', textAlign: 'left', cursor: 'pointer',
+                  backgroundColor: 'color-mix(in srgb, var(--color-accent) 8%, transparent)',
+                  border: '1px solid var(--color-accent)', color: 'var(--color-accent)',
+                  fontSize: 11, fontFamily: 'var(--font-mono)',
+                }}
+              >
+                <T text={favoriteFactionName} category="faction" />
+                <span style={{ float: 'right', fontSize: 9, color: 'var(--color-text-muted)' }}>Changer</span>
+              </button>
+            )}
+          </div>
+
+          {/* Accessibility */}
+          <MSection>Accessibilité</MSection>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {COLOR_VISION_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
+                  background: colorVisionMode === opt.value ? 'color-mix(in srgb, var(--color-accent) 10%, transparent)' : 'transparent',
+                  border: `1px solid ${colorVisionMode === opt.value ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                  color: colorVisionMode === opt.value ? 'var(--color-accent)' : 'var(--color-text-dim)',
+                  cursor: 'pointer', textAlign: 'left',
+                }}
+                onClick={() => setColorVisionMode(opt.value)}
+              >
+                <span style={{ width: 10, height: 10, border: `2px solid ${colorVisionMode === opt.value ? 'var(--color-accent)' : 'var(--color-text-muted)'}`, background: colorVisionMode === opt.value ? 'var(--color-accent)' : 'transparent', flexShrink: 0 }} />
+                <span>
+                  <span style={{ fontSize: 12, fontWeight: 500, display: 'block' }}>{opt.label}</span>
+                  <span style={{ fontSize: 9, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>{opt.description}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {/* Export/Import */}
+          <MSection>Sauvegarde</MSection>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <HudBtn variant="ghost" onClick={exportData} style={{ flex: 1, justifyContent: 'center' }}>EXPORTER</HudBtn>
+            <HudBtn variant="ghost" onClick={() => fileInputRef.current?.click()} style={{ flex: 1, justifyContent: 'center' }}>IMPORTER</HudBtn>
+          </div>
+          <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleImport} aria-label="Importer un fichier JSON" />
+          <p style={{ fontSize: 9, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>
+            L'import remplace toutes les données existantes.
+          </p>
+
+          {/* About */}
+          <div style={{ padding: '12px', border: '1px solid var(--color-border)', background: 'var(--color-surface)', marginTop: 8 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text)' }}>PierreHammer</div>
+            <div style={{ fontSize: 9, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)', marginTop: 2 }}>
+              Companion Warhammer 40K {'\u00b7'} Par Thomas pour Pierre
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+      {/* Faction picker modal */}
+      {factionPickerOpen && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} onClick={() => setFactionPickerOpen(false)}>
+          <div
+            className="w-full max-w-md p-5 max-h-[80vh] overflow-y-auto"
+            style={{ backgroundColor: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-accent)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>
+              {'\u25b8'} Choisir ta faction favorite
+            </div>
+            <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-3">
+              {factions.map((faction) => (
+                <button
+                  key={faction.id}
+                  onClick={() => {
+                    setFavoriteFaction(faction.slug)
+                    setFactionPickerOpen(false)
+                  }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
+                    backgroundColor: faction.slug === favoriteFactionSlug ? 'color-mix(in srgb, var(--color-accent) 10%, transparent)' : 'var(--color-surface)',
+                    color: 'var(--color-text)',
+                    border: `1px solid ${faction.slug === favoriteFactionSlug ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                    cursor: 'pointer', fontSize: 11, textAlign: 'left',
+                  }}
+                >
+                  <span style={{ fontSize: 11, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <T text={faction.name} category="faction" />
+                  </span>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setFactionPickerOpen(false)}
+              style={{
+                marginTop: 16, width: '100%', textAlign: 'center', fontSize: 10,
+                background: 'transparent', border: '1px solid var(--color-border)',
+                color: 'var(--color-text-muted)', cursor: 'pointer', padding: '6px 0',
+                fontFamily: 'var(--font-mono)', letterSpacing: 0.5,
+              }}
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

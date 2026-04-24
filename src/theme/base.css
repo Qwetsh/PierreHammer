@@ -1,23 +1,45 @@
 :root {
-  /* Semantic color tokens — dark mode exclusive */
-  --color-bg: #0f0f1a;
-  --color-surface: #1a1a2e;
+  /* ── HUD Base Surfaces ── */
+  --color-bg: #05080e;
+  --color-bg-elevated: #0a1018;
+  --color-surface: #0e1622;
+  --color-surface-alt: #141e2c;
+  --color-bg-input: #0a121c;
+
+  /* ── Borders ── */
+  --color-border: #1e2b3d;
+  --color-border-soft: #162231;
+  --color-border-hot: #2d4057;
+
+  /* ── Text Hierarchy ── */
+  --color-text: #e4edf7;
+  --color-text-dim: #8297ae;
+  --color-text-muted: #536577;
+
+  /* ── Faction-dynamic accents (overridden per faction) ── */
   --color-primary: #4a6fa5;
-  --color-accent: #c4a535;
-  --color-text: #e0e0e0;
-  --color-text-muted: #9494b0;
-  --color-success: #4caf50;
-  --color-warning: #ff9800;
-  --color-error: #f44336;
+  --color-accent: #4fd4ff;
+
+  /* ── Fixed semantic colors ── */
+  --color-cyan: #4fd4ff;
+  --color-cyan-dim: #2ea8d0;
+  --color-cyan-glow: rgba(79, 212, 255, 0.5);
+  --color-magenta: #d64b6b;
+  --color-gold: #f0b540;
+  --color-success: #5ee0a0;
+  --color-warning: #f0b540;
+  --color-error: #ff3050;
+  --color-purple: #c77dff;
   --color-card-epic: #6b21a8;
   --color-card-battleline: #1e40af;
 
-  /* Typography */
+  /* ── Typography ── */
   --font-display: 'Inquisitor', 'Cinzel', serif;
-  --font-body: 'EB Garamond', serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-sans: 'Inter Tight', 'Helvetica Neue', sans-serif;
+  --font-body: 'Inter Tight', 'Helvetica Neue', sans-serif;
+  --font-mono: 'JetBrains Mono', 'IBM Plex Mono', Menlo, monospace;
 
-  /* Typographic scale — 1.25 Major Third (bumped +15%) */
+  /* ── Typographic scale ── */
   --text-sm: 0.925rem;
   --text-base: 1.1rem;
   --text-lg: 1.4rem;
@@ -25,13 +47,16 @@
   --text-2xl: 2.2rem;
   --text-3xl: 2.75rem;
 
-  /* Spacing — 4px system */
+  /* ── Spacing ── */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
   --space-6: 24px;
   --space-8: 32px;
+
+  /* ── Faction gradient (default) ── */
+  --faction-gradient: none;
 }
 
 /* Display font on headings */
@@ -77,4 +102,86 @@ h1, h2, h3 {
 
 .skip-link:focus {
   left: 0;
+}
+
+/* ── HUD Utilities (desktop only) ── */
+@media (min-width: 1024px) {
+  /* HUD scan lines overlay */
+  .hud-scanlines::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      rgba(79, 212, 255, 0.018) 0 1px,
+      transparent 1px 4px
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* HUD corner brackets on a positioned element */
+  .hud-corners {
+    position: relative;
+  }
+
+  .hud-corners::before,
+  .hud-corners::after {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  .hud-corners::before {
+    top: 6px;
+    left: 6px;
+    border-top: 1px solid var(--color-accent);
+    border-left: 1px solid var(--color-accent);
+  }
+
+  .hud-corners::after {
+    bottom: 6px;
+    right: 6px;
+    border-bottom: 1px solid var(--color-accent);
+    border-right: 1px solid var(--color-accent);
+  }
+
+  /* HUD glow text */
+  .hud-glow {
+    text-shadow: 0 0 8px color-mix(in srgb, var(--color-accent) 60%, transparent);
+  }
+
+  /* HUD section label */
+  .hud-label {
+    font-size: 10px;
+    color: var(--color-accent);
+    letter-spacing: 2.5px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+  }
+
+  .hud-label::before {
+    content: '\25B8 ';
+  }
+}
+
+/* Custom scrollbar (HUD style) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-hot);
 }

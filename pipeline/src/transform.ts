@@ -113,15 +113,22 @@ export async function generate(result: ParseResult): Promise<void> {
     console.log(`🖼️ ${imageCacheSize} image URLs chargées depuis le cache`)
   }
 
-  // Generate factions.json index
+  // Generate factions.json index (with representative image per faction)
   const factionsIndex = {
     lastUpdate,
-    factions: Array.from(result.factions.values()).map((f) => ({
-      id: f.id,
-      name: f.name,
-      slug: toKebabCase(f.name),
-      datasheetCount: f.datasheetIds.length,
-    })),
+    factions: Array.from(result.factions.values()).map((f) => {
+      // Find first datasheet with an image to use as faction banner
+      const bannerImage = f.datasheetIds
+        .map((id) => imageCache[id])
+        .find((url) => url) ?? undefined
+      return {
+        id: f.id,
+        name: f.name,
+        slug: toKebabCase(f.name),
+        datasheetCount: f.datasheetIds.length,
+        ...(bannerImage ? { imageUrl: bannerImage } : {}),
+      }
+    }),
   }
 
   const factionsPath = join(OUTPUT_DIR, 'factions.json')

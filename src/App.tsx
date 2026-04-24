@@ -13,6 +13,7 @@ import { useColorVision } from '@/hooks/useColorVision'
 import { useAuthStore } from '@/stores/authStore'
 import { useTranslationStore } from '@/stores/translationStore'
 
+const DashboardPage = lazy(() => import('./pages/Dashboard/DashboardPage').then(m => ({ default: m.DashboardPage })))
 const CollectionPage = lazy(() => import('./pages/Collection/CollectionPage').then(m => ({ default: m.CollectionPage })))
 const ListsPage = lazy(() => import('./pages/Lists/ListsPage').then(m => ({ default: m.ListsPage })))
 const ListDetailPage = lazy(() => import('./pages/Lists/ListDetailPage').then(m => ({ default: m.ListDetailPage })))
@@ -69,7 +70,8 @@ function AnimatedRoutes() {
       >
         <Suspense fallback={<PageFallback />}>
           <Routes location={location}>
-            <Route path="/" element={<Navigate to="/collection" replace />} />
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/collection" element={<CollectionPage />} />
             <Route path="/lists" element={<ListsPage />} />
             <Route path="/lists/:listId" element={<ListDetailPage />} />

@@ -2,6 +2,38 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 
 const BUCKET = 'custom-images'
 
+// Session-level cache of remote image IDs per user (avoids 400s for non-existent images)
+let _remoteIdsCache: Map<string, Set<string>> = new Map()
+let _remoteIdsFetching: Map<string, Promise<Set<string>>> = new Map()
+
+async function getRemoteIds(userId: string): Promise<Set<string>> {
+  const cached = _remoteIdsCache.get(userId)
+  if (cached) return cached
+
+  const existing = _remoteIdsFetching.get(userId)
+  if (existing) return existing
+
+  const promise = listUserImages(userId).then((ids) => {
+    const set = new Set(ids)
+    _remoteIdsCache.set(userId, set)
+    _remoteIdsFetching.delete(userId)
+    return set
+  })
+  _remoteIdsFetching.set(userId, promise)
+  return promise
+}
+
+/** Invalidate the remote IDs cache (call after upload/delete) */
+export function invalidateRemoteCache(userId: string) {
+  _remoteIdsCache.delete(userId)
+}
+
+/** Check if a remote image exists for this datasheet (uses cached list) */
+export async function hasRemoteImage(userId: string, datasheetId: string): Promise<boolean> {
+  const ids = await getRemoteIds(userId)
+  return ids.has(datasheetId)
+}
+
 function getPath(userId: string, datasheetId: string): string {
   return `${userId}/${datasheetId}.jpg`
 }
@@ -17,6 +49,7 @@ export async function uploadImage(userId: string, datasheetId: string, blob: Blo
     console.warn('[customImageSync] upload failed:', error.message)
     return false
   }
+  invalidateRemoteCache(userId)
   return true
 }
 
@@ -38,6 +71,7 @@ export async function deleteImage(userId: string, datasheetId: string): Promise<
     console.warn('[customImageSync] delete failed:', error.message)
     return false
   }
+  invalidateRemoteCache(userId)
   return true
 }
 

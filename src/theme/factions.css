@@ -1,103 +1,103 @@
-/* Faction theme palettes — applied via data-faction attribute on <html> */
+/* Faction theme palettes — applied via data-faction attribute on <html>
+   Each faction overrides accent colors; HUD base surfaces stay consistent */
 
 [data-faction="space-marines"] {
   --color-primary: #1b3a6b;
   --color-accent: #c4a535;
-  --color-surface: #141e33;
-  --color-surface-alt: #1a2845;
+  --color-surface: #0c1525;
+  --color-surface-alt: #111d33;
   --font-display: 'Cinzel', serif;
-  --faction-gradient: linear-gradient(135deg, #0a1628 0%, #1b3a6b 50%, #0f1f3d 100%);
+  --faction-gradient: radial-gradient(ellipse at 0% 0%, rgba(27, 58, 107, 0.15) 0%, transparent 50%), radial-gradient(ellipse at 100% 100%, rgba(196, 165, 53, 0.08) 0%, transparent 50%);
 }
 
 [data-faction="orks"] {
   --color-primary: #2d4a1e;
   --color-accent: #ff6b35;
-  --color-surface: #1a2813;
-  --color-surface-alt: #243a18;
+  --color-surface: #0c1509;
+  --color-surface-alt: #142010;
   --font-display: 'Black Ops One', sans-serif;
-  --faction-gradient: linear-gradient(135deg, #0d1a08 0%, #2d4a1e 50%, #1a2e10 100%);
+  --faction-gradient: radial-gradient(ellipse at 0% 0%, rgba(45, 74, 30, 0.15) 0%, transparent 50%), radial-gradient(ellipse at 100% 100%, rgba(255, 107, 53, 0.08) 0%, transparent 50%);
 }
 
 [data-faction="aeldari"] {
   --color-primary: #0d6b58;
   --color-accent: #50c878;
-  --color-surface: #0f2420;
-  --color-surface-alt: #143530;
+  --color-surface: #091a16;
+  --color-surface-alt: #0e2520;
   --font-display: 'Quicksand', sans-serif;
-  --faction-gradient: linear-gradient(135deg, #071a15 0%, #0d6b58 50%, #0a2e26 100%);
+  --faction-gradient: radial-gradient(ellipse at 0% 0%, rgba(13, 107, 88, 0.15) 0%, transparent 50%), radial-gradient(ellipse at 100% 100%, rgba(80, 200, 120, 0.08) 0%, transparent 50%);
 }
 
 [data-faction="necrons"] {
   --color-primary: #1a3a1a;
   --color-accent: #00ff41;
-  --color-surface: #0f1f0f;
-  --color-surface-alt: #152d15;
+  --color-surface: #080f08;
+  --color-surface-alt: #0f1f0f;
   --font-display: 'Orbitron', sans-serif;
-  --faction-gradient: linear-gradient(135deg, #050f05 0%, #1a3a1a 50%, #0a200a 100%);
+  --faction-gradient: radial-gradient(ellipse at 0% 0%, rgba(26, 58, 26, 0.15) 0%, transparent 50%), radial-gradient(ellipse at 100% 100%, rgba(0, 255, 65, 0.08) 0%, transparent 50%);
 }
 
 [data-faction="chaos"] {
   --color-primary: #5c1a1a;
   --color-accent: #ff2020;
-  --color-surface: #2a1010;
-  --color-surface-alt: #3d1515;
+  --color-surface: #120808;
+  --color-surface-alt: #1e0e0e;
   --font-display: 'Cinzel', serif;
-  --faction-gradient: linear-gradient(135deg, #1a0808 0%, #5c1a1a 50%, #2e0e0e 100%);
+  --faction-gradient: radial-gradient(ellipse at 0% 0%, rgba(92, 26, 26, 0.15) 0%, transparent 50%), radial-gradient(ellipse at 100% 100%, rgba(255, 32, 32, 0.08) 0%, transparent 50%);
 }
 
 [data-faction="tyranids"] {
   --color-primary: #4a1a5c;
   --color-accent: #c850c0;
-  --color-surface: #1f0f28;
-  --color-surface-alt: #2d153d;
+  --color-surface: #100820;
+  --color-surface-alt: #1a0e2d;
   --font-display: 'Quicksand', sans-serif;
-  --faction-gradient: linear-gradient(135deg, #120820 0%, #4a1a5c 50%, #200e30 100%);
+  --faction-gradient: radial-gradient(ellipse at 0% 0%, rgba(74, 26, 92, 0.15) 0%, transparent 50%), radial-gradient(ellipse at 100% 100%, rgba(200, 80, 192, 0.08) 0%, transparent 50%);
 }
 
-/* Additional factions */
 [data-faction="adeptus-custodes"] {
   --color-primary: #6b5a1e;
   --color-accent: #ffd700;
-  --color-surface: #1f1a0f;
-  --color-surface-alt: #2e2815;
+  --color-surface: #110e08;
+  --color-surface-alt: #1e1a0f;
   --font-display: 'Cinzel', serif;
-  --faction-gradient: linear-gradient(135deg, #120f05 0%, #6b5a1e 50%, #2e2510 100%);
+  --faction-gradient: radial-gradient(ellipse at 0% 0%, rgba(107, 90, 30, 0.15) 0%, transparent 50%), radial-gradient(ellipse at 100% 100%, rgba(255, 215, 0, 0.08) 0%, transparent 50%);
 }
 
 [data-faction="adepta-sororitas"] {
   --color-primary: #5c1a3a;
   --color-accent: #e6a8c8;
-  --color-surface: #1f0f18;
-  --color-surface-alt: #2d1525;
+  --color-surface: #120810;
+  --color-surface-alt: #1e0e1a;
   --font-display: 'Cinzel', serif;
-  --faction-gradient: linear-gradient(135deg, #150810 0%, #5c1a3a 50%, #2e0e1e 100%);
+  --faction-gradient: radial-gradient(ellipse at 0% 0%, rgba(92, 26, 58, 0.15) 0%, transparent 50%), radial-gradient(ellipse at 100% 100%, rgba(230, 168, 200, 0.08) 0%, transparent 50%);
 }
 
 [data-faction="death-guard"] {
   --color-primary: #4a5c1a;
   --color-accent: #b8cc3c;
-  --color-surface: #1a1f0f;
-  --color-surface-alt: #252d15;
+  --color-surface: #0e1108;
+  --color-surface-alt: #161e0e;
   --font-display: 'Cinzel', serif;
-  --faction-gradient: linear-gradient(135deg, #0f1408 0%, #4a5c1a 50%, #262e10 100%);
+  --faction-gradient: radial-gradient(ellipse at 0% 0%, rgba(74, 92, 26, 0.15) 0%, transparent 50%), radial-gradient(ellipse at 100% 100%, rgba(184, 204, 60, 0.08) 0%, transparent 50%);
 }
 
 [data-faction="thousand-sons"] {
   --color-primary: #1a3a6b;
   --color-accent: #40e0d0;
-  --color-surface: #0f1828;
-  --color-surface-alt: #152540;
+  --color-surface: #080f1a;
+  --color-surface-alt: #0e1828;
   --font-display: 'Orbitron', sans-serif;
-  --faction-gradient: linear-gradient(135deg, #080f1a 0%, #1a3a6b 50%, #0f2040 100%);
+  --faction-gradient: radial-gradient(ellipse at 0% 0%, rgba(26, 58, 107, 0.15) 0%, transparent 50%), radial-gradient(ellipse at 100% 100%, rgba(64, 224, 208, 0.08) 0%, transparent 50%);
 }
 
 [data-faction="t-au-empire"] {
   --color-primary: #1a4a5c;
   --color-accent: #ff6b35;
-  --color-surface: #0f1f28;
-  --color-surface-alt: #152d3d;
+  --color-surface: #08111a;
+  --color-surface-alt: #0e1e28;
   --font-display: 'Orbitron', sans-serif;
-  --faction-gradient: linear-gradient(135deg, #08141a 0%, #1a4a5c 50%, #0f2830 100%);
+  --faction-gradient: radial-gradient(ellipse at 0% 0%, rgba(26, 74, 92, 0.15) 0%, transparent 50%), radial-gradient(ellipse at 100% 100%, rgba(255, 107, 53, 0.08) 0%, transparent 50%);
 }
 
 [data-faction="chaos-space-marines"],
@@ -105,100 +105,95 @@
 [data-faction="emperor-s-children"] {
   --color-primary: #5c1a1a;
   --color-accent: #ff2020;
-  --color-surface: #2a1010;
-  --color-surface-alt: #3d1515;
+  --color-surface: #120808;
+  --color-surface-alt: #1e0e0e;
   --font-display: 'Cinzel', serif;
-  --faction-gradient: linear-gradient(135deg, #1a0808 0%, #5c1a1a 50%, #2e0e0e 100%);
+  --faction-gradient: radial-gradient(ellipse at 0% 0%, rgba(92, 26, 26, 0.15) 0%, transparent 50%), radial-gradient(ellipse at 100% 100%, rgba(255, 32, 32, 0.08) 0%, transparent 50%);
 }
 
 [data-faction="drukhari"] {
   --color-primary: #3a1a5c;
   --color-accent: #8b5cf6;
-  --color-surface: #180f28;
-  --color-surface-alt: #25153d;
+  --color-surface: #0f0820;
+  --color-surface-alt: #18102d;
   --font-display: 'Quicksand', sans-serif;
-  --faction-gradient: linear-gradient(135deg, #0f0820 0%, #3a1a5c 50%, #1e0e30 100%);
+  --faction-gradient: radial-gradient(ellipse at 0% 0%, rgba(58, 26, 92, 0.15) 0%, transparent 50%), radial-gradient(ellipse at 100% 100%, rgba(139, 92, 246, 0.08) 0%, transparent 50%);
 }
 
 [data-faction="imperial-knights"],
 [data-faction="chaos-knights"] {
   --color-primary: #4a3a1a;
   --color-accent: #c4a535;
-  --color-surface: #1a160f;
-  --color-surface-alt: #282015;
+  --color-surface: #100c08;
+  --color-surface-alt: #1a160e;
   --font-display: 'Cinzel', serif;
-  --faction-gradient: linear-gradient(135deg, #100c05 0%, #4a3a1a 50%, #251e0e 100%);
+  --faction-gradient: radial-gradient(ellipse at 0% 0%, rgba(74, 58, 26, 0.15) 0%, transparent 50%), radial-gradient(ellipse at 100% 100%, rgba(196, 165, 53, 0.08) 0%, transparent 50%);
 }
 
 [data-faction="astra-militarum"] {
   --color-primary: #3a4a2e;
   --color-accent: #c4a535;
-  --color-surface: #161f10;
-  --color-surface-alt: #1f2c18;
-  --font-display: 'Inter', sans-serif;
-  --faction-gradient: linear-gradient(135deg, #0c1208 0%, #3a4a2e 50%, #1a2510 100%);
+  --color-surface: #0c1208;
+  --color-surface-alt: #141e10;
+  --font-display: 'Inter Tight', sans-serif;
+  --faction-gradient: radial-gradient(ellipse at 0% 0%, rgba(58, 74, 46, 0.15) 0%, transparent 50%), radial-gradient(ellipse at 100% 100%, rgba(196, 165, 53, 0.08) 0%, transparent 50%);
 }
 
 [data-faction="grey-knights"] {
   --color-primary: #3a3a5c;
   --color-accent: #a0a0ff;
-  --color-surface: #161628;
-  --color-surface-alt: #1f1f3d;
+  --color-surface: #0a0a18;
+  --color-surface-alt: #121228;
   --font-display: 'Cinzel', serif;
-  --faction-gradient: linear-gradient(135deg, #0a0a1a 0%, #3a3a5c 50%, #1a1a30 100%);
+  --faction-gradient: radial-gradient(ellipse at 0% 0%, rgba(58, 58, 92, 0.15) 0%, transparent 50%), radial-gradient(ellipse at 100% 100%, rgba(160, 160, 255, 0.08) 0%, transparent 50%);
 }
 
 [data-faction="leagues-of-votann"] {
   --color-primary: #5c4a1a;
   --color-accent: #ff9800;
-  --color-surface: #1f1a0f;
-  --color-surface-alt: #2e2515;
-  --font-display: 'Inter', sans-serif;
-  --faction-gradient: linear-gradient(135deg, #120f05 0%, #5c4a1a 50%, #2e240e 100%);
+  --color-surface: #110e08;
+  --color-surface-alt: #1e1a0e;
+  --font-display: 'Inter Tight', sans-serif;
+  --faction-gradient: radial-gradient(ellipse at 0% 0%, rgba(92, 74, 26, 0.15) 0%, transparent 50%), radial-gradient(ellipse at 100% 100%, rgba(255, 152, 0, 0.08) 0%, transparent 50%);
 }
 
 [data-faction="adeptus-mechanicus"] {
   --color-primary: #5c1a1a;
   --color-accent: #ff4444;
-  --color-surface: #1f0f0f;
-  --color-surface-alt: #2e1515;
+  --color-surface: #120808;
+  --color-surface-alt: #1e0e0e;
   --font-display: 'Orbitron', sans-serif;
-  --faction-gradient: linear-gradient(135deg, #1a0808 0%, #5c1a1a 50%, #2e0e0e 100%);
+  --faction-gradient: radial-gradient(ellipse at 0% 0%, rgba(92, 26, 26, 0.15) 0%, transparent 50%), radial-gradient(ellipse at 100% 100%, rgba(255, 68, 68, 0.08) 0%, transparent 50%);
 }
 
 [data-faction="genestealer-cults"] {
   --color-primary: #4a1a5c;
   --color-accent: #9c27b0;
-  --color-surface: #1f0f28;
-  --color-surface-alt: #2d153d;
-  --font-display: 'Inter', sans-serif;
-  --faction-gradient: linear-gradient(135deg, #120820 0%, #4a1a5c 50%, #200e30 100%);
+  --color-surface: #100820;
+  --color-surface-alt: #1a0e2d;
+  --font-display: 'Inter Tight', sans-serif;
+  --faction-gradient: radial-gradient(ellipse at 0% 0%, rgba(74, 26, 92, 0.15) 0%, transparent 50%), radial-gradient(ellipse at 100% 100%, rgba(156, 39, 176, 0.08) 0%, transparent 50%);
 }
 
 [data-faction="chaos-daemons"] {
   --color-primary: #5c1a2a;
   --color-accent: #ff1744;
-  --color-surface: #2a1015;
-  --color-surface-alt: #3d1520;
+  --color-surface: #12080c;
+  --color-surface-alt: #1e0e15;
   --font-display: 'Cinzel', serif;
-  --faction-gradient: linear-gradient(135deg, #1a080c 0%, #5c1a2a 50%, #2e0e15 100%);
+  --faction-gradient: radial-gradient(ellipse at 0% 0%, rgba(92, 26, 42, 0.15) 0%, transparent 50%), radial-gradient(ellipse at 100% 100%, rgba(255, 23, 68, 0.08) 0%, transparent 50%);
 }
 
 [data-faction="imperial-agents"] {
   --color-primary: #3a3a4a;
   --color-accent: #c4a535;
-  --color-surface: #16161f;
-  --color-surface-alt: #1f1f2d;
+  --color-surface: #0a0a12;
+  --color-surface-alt: #121218;
   --font-display: 'Cinzel', serif;
-  --faction-gradient: linear-gradient(135deg, #0a0a12 0%, #3a3a4a 50%, #1a1a25 100%);
+  --faction-gradient: radial-gradient(ellipse at 0% 0%, rgba(58, 58, 74, 0.15) 0%, transparent 50%), radial-gradient(ellipse at 100% 100%, rgba(196, 165, 53, 0.08) 0%, transparent 50%);
 }
 
 /* Smooth theme transitions */
-:root {
-  --faction-gradient: none;
-  --color-surface-alt: var(--color-surface);
-}
-
 body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }

@@ -5,139 +5,162 @@
       "id": "imperial-agents",
       "name": "Imperial Agents",
       "slug": "imperial-agents",
-      "datasheetCount": 45
+      "datasheetCount": 45,
+      "imageUrl": "/PierreHammer/img/factions/imperial-agents-banner.webp"
     },
     {
       "id": "astra-militarum",
       "name": "Astra Militarum",
       "slug": "astra-militarum",
-      "datasheetCount": 128
+      "datasheetCount": 128,
+      "imageUrl": "/PierreHammer/img/factions/astra-militarum.jpg"
     },
     {
       "id": "genestealer-cults",
       "name": "Genestealer Cults",
       "slug": "genestealer-cults",
-      "datasheetCount": 136
+      "datasheetCount": 136,
+      "imageUrl": "/PierreHammer/img/factions/genestealer-cults.jpg"
     },
     {
       "id": "necrons",
       "name": "Necrons",
       "slug": "necrons",
-      "datasheetCount": 64
+      "datasheetCount": 64,
+      "imageUrl": "/PierreHammer/img/factions/necrons.jpg"
     },
     {
       "id": "aeldari",
       "name": "Aeldari",
       "slug": "aeldari",
-      "datasheetCount": 97
+      "datasheetCount": 97,
+      "imageUrl": "/PierreHammer/img/factions/aeldari.jpg"
     },
     {
       "id": "orks",
       "name": "Orks",
       "slug": "orks",
-      "datasheetCount": 86
+      "datasheetCount": 86,
+      "imageUrl": "/PierreHammer/img/factions/orks.jpg"
     },
     {
       "id": "grey-knights",
       "name": "Grey Knights",
       "slug": "grey-knights",
-      "datasheetCount": 31
+      "datasheetCount": 31,
+      "imageUrl": "/PierreHammer/img/factions/grey-knights.jpg"
     },
     {
       "id": "t-au-empire",
-      "name": "T’au Empire",
+      "name": "T'au Empire",
       "slug": "t-au-empire",
-      "datasheetCount": 63
+      "datasheetCount": 63,
+      "imageUrl": "/PierreHammer/img/factions/t-au-empire.jpg"
     },
     {
       "id": "leagues-of-votann",
       "name": "Leagues of Votann",
       "slug": "leagues-of-votann",
-      "datasheetCount": 22
+      "datasheetCount": 22,
+      "imageUrl": "/PierreHammer/img/factions/leagues-of-votann.jpg"
     },
     {
       "id": "adeptus-mechanicus",
       "name": "Adeptus Mechanicus",
       "slug": "adeptus-mechanicus",
-      "datasheetCount": 36
+      "datasheetCount": 36,
+      "imageUrl": "/PierreHammer/img/factions/adeptus-mechanicus.jpg"
     },
     {
       "id": "thousand-sons",
       "name": "Thousand Sons",
       "slug": "thousand-sons",
-      "datasheetCount": 60
+      "datasheetCount": 60,
+      "imageUrl": "/PierreHammer/img/factions/thousand-sons.jpg"
     },
     {
       "id": "death-guard",
       "name": "Death Guard",
       "slug": "death-guard",
-      "datasheetCount": 71
+      "datasheetCount": 71,
+      "imageUrl": "/PierreHammer/img/factions/death-guard.jpg"
     },
     {
       "id": "emperor-s-children",
-      "name": "Emperor’s Children",
+      "name": "Emperor's Children",
       "slug": "emperor-s-children",
-      "datasheetCount": 22
+      "datasheetCount": 22,
+      "imageUrl": "/PierreHammer/img/factions/emperor-s-children.png"
     },
     {
       "id": "world-eaters",
       "name": "World Eaters",
       "slug": "world-eaters",
-      "datasheetCount": 58
+      "datasheetCount": 58,
+      "imageUrl": "/PierreHammer/img/factions/world-eaters.jpg"
     },
     {
       "id": "chaos-knights",
       "name": "Chaos Knights",
       "slug": "chaos-knights",
-      "datasheetCount": 37
+      "datasheetCount": 37,
+      "imageUrl": "/PierreHammer/img/factions/chaos-knights.jpg"
     },
     {
       "id": "chaos-daemons",
       "name": "Chaos Daemons",
       "slug": "chaos-daemons",
-      "datasheetCount": 106
+      "datasheetCount": 106,
+      "imageUrl": "/PierreHammer/img/factions/Chaosdemons.jpg"
     },
     {
       "id": "imperial-knights",
       "name": "Imperial Knights",
       "slug": "imperial-knights",
-      "datasheetCount": 27
+      "datasheetCount": 27,
+      "imageUrl": "/PierreHammer/img/factions/Imperialknight.jpg"
     },
     {
       "id": "space-marines",
       "name": "Space Marines",
       "slug": "space-marines",
-      "datasheetCount": 299
+      "datasheetCount": 299,
+      "imageUrl": "/PierreHammer/img/factions/space-marines.webp"
     },
     {
       "id": "tyranids",
       "name": "Tyranids",
       "slug": "tyranids",
-      "datasheetCount": 56
+      "datasheetCount": 56,
+      "imageUrl": "/PierreHammer/img/factions/Tyranid.jpg"
     },
     {
       "id": "adeptus-custodes",
       "name": "Adeptus Custodes",
       "slug": "adeptus-custodes",
-      "datasheetCount": 31
+      "datasheetCount": 31,
+      "imageUrl": "/PierreHammer/img/factions/adeptus-custodes.jpg"
     },
     {
       "id": "adepta-sororitas",
       "name": "Adepta Sororitas",
       "slug": "adepta-sororitas",
-      "datasheetCount": 37
+      "datasheetCount": 37,
+      "imageUrl": "/PierreHammer/img/factions/adepta-sororitas.jpg"
     },
     {
       "id": "chaos-space-marines",
       "name": "Chaos Space Marines",
       "slug": "chaos-space-marines",
-      "datasheetCount": 112
+      "datasheetCount": 112,
+      "imageUrl": "/PierreHammer/img/factions/chaos-space-marines.jpg"
     },
     {
       "id": "drukhari",
       "name": "Drukhari",
       "slug": "drukhari",
-      "datasheetCount": 47
+      "datasheetCount": 47,
+      "imageUrl": "/PierreHammer/img/factions/drukhari.jpg"
     }
   ]
 }

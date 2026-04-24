@@ -6,8 +6,14 @@ import { resolveCombat } from '@/utils/combatEngine'
 import { parseWeaponKeywords } from '@/utils/weaponKeywordParser'
 import { extractCombatEffects, extractEnhancementEffects } from '@/utils/combatEffectsExtractor'
 import { parseStratagemEffect, isStratagemRelevant } from '@/utils/stratagemEffectParser'
-import { SimulatorCard } from '@/components/domain/Simulator/SimulatorCard'
-import type { Weapon, Datasheet, Detachment, Enhancement, Stratagem } from '@/types/gameData.types'
+import { isCharacter, canEquipEnhancement } from '@/utils/enhancementUtils'
+import { FactionPickerModal } from '@/components/domain/Simulator/FactionPickerModal'
+import { UnitSearchModal } from '@/components/domain/Simulator/UnitSearchModal'
+import { WeaponPickerModal } from '@/components/domain/Simulator/WeaponPickerModal'
+import { EnhancementPickerModal } from '@/components/domain/Simulator/EnhancementPickerModal'
+import { HudTopBar, MTopBar, HudPill } from '@/components/ui/Hud'
+import { T } from '@/components/ui/TranslatableText'
+import type { Weapon, Datasheet, Detachment, Enhancement } from '@/types/gameData.types'
 import type { CombatResult, AbilityEffect } from '@/types/combat.types'
 
 function mergeEffects(a: AbilityEffect, b: AbilityEffect): AbilityEffect {
@@ -28,32 +34,6 @@ function mergeEffects(a: AbilityEffect, b: AbilityEffect): AbilityEffect {
 
 function round(n: number): string {
   return (Math.round(n * 10) / 10).toString()
-}
-
-function ResultBar({ label, value, max, detail }: { label: string; value: number; max: number; detail?: string }) {
-  const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0
-  return (
-    <div className="mb-2">
-      <div className="flex justify-between text-xs mb-0.5 lg:text-sm">
-        <span style={{ color: 'var(--color-text)' }}>{label}</span>
-        <span style={{ color: 'var(--color-accent)' }}>
-          {round(value)}
-          {detail && <span style={{ color: 'var(--color-text-muted)' }}> {detail}</span>}
-        </span>
-      </div>
-      <div className="rounded-full h-2 overflow-hidden lg:h-3" style={{ backgroundColor: 'var(--color-surface)' }}>
-        <div className="h-full rounded-full transition-all duration-300" style={{ width: `${pct}%`, backgroundColor: 'var(--color-accent)' }} />
-      </div>
-    </div>
-  )
-}
-
-function KeywordBadge({ text }: { text: string }) {
-  return (
-    <span className="text-[10px] px-1.5 py-0.5 rounded font-medium lg:text-xs lg:px-2 lg:py-1" style={{ backgroundColor: 'var(--color-primary)', color: '#fff' }}>
-      {text}
-    </span>
-  )
 }
 
 interface SideState {
@@ -86,6 +66,19 @@ export function SimulatorPage() {
   // Stratagems
   const [activeAttackerStrats, setActiveAttackerStrats] = useState<Set<string>>(new Set())
   const [activeDefenderStrats, setActiveDefenderStrats] = useState<Set<string>>(new Set())
+
+  // Modals
+  const [showAtkFactionPicker, setShowAtkFactionPicker] = useState(false)
+  const [showAtkUnitSearch, setShowAtkUnitSearch] = useState(false)
+  const [showAtkWeaponPicker, setShowAtkWeaponPicker] = useState(false)
+  const [showAtkEnhancementPicker, setShowAtkEnhancementPicker] = useState(false)
+  const [pendingAtkFactionSlug, setPendingAtkFactionSlug] = useState<string | null>(null)
+
+  const [showDefFactionPicker, setShowDefFactionPicker] = useState(false)
+  const [showDefUnitSearch, setShowDefUnitSearch] = useState(false)
+  const [showDefWeaponPicker, setShowDefWeaponPicker] = useState(false)
+  const [showDefEnhancementPicker, setShowDefEnhancementPicker] = useState(false)
+  const [pendingDefFactionSlug, setPendingDefFactionSlug] = useState<string | null>(null)
 
   const factions = factionIndex?.factions ?? []
 
@@ -121,8 +114,27 @@ export function SimulatorPage() {
   const attackerFaction = attacker.factionSlug ? loadedFactions[attacker.factionSlug] : null
   const defenderFaction = defender.factionSlug ? loadedFactions[defender.factionSlug] : null
 
+  const attackerDetachments = attackerFaction?.detachments ?? []
+  const defenderDetachments = defenderFaction?.detachments ?? []
+
   const attackerStratagems = attacker.detachment?.stratagems ?? []
   const defenderStratagems = defender.detachment?.stratagems ?? []
+
+  const pendingAtkFaction = pendingAtkFactionSlug ? loadedFactions[pendingAtkFactionSlug] : null
+  const atkPickerDetachments = pendingAtkFaction?.detachments ?? []
+  const pendingDefFaction = pendingDefFactionSlug ? loadedFactions[pendingDefFactionSlug] : null
+  const defPickerDetachments = pendingDefFaction?.detachments ?? []
+
+  // Enhancements
+  const attackerEnhancements = useMemo(() => {
+    if (!attacker.detachment || !attacker.datasheet || !isCharacter(attacker.datasheet)) return []
+    return (attacker.detachment.enhancements ?? []).filter((e) => canEquipEnhancement(e, attacker.datasheet!))
+  }, [attacker.detachment, attacker.datasheet])
+
+  const defenderEnhancements = useMemo(() => {
+    if (!defender.detachment || !defender.datasheet || !isCharacter(defender.datasheet)) return []
+    return (defender.detachment.enhancements ?? []).filter((e) => canEquipEnhancement(e, defender.datasheet!))
+  }, [defender.detachment, defender.datasheet])
 
   // Combat effects with enhancements
   const attackerEffects = useMemo(() => {
@@ -226,38 +238,661 @@ export function SimulatorPage() {
     if (weaponKeywords.precision) activeKeywords.push('Precision')
   }
 
+  const attackerProfile = attacker.datasheet?.profiles[0]
+  const defenderProfile = defender.datasheet?.profiles[0]
+
   return (
-    <div className="p-4 pb-24 lg:max-w-5xl lg:mx-auto lg:py-8">
-      <button
-        className="text-sm mb-3 bg-transparent border-none cursor-pointer lg:text-base"
-        style={{ color: 'var(--color-accent)' }}
-        onClick={() => navigate(-1)}
-      >
-        ← Retour
-      </button>
+    <>
+      {/* Desktop HUD top bar */}
+      <div className="hidden lg:block">
+        <HudTopBar title="Simulateur de Combat" sub="Tactique" />
+      </div>
+      <div className="-mx-4 px-1.5 pb-24 lg:mx-auto lg:px-6 lg:py-0 lg:pb-8 lg:max-w-5xl lg:min-h-[calc(100vh-60px)] lg:flex lg:flex-col lg:justify-center">
+        {/* Mobile header */}
+        <div className="lg:hidden" style={{ marginBottom: 8 }}>
+          <MTopBar
+            title="Simulateur"
+            sub="Tactique"
+            actions={
+              <button
+                style={{ background: 'transparent', border: '1px solid var(--color-border)', color: 'var(--color-accent)', padding: '4px 8px', fontFamily: 'var(--font-mono)', fontSize: 9, cursor: 'pointer' }}
+                onClick={() => navigate(-1)}
+              >
+                {'\u2190'} RETOUR
+              </button>
+            }
+          />
+        </div>
 
-      <h1 className="font-bold mb-4 lg:text-2xl lg:mb-6" style={{ fontSize: 'var(--text-xl)' }}>Simulateur de combat</h1>
+        <div className="flex flex-col gap-3 lg:gap-4">
 
-      {/* ===== CARDS: ATTACKER vs DEFENDER ===== */}
-      <div className="flex flex-col gap-3 mb-4 lg:flex-row lg:items-stretch lg:gap-6">
-        <SimulatorCard
-          role="attacker"
+          {/* === ATTACKER & DEFENDER COLUMNS === */}
+          <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-4" style={{ alignItems: 'start' }}>
+
+            {/* ===== ATTACKER COLUMN ===== */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
+              <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-accent)', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                {'\u25b8'} Attaquant
+              </div>
+
+              {/* Attacker header */}
+              {!attacker.factionSlug ? (
+                <button
+                  onClick={() => setShowAtkFactionPicker(true)}
+                  style={{
+                    width: '100%', minHeight: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    background: 'var(--color-surface)', border: '2px dashed var(--color-border)', color: 'var(--color-text-muted)', cursor: 'pointer',
+                  }}
+                >
+                  <span style={{ fontSize: 20 }}>{'\u2694'}</span>
+                  <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', letterSpacing: 1 }}>CHOISIR UNE FACTION</span>
+                </button>
+              ) : (
+                <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', padding: '8px 10px' }}>
+                  {!attacker.datasheet ? (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)' }}>
+                          {attackerFaction?.name ? <T text={attackerFaction.name} category="faction" /> : '...'}
+                        </div>
+                        <button
+                          onClick={() => { setAttacker({ ...emptySide }); setActiveAttackerStrats(new Set()) }}
+                          style={{ background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: 10, fontFamily: 'var(--font-mono)' }}
+                        >
+                          Changer
+                        </button>
+                      </div>
+                      {attackerDetachments.length > 0 && (
+                        <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', letterSpacing: 1, flexShrink: 0 }}>DET.</span>
+                          <select
+                            value={attacker.detachment?.id ?? ''}
+                            onChange={(e) => {
+                              const det = attackerDetachments.find((d) => d.id === e.target.value) ?? null
+                              setAttacker((prev) => ({ ...prev, detachment: det, enhancement: null }))
+                              setActiveAttackerStrats(new Set())
+                            }}
+                            style={{
+                              flex: 1, padding: '4px 8px', fontSize: 11, fontFamily: 'var(--font-mono)',
+                              background: 'var(--color-surface)', border: '1px solid var(--color-border)',
+                              color: 'var(--color-text)', outline: 'none', cursor: 'pointer', colorScheme: 'dark',
+                            }}
+                          >
+                            {attackerDetachments.map((det) => (
+                              <option key={det.id} value={det.id} style={{ background: 'var(--color-surface)', color: 'var(--color-text)' }}>{det.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                      <button
+                        onClick={() => setShowAtkUnitSearch(true)}
+                        style={{
+                          width: '100%', marginTop: 6, padding: '10px 10px', background: 'transparent',
+                          border: '2px dashed var(--color-border)', color: 'var(--color-text-muted)', cursor: 'pointer',
+                          fontSize: 11, fontFamily: 'var(--font-mono)', textAlign: 'center',
+                        }}
+                      >
+                        Choisir une unité
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)', marginBottom: 4 }}>
+                        <T text={attacker.datasheet.name} category="unit" />
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ fontSize: 10, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>
+                          {attackerFaction?.name ? <T text={attackerFaction.name} category="faction" /> : '...'}
+                        </div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button onClick={() => setShowAtkUnitSearch(true)} style={{ background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: 10, fontFamily: 'var(--font-mono)' }}>Unité</button>
+                          <button onClick={() => { setAttacker({ ...emptySide }); setActiveAttackerStrats(new Set()) }} style={{ background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: 10, fontFamily: 'var(--font-mono)' }}>Faction</button>
+                        </div>
+                      </div>
+                      {attackerDetachments.length > 0 && (
+                        <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', letterSpacing: 1, flexShrink: 0 }}>DET.</span>
+                          <select
+                            value={attacker.detachment?.id ?? ''}
+                            onChange={(e) => {
+                              const det = attackerDetachments.find((d) => d.id === e.target.value) ?? null
+                              setAttacker((prev) => ({ ...prev, detachment: det, enhancement: null }))
+                              setActiveAttackerStrats(new Set())
+                            }}
+                            style={{
+                              flex: 1, padding: '4px 8px', fontSize: 11, fontFamily: 'var(--font-mono)',
+                              background: 'var(--color-surface)', border: '1px solid var(--color-border)',
+                              color: 'var(--color-text)', outline: 'none', cursor: 'pointer', colorScheme: 'dark',
+                            }}
+                          >
+                            {attackerDetachments.map((det) => (
+                              <option key={det.id} value={det.id} style={{ background: 'var(--color-surface)', color: 'var(--color-text)' }}>{det.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                      {attackerProfile && (
+                        <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+                          {(['M', 'T', 'Sv', 'W', 'Ld', 'OC'] as const).map((stat) => {
+                            const val = attackerProfile[stat]
+                            if (!val) return null
+                            return (
+                              <div key={stat} style={{ flex: 1, textAlign: 'center', border: '1px solid var(--color-border)', background: 'rgba(255,255,255,0.03)', padding: '4px 0' }}>
+                                <div style={{ fontSize: 7, color: 'var(--color-accent)', fontFamily: 'var(--font-mono)', letterSpacing: 1, textTransform: 'uppercase' }}>{stat}</div>
+                                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)', lineHeight: 1.2 }}>{val}</div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Attacker weapon */}
+              {attacker.datasheet && (
+                <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', padding: '6px 10px' }}>
+                  <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', letterSpacing: 1, marginBottom: 6 }}>ARME</div>
+                  <button
+                    onClick={() => setShowAtkWeaponPicker(true)}
+                    style={{
+                      width: '100%', textAlign: 'left', padding: '8px 10px', background: 'rgba(255,255,255,0.05)',
+                      border: `1px solid ${attacker.weapon ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                      color: 'var(--color-text)', cursor: 'pointer', fontSize: 12,
+                    }}
+                  >
+                    <div style={{ fontWeight: 600 }}>{attacker.weapon ? <T text={attacker.weapon.name} category="weapon" /> : 'Choisir une arme'}</div>
+                    {attacker.weapon && (
+                      <div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: 2, fontFamily: 'var(--font-mono)' }}>
+                        {attacker.weapon.range !== 'Melee' && `${attacker.weapon.range} `}A:{attacker.weapon.A} {attacker.weapon.type === 'Melee' || attacker.weapon.range === 'Melee' ? 'CC' : 'CT'}:{attacker.weapon.BS_WS} S:{attacker.weapon.S} AP:{attacker.weapon.AP} D:{attacker.weapon.D}
+                      </div>
+                    )}
+                  </button>
+                  {activeKeywords.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
+                      {activeKeywords.map((kw) => <HudPill key={kw}>{kw}</HudPill>)}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Attacker enhancement */}
+              {attackerEnhancements.length > 0 && (
+                <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', padding: '6px 10px' }}>
+                  <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', letterSpacing: 1, marginBottom: 6 }}>AMÉLIORATION</div>
+                  <button
+                    onClick={() => setShowAtkEnhancementPicker(true)}
+                    style={{
+                      width: '100%', textAlign: 'left', padding: '8px 10px', background: 'rgba(255,255,255,0.05)',
+                      border: `1px solid ${attacker.enhancement ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                      color: 'var(--color-text)', cursor: 'pointer', fontSize: 12,
+                    }}
+                  >
+                    {attacker.enhancement ? (
+                      <div>
+                        <span style={{ fontWeight: 600 }}><T text={attacker.enhancement.name} category="enhancement" /></span>
+                        <span style={{ color: 'var(--color-accent)', marginLeft: 6, fontFamily: 'var(--font-mono)', fontSize: 10 }}>{attacker.enhancement.cost} pts</span>
+                      </div>
+                    ) : (
+                      <span style={{ color: 'var(--color-text-muted)' }}>Aucune</span>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* Attacker model count */}
+              {attacker.datasheet && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--color-surface)', border: '1px solid var(--color-border)', padding: '8px 10px' }}>
+                  <span style={{ fontSize: 10, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>MODÈLES</span>
+                  <input
+                    type="number" min={1} max={30} value={attacker.modelCount}
+                    onChange={(e) => setAttacker((prev) => ({ ...prev, modelCount: Math.max(1, Number(e.target.value)) }))}
+                    style={{ width: 50, padding: '4px 6px', fontSize: 12, textAlign: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--color-border)', color: 'var(--color-text)', outline: 'none' }}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* ===== DEFENDER COLUMN ===== */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
+              <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-error, #ef4444)', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                {'\u25b8'} Cible
+              </div>
+
+              {/* Defender header */}
+              {!defender.factionSlug ? (
+                <button
+                  onClick={() => setShowDefFactionPicker(true)}
+                  style={{
+                    width: '100%', minHeight: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    background: 'var(--color-surface)', border: '2px dashed var(--color-border)', color: 'var(--color-text-muted)', cursor: 'pointer',
+                  }}
+                >
+                  <span style={{ fontSize: 20 }}>{'\uD83D\uDEE1'}</span>
+                  <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', letterSpacing: 1 }}>CHOISIR UNE FACTION</span>
+                </button>
+              ) : (
+                <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', padding: '8px 10px' }}>
+                  {!defender.datasheet ? (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)' }}>
+                          {defenderFaction?.name ? <T text={defenderFaction.name} category="faction" /> : '...'}
+                        </div>
+                        <button
+                          onClick={() => { setDefender({ ...emptySide }); setActiveDefenderStrats(new Set()) }}
+                          style={{ background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: 10, fontFamily: 'var(--font-mono)' }}
+                        >
+                          Changer
+                        </button>
+                      </div>
+                      {defenderDetachments.length > 0 && (
+                        <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', letterSpacing: 1, flexShrink: 0 }}>DET.</span>
+                          <select
+                            value={defender.detachment?.id ?? ''}
+                            onChange={(e) => {
+                              const det = defenderDetachments.find((d) => d.id === e.target.value) ?? null
+                              setDefender((prev) => ({ ...prev, detachment: det, enhancement: null }))
+                              setActiveDefenderStrats(new Set())
+                            }}
+                            style={{
+                              flex: 1, padding: '4px 8px', fontSize: 11, fontFamily: 'var(--font-mono)',
+                              background: 'var(--color-surface)', border: '1px solid var(--color-border)',
+                              color: 'var(--color-text)', outline: 'none', cursor: 'pointer', colorScheme: 'dark',
+                            }}
+                          >
+                            {defenderDetachments.map((det) => (
+                              <option key={det.id} value={det.id} style={{ background: 'var(--color-surface)', color: 'var(--color-text)' }}>{det.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                      <button
+                        onClick={() => setShowDefUnitSearch(true)}
+                        style={{
+                          width: '100%', marginTop: 6, padding: '10px 10px', background: 'transparent',
+                          border: '2px dashed var(--color-border)', color: 'var(--color-text-muted)', cursor: 'pointer',
+                          fontSize: 11, fontFamily: 'var(--font-mono)', textAlign: 'center',
+                        }}
+                      >
+                        Choisir une unité
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)', marginBottom: 4 }}>
+                        <T text={defender.datasheet.name} category="unit" />
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ fontSize: 10, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>
+                          {defenderFaction?.name ? <T text={defenderFaction.name} category="faction" /> : '...'}
+                        </div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button onClick={() => setShowDefUnitSearch(true)} style={{ background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: 10, fontFamily: 'var(--font-mono)' }}>Unité</button>
+                          <button onClick={() => { setDefender({ ...emptySide }); setActiveDefenderStrats(new Set()) }} style={{ background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: 10, fontFamily: 'var(--font-mono)' }}>Faction</button>
+                        </div>
+                      </div>
+                      {defenderDetachments.length > 0 && (
+                        <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', letterSpacing: 1, flexShrink: 0 }}>DET.</span>
+                          <select
+                            value={defender.detachment?.id ?? ''}
+                            onChange={(e) => {
+                              const det = defenderDetachments.find((d) => d.id === e.target.value) ?? null
+                              setDefender((prev) => ({ ...prev, detachment: det, enhancement: null }))
+                              setActiveDefenderStrats(new Set())
+                            }}
+                            style={{
+                              flex: 1, padding: '4px 8px', fontSize: 11, fontFamily: 'var(--font-mono)',
+                              background: 'var(--color-surface)', border: '1px solid var(--color-border)',
+                              color: 'var(--color-text)', outline: 'none', cursor: 'pointer', colorScheme: 'dark',
+                            }}
+                          >
+                            {defenderDetachments.map((det) => (
+                              <option key={det.id} value={det.id} style={{ background: 'var(--color-surface)', color: 'var(--color-text)' }}>{det.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                      {defenderProfile && (
+                        <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+                          {(['M', 'T', 'Sv', 'W', 'Ld', 'OC'] as const).map((stat) => {
+                            const val = defenderProfile[stat]
+                            if (!val) return null
+                            return (
+                              <div key={stat} style={{ flex: 1, textAlign: 'center', border: '1px solid var(--color-border)', background: 'rgba(255,255,255,0.03)', padding: '4px 0' }}>
+                                <div style={{ fontSize: 7, color: 'var(--color-error, #ef4444)', fontFamily: 'var(--font-mono)', letterSpacing: 1, textTransform: 'uppercase' }}>{stat}</div>
+                                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)', lineHeight: 1.2 }}>{val}</div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Defender weapon */}
+              {defender.datasheet && (
+                <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', padding: '6px 10px' }}>
+                  <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', letterSpacing: 1, marginBottom: 6 }}>ARME</div>
+                  <button
+                    onClick={() => setShowDefWeaponPicker(true)}
+                    style={{
+                      width: '100%', textAlign: 'left', padding: '8px 10px', background: 'rgba(255,255,255,0.05)',
+                      border: `1px solid ${defender.weapon ? 'var(--color-error, #ef4444)' : 'var(--color-border)'}`,
+                      color: 'var(--color-text)', cursor: 'pointer', fontSize: 12,
+                    }}
+                  >
+                    <div style={{ fontWeight: 600 }}>{defender.weapon ? <T text={defender.weapon.name} category="weapon" /> : 'Choisir'}</div>
+                    {defender.weapon && (
+                      <div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: 2, fontFamily: 'var(--font-mono)' }}>
+                        {defender.weapon.range !== 'Melee' && `${defender.weapon.range} `}A:{defender.weapon.A} {defender.weapon.type === 'Melee' || defender.weapon.range === 'Melee' ? 'CC' : 'CT'}:{defender.weapon.BS_WS} S:{defender.weapon.S} AP:{defender.weapon.AP} D:{defender.weapon.D}
+                      </div>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* Defender enhancement */}
+              {defender.datasheet && defenderEnhancements.length > 0 && (
+                <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', padding: '6px 10px' }}>
+                  <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', letterSpacing: 1, marginBottom: 6 }}>AMÉLIORATION</div>
+                  <button
+                    onClick={() => setShowDefEnhancementPicker(true)}
+                    style={{
+                      width: '100%', textAlign: 'left', padding: '8px 10px', background: 'rgba(255,255,255,0.05)',
+                      border: `1px solid ${defender.enhancement ? 'var(--color-error, #ef4444)' : 'var(--color-border)'}`,
+                      color: 'var(--color-text)', cursor: 'pointer', fontSize: 12,
+                    }}
+                  >
+                    {defender.enhancement ? (
+                      <div>
+                        <span style={{ fontWeight: 600 }}><T text={defender.enhancement.name} category="enhancement" /></span>
+                        <span style={{ color: 'var(--color-error, #ef4444)', marginLeft: 6, fontFamily: 'var(--font-mono)', fontSize: 10 }}>{defender.enhancement.cost} pts</span>
+                      </div>
+                    ) : (
+                      <span style={{ color: 'var(--color-text-muted)' }}>Aucune</span>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* Defender model count */}
+              {defender.datasheet && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--color-surface)', border: '1px solid var(--color-border)', padding: '8px 10px' }}>
+                  <span style={{ fontSize: 10, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>MODÈLES</span>
+                  <input
+                    type="number" min={1} max={30} value={defender.modelCount}
+                    onChange={(e) => setDefender((prev) => ({ ...prev, modelCount: Math.max(1, Number(e.target.value)) }))}
+                    style={{ width: 50, padding: '4px 6px', fontSize: 12, textAlign: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--color-border)', color: 'var(--color-text)', outline: 'none' }}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Toggles */}
+          {attacker.weapon && defender.datasheet && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {(weaponKeywords?.rapidFire || weaponKeywords?.melta) && (
+                <ToggleChip label="Demi-portée" active={halfRange} onToggle={() => setHalfRange(!halfRange)} />
+              )}
+              {weaponKeywords?.lance && (
+                <ToggleChip label="A chargé" active={charged} onToggle={() => setCharged(!charged)} />
+              )}
+              {weaponKeywords?.heavy && (
+                <ToggleChip label="Stationnaire" active={stationary} onToggle={() => setStationary(!stationary)} />
+              )}
+              <ToggleChip label="Couvert" active={inCover} onToggle={() => setInCover(!inCover)} />
+            </div>
+          )}
+
+          {/* Stratagems */}
+          {(filteredAttackerStrats.length > 0 || filteredDefenderStrats.length > 0) && attacker.weapon && defender.datasheet && (
+            <div>
+              <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', letterSpacing: 1, marginBottom: 6 }}>STRATAGÈMES</div>
+              <div className="flex flex-col gap-1.5 lg:grid lg:grid-cols-2 lg:gap-1.5">
+                {filteredAttackerStrats.map((strat) => {
+                  const isActive = activeAttackerStrats.has(strat.id)
+                  const parsed = !!parseStratagemEffect(strat)
+                  return (
+                    <StratagemToggle
+                      key={strat.id}
+                      name={strat.name}
+                      cpCost={strat.cpCost}
+                      isActive={isActive}
+                      parsed={parsed}
+                      variant="attacker"
+                      onToggle={() => {
+                        const next = new Set(activeAttackerStrats)
+                        isActive ? next.delete(strat.id) : next.add(strat.id)
+                        setActiveAttackerStrats(next)
+                      }}
+                    />
+                  )
+                })}
+                {filteredDefenderStrats.map((strat) => {
+                  const isActive = activeDefenderStrats.has(strat.id)
+                  const parsed = !!parseStratagemEffect(strat)
+                  return (
+                    <StratagemToggle
+                      key={`def-${strat.id}`}
+                      name={strat.name}
+                      cpCost={strat.cpCost}
+                      isActive={isActive}
+                      parsed={parsed}
+                      variant="defender"
+                      onToggle={() => {
+                        const next = new Set(activeDefenderStrats)
+                        isActive ? next.delete(strat.id) : next.add(strat.id)
+                        setActiveDefenderStrats(next)
+                      }}
+                    />
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Results — Pipeline horizontal */}
+          {result && (() => {
+            const hitPct = result.attacksTotal > 0 ? Math.round((result.hitsExpected / result.attacksTotal) * 100) : 0
+            const woundPct = result.hitsExpected > 0 ? Math.round((result.woundsExpected / result.hitsExpected) * 100) : 0
+            const savePct = result.woundsExpected > 0 ? Math.round((result.unsavedWounds / result.woundsExpected) * 100) : 0
+            const killPct = defender.modelCount > 0 ? Math.round((result.estimatedKills / defender.modelCount) * 100) : 0
+            const finalDmg = result.steps.fnpThreshold ? result.damageAfterFnp : result.damageTotal
+
+            const stepStyle: React.CSSProperties = {
+              flex: 1, padding: '12px 10px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minWidth: 0,
+            }
+            const labelStyle: React.CSSProperties = {
+              fontSize: 8, fontFamily: 'var(--font-mono)', letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 6,
+            }
+            const valueStyle = (color: string): React.CSSProperties => ({
+              fontSize: 28, fontWeight: 700, color, lineHeight: 1, marginBottom: 4,
+            })
+            const detailStyle: React.CSSProperties = {
+              fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', marginBottom: 6,
+            }
+            const barBg: React.CSSProperties = {
+              height: 3, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', marginTop: 'auto',
+            }
+            const arrowStyle: React.CSSProperties = {
+              display: 'flex', alignItems: 'center', color: 'var(--color-text-muted)', fontSize: 8, padding: '0 2px', opacity: 0.5,
+            }
+            const separatorStyle: React.CSSProperties = {
+              width: 1, background: 'var(--color-border)', alignSelf: 'stretch',
+            }
+
+            return (
+              <div>
+                <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-accent)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 }}>
+                  {'\u25b8'} Analyse probabiliste — Valeurs attendues
+                </div>
+
+                {/* Mobile: vertical stack */}
+                <div className="lg:hidden" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', padding: '8px 10px' }}>
+                  <PipelineStep label="Attaques" value={round(result.attacksTotal)} detail={`${attacker.modelCount} moy.`} color="var(--color-text)" pct={100} />
+                  <PipelineStep label="Touches" value={round(result.hitsExpected)} detail={`${result.steps.hitThreshold > 0 ? `${result.steps.hitThreshold}+` : 'auto'} · ${hitPct}%`} color="#22d3ee" pct={hitPct} />
+                  <PipelineStep label="Blessures" value={round(result.woundsExpected)} detail={`${result.steps.woundThreshold}+ · ${woundPct}%`} color="#fbbf24" pct={woundPct} />
+                  <PipelineStep label="Non sauvées" value={round(result.unsavedWounds)} detail={`${result.steps.usedInvuln ? 'inv' : 'sv'}${result.steps.saveThreshold}+ · ${savePct}%`} color="#f472b6" pct={savePct} />
+                  <PipelineStep label="Dégâts" value={round(finalDmg)} detail={`× ${result.steps.avgDamagePerWound} dmg${result.steps.fnpThreshold ? ` · FnP ${result.steps.fnpThreshold}+` : ''}`} color="#f472b6" pct={100} />
+                  <div style={{ marginTop: 12, padding: '12px 0', borderTop: '1px solid var(--color-border)', textAlign: 'center' }}>
+                    <div style={{ fontSize: 8, fontFamily: 'var(--font-mono)', letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--color-error, #ef4444)', marginBottom: 4 }}>≈ Modèles éliminés</div>
+                    <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--color-error, #ef4444)', lineHeight: 1 }}>
+                      {round(result.estimatedKills)}<span style={{ fontSize: 14, fontWeight: 400, color: 'var(--color-text-muted)' }}>/{defender.modelCount}</span>
+                    </div>
+                    <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', marginTop: 4 }}>{killPct}% de l'unité</div>
+                  </div>
+                  {result.mortalWounds > 0 && (
+                    <div style={{ fontSize: 10, color: 'var(--color-warning, #f59e0b)', marginTop: 6, fontFamily: 'var(--font-mono)' }}>
+                      dont {round(result.mortalWounds)} mortal wounds
+                    </div>
+                  )}
+                </div>
+
+                {/* Desktop: horizontal pipeline */}
+                <div className="hidden lg:block">
+                  <div style={{ display: 'flex', background: 'var(--color-surface)', border: '1px solid var(--color-border)', alignItems: 'stretch' }}>
+                    <div style={stepStyle}>
+                      <div style={labelStyle}>Attaques</div>
+                      <div style={valueStyle('var(--color-text)')}>{round(result.attacksTotal)}</div>
+                      <div style={detailStyle}>{attacker.modelCount} moy.</div>
+                      <div style={barBg}>
+                        <div style={{ height: '100%', width: '100%', background: 'var(--color-text-muted)' }} />
+                      </div>
+                    </div>
+
+                    <div style={separatorStyle} />
+                    <div style={arrowStyle}>{'\u25b8'}</div>
+
+                    <div style={stepStyle}>
+                      <div style={labelStyle}>Touches</div>
+                      <div style={valueStyle('#22d3ee')}>{round(result.hitsExpected)}</div>
+                      <div style={detailStyle}>{result.steps.hitThreshold > 0 ? `${result.steps.hitThreshold}+` : 'auto'} · {hitPct}%</div>
+                      <div style={barBg}>
+                        <div style={{ height: '100%', width: `${hitPct}%`, background: '#22d3ee', transition: 'width 0.3s' }} />
+                      </div>
+                    </div>
+
+                    <div style={separatorStyle} />
+                    <div style={arrowStyle}>{'\u25b8'}</div>
+
+                    <div style={stepStyle}>
+                      <div style={labelStyle}>Blessures</div>
+                      <div style={valueStyle('#fbbf24')}>{round(result.woundsExpected)}</div>
+                      <div style={detailStyle}>{result.steps.woundThreshold}+ · {woundPct}%</div>
+                      <div style={barBg}>
+                        <div style={{ height: '100%', width: `${woundPct}%`, background: '#fbbf24', transition: 'width 0.3s' }} />
+                      </div>
+                    </div>
+
+                    <div style={separatorStyle} />
+                    <div style={arrowStyle}>{'\u25b8'}</div>
+
+                    <div style={stepStyle}>
+                      <div style={labelStyle}>Non sauvées</div>
+                      <div style={valueStyle('#f472b6')}>{round(result.unsavedWounds)}</div>
+                      <div style={detailStyle}>{result.steps.usedInvuln ? 'inv' : 'sv'}{result.steps.saveThreshold}+ · {savePct}%</div>
+                      <div style={barBg}>
+                        <div style={{ height: '100%', width: `${savePct}%`, background: '#f472b6', transition: 'width 0.3s' }} />
+                      </div>
+                    </div>
+
+                    <div style={separatorStyle} />
+                    <div style={arrowStyle}>{'\u25b8'}</div>
+
+                    <div style={stepStyle}>
+                      <div style={labelStyle}>Dégâts</div>
+                      <div style={valueStyle('#f472b6')}>{round(finalDmg)}</div>
+                      <div style={detailStyle}>
+                        × {result.steps.avgDamagePerWound} dmg
+                        {result.steps.fnpThreshold ? ` · FnP ${result.steps.fnpThreshold}+` : ''}
+                      </div>
+                      <div style={barBg}>
+                        <div style={{ height: '100%', width: '100%', background: '#f472b6', transition: 'width 0.3s' }} />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', padding: '0 8px', fontSize: 18, color: 'var(--color-text-muted)', fontWeight: 300 }}>=</div>
+
+                    <div style={{
+                      padding: '12px 14px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
+                      borderLeft: '1px solid var(--color-border)', minWidth: 130,
+                    }}>
+                      <div style={{ fontSize: 8, fontFamily: 'var(--font-mono)', letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--color-error, #ef4444)', marginBottom: 6 }}>
+                        ≈ Modèles éliminés
+                      </div>
+                      <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--color-error, #ef4444)', lineHeight: 1 }}>
+                        {round(result.estimatedKills)}
+                        <span style={{ fontSize: 14, fontWeight: 400, color: 'var(--color-text-muted)' }}>/{defender.modelCount}</span>
+                      </div>
+                      <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', marginTop: 4 }}>
+                        {killPct}% de l'unité
+                      </div>
+                    </div>
+                  </div>
+                  {result.mortalWounds > 0 && (
+                    <div style={{ fontSize: 10, color: 'var(--color-warning, #f59e0b)', marginTop: 6, fontFamily: 'var(--font-mono)' }}>
+                      dont {round(result.mortalWounds)} mortal wounds
+                    </div>
+                  )}
+                </div>
+
+                {damageDelta !== null && damageDelta !== 0 && (
+                  <p className="text-xs mt-2 font-medium" style={{ color: damageDelta > 0 ? 'var(--color-success, #22c55e)' : 'var(--color-error, #ef4444)', fontFamily: 'var(--font-mono)' }}>
+                    {damageDelta > 0 ? '+' : ''}{round(damageDelta)} dégâts avec stratagèmes
+                  </p>
+                )}
+              </div>
+            )
+          })()}
+
+          {/* Hints */}
+          {attacker.datasheet && !attacker.weapon && (
+            <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--color-text-muted)', padding: 12 }}>
+              Sélectionne une arme pour lancer la simulation
+            </div>
+          )}
+          {attacker.weapon && !defender.datasheet && (
+            <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--color-text-muted)', padding: 12 }}>
+              Sélectionne une cible pour voir les résultats
+            </div>
+          )}
+          {!attacker.factionSlug && !defender.factionSlug && (
+            <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--color-text-muted)', padding: 20 }}>
+              Choisis un attaquant et une cible pour simuler un combat
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Attacker modals */}
+      {showAtkFactionPicker && (
+        <FactionPickerModal
           factions={factions}
-          loadedFactions={loadedFactions}
-          factionSlug={attacker.factionSlug}
-          factionName={attackerFaction?.name ?? null}
-          detachment={attacker.detachment}
-          datasheet={attacker.datasheet}
-          selectedWeapon={attacker.weapon}
-          enhancement={attacker.enhancement}
-          modelCount={attacker.modelCount}
-          onLoadFaction={loadFaction}
-          onFactionSelect={(slug, det) => {
+          detachments={atkPickerDetachments}
+          onFactionChosen={(slug) => {
+            setPendingAtkFactionSlug(slug)
             loadFaction(slug)
+          }}
+          onSelect={(slug, det) => {
             setAttacker({ ...emptySide, factionSlug: slug, detachment: det })
             setActiveAttackerStrats(new Set())
+            setPendingAtkFactionSlug(null)
+            setShowAtkFactionPicker(false)
           }}
-          onUnitSelect={(ds) => {
+          onClose={() => { setShowAtkFactionPicker(false); setPendingAtkFactionSlug(null) }}
+        />
+      )}
+      {showAtkUnitSearch && attackerFaction && (
+        <UnitSearchModal
+          datasheets={attackerFaction.datasheets}
+          onSelect={(ds) => {
             setAttacker((prev) => ({
               ...prev,
               datasheet: ds,
@@ -265,35 +900,50 @@ export function SimulatorPage() {
               enhancement: null,
               modelCount: parseInt(String(ds.pointOptions[0]?.models), 10) || 5,
             }))
+            setShowAtkUnitSearch(false)
           }}
-          onWeaponSelect={(w) => setAttacker((prev) => ({ ...prev, weapon: w }))}
-          onEnhancementSelect={(e) => setAttacker((prev) => ({ ...prev, enhancement: e }))}
-          onModelCountChange={(n) => setAttacker((prev) => ({ ...prev, modelCount: n }))}
-          onReset={() => { setAttacker({ ...emptySide }); setActiveAttackerStrats(new Set()) }}
+          onClose={() => setShowAtkUnitSearch(false)}
         />
+      )}
+      {showAtkWeaponPicker && attacker.datasheet && (
+        <WeaponPickerModal
+          weapons={attacker.datasheet.weapons}
+          selectedWeapon={attacker.weapon}
+          onSelect={(w) => setAttacker((prev) => ({ ...prev, weapon: w }))}
+          onClose={() => setShowAtkWeaponPicker(false)}
+        />
+      )}
+      {showAtkEnhancementPicker && (
+        <EnhancementPickerModal
+          enhancements={attackerEnhancements}
+          selectedEnhancement={attacker.enhancement}
+          onSelect={(e) => { setAttacker((prev) => ({ ...prev, enhancement: e })); setShowAtkEnhancementPicker(false) }}
+          onClose={() => setShowAtkEnhancementPicker(false)}
+        />
+      )}
 
-        <div className="flex justify-center lg:items-center lg:shrink-0">
-          <span className="text-lg font-bold lg:text-2xl" style={{ color: 'var(--color-text-muted)' }}>VS</span>
-        </div>
-
-        <SimulatorCard
-          role="defender"
+      {/* Defender modals */}
+      {showDefFactionPicker && (
+        <FactionPickerModal
           factions={factions}
-          loadedFactions={loadedFactions}
-          factionSlug={defender.factionSlug}
-          factionName={defenderFaction?.name ?? null}
-          detachment={defender.detachment}
-          datasheet={defender.datasheet}
-          selectedWeapon={defender.weapon}
-          enhancement={defender.enhancement}
-          modelCount={defender.modelCount}
-          onLoadFaction={loadFaction}
-          onFactionSelect={(slug, det) => {
+          detachments={defPickerDetachments}
+          onFactionChosen={(slug) => {
+            setPendingDefFactionSlug(slug)
             loadFaction(slug)
+          }}
+          onSelect={(slug, det) => {
             setDefender({ ...emptySide, factionSlug: slug, detachment: det })
             setActiveDefenderStrats(new Set())
+            setPendingDefFactionSlug(null)
+            setShowDefFactionPicker(false)
           }}
-          onUnitSelect={(ds) => {
+          onClose={() => { setShowDefFactionPicker(false); setPendingDefFactionSlug(null) }}
+        />
+      )}
+      {showDefUnitSearch && defenderFaction && (
+        <UnitSearchModal
+          datasheets={defenderFaction.datasheets}
+          onSelect={(ds) => {
             setDefender((prev) => ({
               ...prev,
               datasheet: ds,
@@ -301,171 +951,42 @@ export function SimulatorPage() {
               enhancement: null,
               modelCount: parseInt(String(ds.pointOptions[0]?.models), 10) || 5,
             }))
+            setShowDefUnitSearch(false)
           }}
-          onWeaponSelect={(w) => setDefender((prev) => ({ ...prev, weapon: w }))}
-          onEnhancementSelect={(e) => setDefender((prev) => ({ ...prev, enhancement: e }))}
-          onModelCountChange={(n) => setDefender((prev) => ({ ...prev, modelCount: n }))}
-          onReset={() => { setDefender({ ...emptySide }); setActiveDefenderStrats(new Set()) }}
+          onClose={() => setShowDefUnitSearch(false)}
         />
-      </div>
+      )}
+      {showDefWeaponPicker && defender.datasheet && (
+        <WeaponPickerModal
+          weapons={defender.datasheet.weapons}
+          selectedWeapon={defender.weapon}
+          onSelect={(w) => setDefender((prev) => ({ ...prev, weapon: w }))}
+          onClose={() => setShowDefWeaponPicker(false)}
+        />
+      )}
+      {showDefEnhancementPicker && (
+        <EnhancementPickerModal
+          enhancements={defenderEnhancements}
+          selectedEnhancement={defender.enhancement}
+          onSelect={(e) => { setDefender((prev) => ({ ...prev, enhancement: e })); setShowDefEnhancementPicker(false) }}
+          onClose={() => setShowDefEnhancementPicker(false)}
+        />
+      )}
+    </>
+  )
+}
 
-      {/* ===== WEAPON KEYWORDS ===== */}
-      {activeKeywords.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-3">
-          {activeKeywords.map((kw) => <KeywordBadge key={kw} text={kw} />)}
+function PipelineStep({ label, value, detail, color, pct }: { label: string; value: string; detail: string; color: string; pct: number }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+      <div style={{ width: 60, fontSize: 8, fontFamily: 'var(--font-mono)', letterSpacing: 1, textTransform: 'uppercase', color: 'var(--color-text-muted)', flexShrink: 0 }}>{label}</div>
+      <div style={{ fontSize: 22, fontWeight: 700, color, lineHeight: 1, width: 50, flexShrink: 0 }}>{value}</div>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', marginBottom: 3 }}>{detail}</div>
+        <div style={{ height: 3, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${pct}%`, background: color, transition: 'width 0.3s' }} />
         </div>
-      )}
-
-      {/* ===== TOGGLES ===== */}
-      {attacker.weapon && defender.datasheet && (
-        <section className="mb-4">
-          <div className="flex flex-wrap gap-2">
-            {(weaponKeywords?.rapidFire || weaponKeywords?.melta) && (
-              <ToggleChip label="Demi-portée" active={halfRange} onToggle={() => setHalfRange(!halfRange)} />
-            )}
-            {weaponKeywords?.lance && (
-              <ToggleChip label="A chargé" active={charged} onToggle={() => setCharged(!charged)} />
-            )}
-            {weaponKeywords?.heavy && (
-              <ToggleChip label="Stationnaire" active={stationary} onToggle={() => setStationary(!stationary)} />
-            )}
-            <ToggleChip label="Couvert" active={inCover} onToggle={() => setInCover(!inCover)} />
-          </div>
-        </section>
-      )}
-
-      {/* ===== STRATAGEMS ===== */}
-      {(filteredAttackerStrats.length > 0 || filteredDefenderStrats.length > 0) && attacker.weapon && defender.datasheet && (
-        <section className="mb-4">
-          <p className="text-xs font-medium mb-2 lg:text-sm" style={{ color: 'var(--color-text-muted)' }}>Stratagèmes</p>
-          <div className="flex flex-col gap-1 lg:grid lg:grid-cols-2 lg:gap-2">
-            {filteredAttackerStrats.map((strat) => {
-              const isActive = activeAttackerStrats.has(strat.id)
-              const parsed = parseStratagemEffect(strat)
-              return (
-                <StratagemToggle
-                  key={strat.id}
-                  strat={strat}
-                  isActive={isActive}
-                  parsed={!!parsed}
-                  variant="attacker"
-                  onToggle={() => {
-                    const next = new Set(activeAttackerStrats)
-                    isActive ? next.delete(strat.id) : next.add(strat.id)
-                    setActiveAttackerStrats(next)
-                  }}
-                />
-              )
-            })}
-            {filteredDefenderStrats.map((strat) => {
-              const isActive = activeDefenderStrats.has(strat.id)
-              const parsed = parseStratagemEffect(strat)
-              return (
-                <StratagemToggle
-                  key={`def-${strat.id}`}
-                  strat={strat}
-                  isActive={isActive}
-                  parsed={!!parsed}
-                  variant="defender"
-                  onToggle={() => {
-                    const next = new Set(activeDefenderStrats)
-                    isActive ? next.delete(strat.id) : next.add(strat.id)
-                    setActiveDefenderStrats(next)
-                  }}
-                />
-              )
-            })}
-          </div>
-          {damageDelta !== null && damageDelta !== 0 && (
-            <p className="text-xs mt-1 font-medium" style={{ color: damageDelta > 0 ? 'var(--color-success, #22c55e)' : 'var(--color-error, #ef4444)' }}>
-              {damageDelta > 0 ? '+' : ''}{round(damageDelta)} dégâts avec stratagèmes
-            </p>
-          )}
-        </section>
-      )}
-
-      {/* ===== RESULTS ===== */}
-      {result && (
-        <section>
-          <h2 className="text-sm font-semibold mb-3 lg:text-base" style={{ color: 'var(--color-text-muted)' }}>Résultats</h2>
-
-          <div className="lg:flex lg:gap-6 lg:items-start">
-          <div className="rounded-lg p-3 mb-3 lg:flex-1 lg:p-5" style={{ backgroundColor: 'var(--color-surface)' }}>
-            <ResultBar
-              label="Attaques"
-              value={result.attacksTotal}
-              max={result.attacksTotal}
-              detail={`(${attacker.modelCount}× A:${attacker.weapon!.A})`}
-            />
-            <ResultBar
-              label="Hits"
-              value={result.hitsExpected}
-              max={result.attacksTotal}
-              detail={result.steps.hitThreshold > 0 ? `sur ${result.steps.hitThreshold}+` : 'auto'}
-            />
-            <ResultBar
-              label="Wounds"
-              value={result.woundsExpected}
-              max={result.hitsExpected}
-              detail={`sur ${result.steps.woundThreshold}+`}
-            />
-            <ResultBar
-              label="Saves ratés"
-              value={result.unsavedWounds}
-              max={result.woundsExpected}
-              detail={`${result.steps.usedInvuln ? 'invuln' : 'save'} ${result.steps.saveThreshold}+`}
-            />
-            <ResultBar
-              label="Dégâts"
-              value={result.damageTotal}
-              max={result.damageTotal}
-              detail={`(D:${attacker.weapon!.D} avg ${result.steps.avgDamagePerWound})`}
-            />
-            {result.steps.fnpThreshold && (
-              <ResultBar
-                label="Après FnP"
-                value={result.damageAfterFnp}
-                max={result.damageTotal}
-                detail={`FnP ${result.steps.fnpThreshold}+`}
-              />
-            )}
-            {result.mortalWounds > 0 && (
-              <div className="text-xs mt-1" style={{ color: 'var(--color-warning, #f59e0b)' }}>
-                dont {round(result.mortalWounds)} mortal wounds
-              </div>
-            )}
-          </div>
-
-          {/* Kills */}
-          <div className="rounded-lg p-4 text-center lg:w-48 lg:shrink-0 lg:p-6" style={{ backgroundColor: 'var(--color-surface)' }}>
-            <p className="text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>Kills estimés</p>
-            <p className="text-3xl font-bold lg:text-4xl" style={{ color: 'var(--color-accent)' }}>
-              {round(result.estimatedKills)}
-            </p>
-            <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-              sur {defender.modelCount} modèle{defender.modelCount > 1 ? 's' : ''} ({defender.datasheet!.profiles[0]?.W}W)
-            </p>
-          </div>
-          </div>
-        </section>
-      )}
-
-      {/* ===== Hints ===== */}
-      {attacker.datasheet && !attacker.weapon && (
-        <p className="text-sm text-center mt-4" style={{ color: 'var(--color-text-muted)' }}>
-          Sélectionne une arme pour lancer la simulation
-        </p>
-      )}
-      {attacker.weapon && !defender.datasheet && (
-        <p className="text-sm text-center mt-4" style={{ color: 'var(--color-text-muted)' }}>
-          Sélectionne une cible pour voir les résultats
-        </p>
-      )}
-      {!attacker.factionSlug && !defender.factionSlug && (
-        <p className="text-sm text-center mt-8" style={{ color: 'var(--color-text-muted)' }}>
-          Choisis un attaquant et une cible pour simuler un combat
-        </p>
-      )}
+      </div>
     </div>
   )
 }
@@ -473,20 +994,26 @@ export function SimulatorPage() {
 function ToggleChip({ label, active, onToggle }: { label: string; active: boolean; onToggle: () => void }) {
   return (
     <button
-      className="text-xs px-3 py-1.5 rounded-full border-none cursor-pointer lg:text-sm lg:px-4 lg:py-2"
-      style={{
-        backgroundColor: active ? 'var(--color-accent)' : 'var(--color-surface)',
-        color: active ? '#fff' : 'var(--color-text-muted)',
-      }}
       onClick={onToggle}
+      style={{
+        padding: '4px 10px',
+        fontSize: 10,
+        fontFamily: 'var(--font-mono)',
+        letterSpacing: 0.5,
+        background: active ? 'var(--color-accent)' : 'var(--color-surface)',
+        color: active ? '#fff' : 'var(--color-text-muted)',
+        border: `1px solid ${active ? 'var(--color-accent)' : 'var(--color-border)'}`,
+        cursor: 'pointer',
+      }}
     >
       {label}
     </button>
   )
 }
 
-function StratagemToggle({ strat, isActive, parsed, variant, onToggle }: {
-  strat: Stratagem
+function StratagemToggle({ name, cpCost, isActive, parsed, variant, onToggle }: {
+  name: string
+  cpCost: number
   isActive: boolean
   parsed: boolean
   variant: 'attacker' | 'defender'
@@ -495,16 +1022,22 @@ function StratagemToggle({ strat, isActive, parsed, variant, onToggle }: {
   const activeColor = variant === 'attacker' ? 'var(--color-accent)' : 'var(--color-error, #ef4444)'
   return (
     <button
-      className="flex items-center justify-between text-xs px-2 py-1.5 rounded border-none cursor-pointer lg:text-sm lg:px-3 lg:py-2"
+      onClick={onToggle}
       style={{
-        backgroundColor: isActive ? activeColor : 'var(--color-surface)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '6px 10px',
+        fontSize: 10,
+        background: isActive ? activeColor : 'var(--color-surface)',
         color: isActive ? '#fff' : variant === 'defender' ? 'var(--color-text-muted)' : 'var(--color-text)',
         opacity: parsed ? 1 : 0.6,
+        border: `1px solid ${isActive ? activeColor : 'var(--color-border)'}`,
+        cursor: 'pointer',
       }}
-      onClick={onToggle}
     >
-      <span>{variant === 'defender' ? 'Def: ' : ''}{strat.name} {!parsed && '(lecture seule)'}</span>
-      <span style={{ opacity: 0.7 }}>{strat.cpCost} CP</span>
+      <span>{variant === 'defender' ? 'Def: ' : ''}{name} {!parsed && '(lecture seule)'}</span>
+      <span style={{ opacity: 0.7 }}>{cpCost} CP</span>
     </button>
   )
 }

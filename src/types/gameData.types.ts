@@ -3,6 +3,7 @@ export interface FactionSummary {
   name: string
   slug: string
   datasheetCount: number
+  imageUrl?: string
 }
 
 export interface FactionIndex {

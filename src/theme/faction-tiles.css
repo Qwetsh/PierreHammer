@@ -1,6 +1,6 @@
 /* Faction Tiles — forged armory plates for faction selection */
 
-/* === BASE TILE === */
+/* === BASE TILE — flat HUD on mobile === */
 .faction-tile {
   position: relative;
   display: flex;
@@ -17,93 +17,75 @@
   color: #ffffff;
   isolation: isolate;
   transition: transform 0.15s ease, box-shadow 0.2s ease, grid-column 0.3s ease;
-
-  /* Outer frame — metallic bevel */
-  border-radius: 8px;
-  outline: 1px solid color-mix(in srgb, var(--tile-accent) 25%, transparent);
-
-  /* Brushed metal + body gradient */
-  background:
-    repeating-linear-gradient(
-      95deg,
-      transparent,
-      rgba(255, 255, 255, 0.008) 1px,
-      transparent 2px,
-      transparent 5px
-    ),
-    linear-gradient(
-      165deg,
-      color-mix(in srgb, var(--tile-surface) 85%, #000) 0%,
-      var(--tile-surface) 25%,
-      color-mix(in srgb, var(--tile-surface) 92%, #fff) 45%,
-      var(--tile-surface) 55%,
-      color-mix(in srgb, var(--tile-surface) 65%, var(--tile-primary)) 100%
-    );
-
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.4),
-    0 0 1px color-mix(in srgb, var(--tile-primary) 30%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+  border-radius: 0;
+  outline: 1px solid color-mix(in srgb, var(--tile-accent) 30%, transparent);
+  background: var(--tile-surface);
+  box-shadow: none;
 }
 
 .faction-tile:hover {
-  box-shadow:
-    0 4px 16px color-mix(in srgb, var(--tile-primary) 40%, transparent),
-    0 0 12px color-mix(in srgb, var(--tile-accent) 20%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+  outline-color: var(--tile-accent);
+  box-shadow: none;
 }
 
 .faction-tile:active {
   transform: scale(0.97);
 }
 
-/* Inner frame line */
-.faction-tile::before {
-  content: '';
-  position: absolute;
-  inset: 3px;
-  border: 1px solid color-mix(in srgb, var(--tile-accent) 12%, transparent);
-  border-radius: 5px;
-  pointer-events: none;
-  z-index: 5;
+/* Hidden on mobile HUD */
+.faction-tile::before,
+.faction-tile::after {
+  display: none;
 }
 
-/* Top edge highlight */
-.faction-tile::after {
-  content: '';
+
+/* === BACKGROUND IMAGE === */
+.faction-tile__bg {
   position: absolute;
-  top: 0;
-  left: 12px;
-  right: 12px;
-  height: 1px;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  border-radius: 0;
+}
+
+.faction-tile__bg-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  filter: saturate(1.1);
+}
+
+.faction-tile__bg-overlay {
+  position: absolute;
+  inset: 0;
   background: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in srgb, var(--tile-accent) 30%, transparent) 30%,
-    color-mix(in srgb, var(--tile-accent) 50%, transparent) 50%,
-    color-mix(in srgb, var(--tile-accent) 30%, transparent) 70%,
-    transparent
+    180deg,
+    color-mix(in srgb, var(--tile-surface) 30%, transparent) 0%,
+    color-mix(in srgb, var(--tile-surface) 60%, transparent) 40%,
+    color-mix(in srgb, var(--tile-surface) 85%, transparent) 70%,
+    var(--tile-surface) 100%
   );
-  pointer-events: none;
-  z-index: 5;
+}
+
+/* When tile has image, boost text readability */
+.faction-tile:has(.faction-tile__bg) .faction-tile__name {
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9), 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+.faction-tile:has(.faction-tile__bg) .faction-tile__count {
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+.faction-tile:has(.faction-tile__bg) {
+  min-height: 130px;
 }
 
 
 /* === SELECTED STATE === */
 .faction-tile--selected {
-  outline: 2px solid color-mix(in srgb, var(--tile-accent) 60%, transparent);
-  box-shadow:
-    0 4px 20px color-mix(in srgb, var(--tile-accent) 30%, transparent),
-    0 0 12px color-mix(in srgb, var(--tile-accent) 20%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
-}
-
-.faction-tile--selected::before {
-  border-width: 2px;
-  border-color: color-mix(in srgb, var(--tile-accent) 20%, transparent);
+  outline: 2px solid var(--tile-accent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--tile-accent) 20%, transparent);
 }
 
 
@@ -129,38 +111,28 @@
   z-index: 2;
 }
 
-/* === SIGIL — faction emblem placeholder === */
+/* === SIGIL — square HUD style on mobile === */
 .faction-tile__sigil {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 36px;
   height: 36px;
-  border-radius: 50%;
+  border-radius: 0;
   font-weight: 900;
   font-size: 0.9rem;
   letter-spacing: 0.05em;
   position: relative;
   z-index: 2;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-
-  background: linear-gradient(
-    135deg,
-    var(--tile-primary),
-    color-mix(in srgb, var(--tile-primary) 60%, #000)
-  );
+  border: 1px solid color-mix(in srgb, var(--tile-accent) 40%, transparent);
+  background: color-mix(in srgb, var(--tile-primary) 20%, var(--tile-surface));
   color: var(--tile-accent);
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--tile-primary) 40%, transparent);
+  box-shadow: none;
 }
 
-/* Glow ring on sigil */
+/* Hidden on mobile HUD */
 .faction-tile__sigil::after {
-  content: '';
-  position: absolute;
-  inset: -3px;
-  border-radius: 50%;
-  border: 1px solid color-mix(in srgb, var(--tile-accent) 10%, transparent);
-  pointer-events: none;
+  display: none;
 }
 
 
@@ -202,7 +174,7 @@
 .faction-tile__detachment-btn {
   margin-top: 4px;
   padding: 6px 14px;
-  border-radius: 5px;
+  border-radius: 0;
   border: 1px solid color-mix(in srgb, var(--tile-accent) 25%, transparent);
   background: transparent;
   color: color-mix(in srgb, var(--tile-accent) 80%, #fff);
@@ -250,21 +222,11 @@
   overflow-y: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  border-radius: 12px;
+  border-radius: 0;
   padding: 20px;
-  border: 1px solid color-mix(in srgb, var(--tile-accent) 25%, transparent);
-  background:
-    linear-gradient(
-      165deg,
-      color-mix(in srgb, var(--tile-surface) 85%, #000) 0%,
-      var(--tile-surface) 25%,
-      color-mix(in srgb, var(--tile-surface) 92%, #fff) 45%,
-      var(--tile-surface) 55%,
-      color-mix(in srgb, var(--tile-surface) 65%, var(--tile-primary)) 100%
-    );
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.6),
-    0 0 20px color-mix(in srgb, var(--tile-accent) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tile-accent) 40%, transparent);
+  background: var(--tile-surface);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
   animation: modal-slide-up 0.25s ease;
 }
 
@@ -296,7 +258,7 @@
 
 .detachment-modal__item {
   padding: 12px 16px;
-  border-radius: 8px;
+  border-radius: 0;
   border: 1px solid color-mix(in srgb, var(--tile-accent) 15%, transparent);
   background: color-mix(in srgb, var(--tile-surface) 70%, #000);
   color: rgba(255, 255, 255, 0.85);
@@ -317,6 +279,136 @@
   color: var(--tile-accent);
   background: color-mix(in srgb, var(--tile-accent) 10%, var(--tile-surface));
   box-shadow: 0 0 8px color-mix(in srgb, var(--tile-accent) 20%, transparent);
+}
+
+/* === FACTION TILE CARD — hover feedback === */
+.faction-tile-card:hover {
+  border-color: var(--color-accent) !important;
+  box-shadow: 0 0 12px rgba(79, 212, 255, 0.25);
+}
+
+.faction-tile-card:active {
+  transform: scale(0.98);
+}
+
+/* === FACTION TILE VISUAL BLOCK === */
+.faction-tile__visual {
+  aspect-ratio: 1 / 1;
+}
+
+@media (min-width: 1024px) {
+  .faction-tile__visual {
+    aspect-ratio: 2 / 1;
+  }
+}
+
+/* === FACTION PICKER GRID — responsive columns === */
+.faction-picker-grid {
+  grid-template-columns: repeat(2, 1fr) !important;
+}
+
+@media (min-width: 640px) {
+  .faction-picker-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .faction-picker-grid {
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 8px !important;
+  }
+}
+
+@media (min-width: 1400px) {
+  .faction-picker-grid {
+    grid-template-columns: repeat(6, 1fr) !important;
+  }
+}
+
+/* === DESKTOP HUD OVERRIDES === */
+@media (min-width: 1024px) {
+  .faction-tile {
+    border-radius: 0;
+    outline: 1px solid color-mix(in srgb, var(--tile-accent) 30%, transparent);
+    background: var(--tile-surface);
+    box-shadow: none;
+    min-height: 120px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .faction-tile:hover {
+    outline-color: var(--tile-accent);
+    box-shadow: 0 0 16px color-mix(in srgb, var(--tile-accent) 20%, transparent);
+  }
+
+  .faction-tile:active {
+    transform: none;
+  }
+
+  .faction-tile::before,
+  .faction-tile::after {
+    display: none;
+  }
+
+  .faction-tile__bg {
+    border-radius: 0;
+  }
+
+  .faction-tile__sigil {
+    border-radius: 0;
+    width: 40px;
+    height: 40px;
+    border: 1px solid color-mix(in srgb, var(--tile-accent) 40%, transparent);
+    background: color-mix(in srgb, var(--tile-primary) 20%, var(--tile-surface));
+    box-shadow: none;
+    font-family: var(--font-mono);
+    font-weight: 700;
+  }
+
+  .faction-tile__sigil::after {
+    display: none;
+  }
+
+  .faction-tile__name {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0;
+  }
+
+  .faction-tile__count {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+  }
+
+  .faction-tile--selected {
+    outline: 2px solid var(--tile-accent);
+    box-shadow: 0 0 20px color-mix(in srgb, var(--tile-accent) 25%, transparent);
+  }
+
+  .faction-tile--expanded {
+    animation: none;
+  }
+
+  .detachment-modal {
+    border-radius: 0;
+    border: 1px solid color-mix(in srgb, var(--tile-accent) 40%, transparent);
+    background: var(--tile-surface);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  }
+
+  .detachment-modal__item {
+    border-radius: 0;
+  }
+
+  .faction-tile__detachment-btn {
+    border-radius: 0;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.5px;
+  }
 }
 
 /* === REDUCED MOTION === */

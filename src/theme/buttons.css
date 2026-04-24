@@ -30,6 +30,15 @@
 }
 
 /* === PRIMARY — "Forged Metal" === */
+.btn-forged,
+.btn-primary-forged,
+.btn-secondary-forged,
+.btn-ghost-forged,
+.btn-danger-forged,
+.btn-points {
+  border-radius: 0;
+}
+
 .btn-primary-forged {
   background:
     /* Brushed metal grain — fine horizontal streaks */

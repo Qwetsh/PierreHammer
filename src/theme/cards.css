@@ -10,185 +10,57 @@
   overflow: hidden;
   cursor: pointer;
   text-align: left;
-  border: none;
+  border: 1px solid var(--color-border);
   padding: 0;
   isolation: isolate;
   transition: transform 0.15s ease, box-shadow 0.2s ease;
-
-  /* Outer frame — metallic bevel */
-  border-radius: 6px;
-  outline: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
+  border-radius: 0;
+  outline: none;
+  background: var(--color-surface);
 }
 
 .unit-card:active {
   transform: scale(0.97);
 }
 
-/* Inner frame line via pseudo-element */
-.unit-card::before {
-  content: '';
-  position: absolute;
-  inset: 3px;
-  border: 1px solid color-mix(in srgb, var(--color-accent) 12%, transparent);
-  border-radius: 3px;
-  pointer-events: none;
-  z-index: 5;
-}
-
-/* Top edge highlight */
+/* Inner frame line — hidden on mobile HUD */
+.unit-card::before,
 .unit-card::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 8px;
-  right: 8px;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in srgb, var(--color-accent) 30%, transparent) 30%,
-    color-mix(in srgb, var(--color-accent) 50%, transparent) 50%,
-    color-mix(in srgb, var(--color-accent) 30%, transparent) 70%,
-    transparent
-  );
-  pointer-events: none;
-  z-index: 5;
+  display: none;
 }
 
 
-/* === VARIANT: STANDARD === */
+/* === VARIANT: STANDARD — flat HUD on mobile === */
 .unit-card--standard {
-  background:
-    /* Brushed metal grain */
-    repeating-linear-gradient(
-      95deg,
-      transparent,
-      rgba(255, 255, 255, 0.008) 1px,
-      transparent 2px,
-      transparent 5px
-    ),
-    /* Metallic body gradient */
-    linear-gradient(
-      165deg,
-      color-mix(in srgb, var(--color-surface) 85%, #000) 0%,
-      var(--color-surface) 25%,
-      color-mix(in srgb, var(--color-surface) 92%, #fff) 45%,
-      var(--color-surface) 55%,
-      color-mix(in srgb, var(--color-surface) 75%, var(--color-primary)) 100%
-    );
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.4),
-    0 0 1px color-mix(in srgb, var(--color-primary) 30%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+  background: var(--color-surface);
+  box-shadow: none;
 }
 
 .unit-card--standard:hover {
-  box-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.5),
-    0 0 8px color-mix(in srgb, var(--color-primary) 20%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+  box-shadow: none;
 }
 
 
-/* === VARIANT: BATTLELINE === */
+/* === VARIANT: BATTLELINE — flat HUD on mobile === */
 .unit-card--battleline {
-  background:
-    repeating-linear-gradient(
-      95deg,
-      transparent,
-      rgba(255, 255, 255, 0.008) 1px,
-      transparent 2px,
-      transparent 5px
-    ),
-    linear-gradient(
-      165deg,
-      color-mix(in srgb, var(--color-surface) 85%, #000) 0%,
-      var(--color-surface) 25%,
-      color-mix(in srgb, var(--color-surface) 92%, #fff) 45%,
-      var(--color-surface) 55%,
-      color-mix(in srgb, var(--color-surface) 70%, var(--color-card-battleline)) 100%
-    );
-  outline-color: color-mix(in srgb, var(--color-card-battleline) 50%, transparent);
-  box-shadow:
-    0 2px 8px color-mix(in srgb, var(--color-card-battleline) 25%, transparent),
-    0 0 1px var(--color-card-battleline),
-    inset 0 1px 0 color-mix(in srgb, var(--color-card-battleline) 6%, transparent),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
-}
-
-.unit-card--battleline::before {
-  border-color: color-mix(in srgb, var(--color-card-battleline) 18%, transparent);
-}
-
-.unit-card--battleline::after {
-  background: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in srgb, var(--color-card-battleline) 30%, transparent) 30%,
-    color-mix(in srgb, var(--color-card-battleline) 50%, transparent) 50%,
-    color-mix(in srgb, var(--color-card-battleline) 30%, transparent) 70%,
-    transparent
-  );
+  background: var(--color-surface);
+  box-shadow: none;
 }
 
 .unit-card--battleline:hover {
-  box-shadow:
-    0 4px 16px color-mix(in srgb, var(--color-card-battleline) 35%, transparent),
-    0 0 12px color-mix(in srgb, var(--color-card-battleline) 25%, transparent),
-    inset 0 1px 0 color-mix(in srgb, var(--color-card-battleline) 8%, transparent),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+  box-shadow: none;
 }
 
 
-/* === VARIANT: EPIC HERO === */
+/* === VARIANT: EPIC HERO — flat HUD on mobile === */
 .unit-card--epic-hero {
-  background:
-    repeating-linear-gradient(
-      95deg,
-      transparent,
-      rgba(255, 255, 255, 0.012) 1px,
-      transparent 2px,
-      transparent 4px
-    ),
-    linear-gradient(
-      165deg,
-      color-mix(in srgb, var(--color-surface) 80%, var(--color-card-epic)) 0%,
-      var(--color-surface) 20%,
-      color-mix(in srgb, var(--color-surface) 92%, #fff) 42%,
-      var(--color-surface) 55%,
-      color-mix(in srgb, var(--color-surface) 65%, var(--color-card-epic)) 100%
-    );
-  outline: 1px solid color-mix(in srgb, var(--color-accent) 45%, transparent);
-  box-shadow:
-    0 2px 12px color-mix(in srgb, var(--color-accent) 20%, transparent),
-    0 0 1px var(--color-accent),
-    inset 0 1px 0 color-mix(in srgb, var(--color-accent) 12%, transparent),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
-}
-
-.unit-card--epic-hero::before {
-  border-color: color-mix(in srgb, var(--color-accent) 20%, transparent);
-}
-
-.unit-card--epic-hero::after {
-  background: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in srgb, var(--color-accent) 40%, transparent) 20%,
-    color-mix(in srgb, var(--color-accent) 70%, transparent) 50%,
-    color-mix(in srgb, var(--color-accent) 40%, transparent) 80%,
-    transparent
-  );
+  background: var(--color-surface);
+  border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-border));
+  box-shadow: none;
 }
 
 .unit-card--epic-hero:hover {
-  box-shadow:
-    0 4px 20px color-mix(in srgb, var(--color-accent) 30%, transparent),
-    0 0 16px color-mix(in srgb, var(--color-accent) 25%, transparent),
-    inset 0 1px 0 color-mix(in srgb, var(--color-accent) 15%, transparent),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+  box-shadow: none;
 }
 
 /* Shimmer sweep for epic heroes */
@@ -221,21 +93,70 @@
   min-width: 0;
 }
 
+/* === DESKTOP HUD CARD OVERRIDES === */
 @media (min-width: 1024px) {
   .unit-card {
-    flex-direction: row;
-    min-height: 120px;
+    flex-direction: column;
+    border-radius: 0;
+    outline: none;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    box-shadow: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
 
+  .unit-card:hover {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--color-accent) 15%, transparent);
+  }
+
+  .unit-card:active {
+    transform: none;
+  }
+
+  /* Remove metallic frame pseudo-elements on desktop */
+  .unit-card::before,
+  .unit-card::after {
+    display: none;
+  }
+
+  /* All variants share the same flat HUD style on desktop */
+  .unit-card--standard,
+  .unit-card--battleline,
+  .unit-card--epic-hero {
+    background: var(--color-surface);
+    box-shadow: none;
+    outline: none;
+  }
+
+  .unit-card--standard:hover,
+  .unit-card--battleline:hover,
+  .unit-card--epic-hero:hover {
+    box-shadow: 0 0 12px color-mix(in srgb, var(--color-accent) 15%, transparent);
+  }
+
+  .unit-card--epic-hero {
+    border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-border));
+  }
+
+  .unit-card--battleline::before,
+  .unit-card--battleline::after,
+  .unit-card--epic-hero::before,
+  .unit-card--epic-hero::after {
+    display: none;
+  }
+
+  /* Image panel — HUD style */
   .unit-card__image-panel {
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
-    width: 110px;
+    width: 100%;
+    height: 140px;
     flex-shrink: 0;
     overflow: hidden;
-    border-radius: 5px 0 0 5px;
+    background: color-mix(in srgb, var(--color-primary) 12%, var(--color-bg));
   }
 
   .unit-card__image-panel-img {
@@ -250,50 +171,232 @@
     position: absolute;
     inset: 0;
     background: linear-gradient(
-      90deg,
-      transparent 60%,
-      color-mix(in srgb, var(--color-surface) 80%, transparent) 100%
+      180deg,
+      transparent 40%,
+      color-mix(in srgb, var(--color-surface) 90%, transparent) 100%
     );
     pointer-events: none;
   }
 
   .unit-card__image-panel--initials {
-    color: #ffffff;
-    font-weight: 800;
-    font-size: 1.5rem;
-    letter-spacing: 0.08em;
+    color: var(--color-accent);
+    font-weight: 700;
+    font-size: 2rem;
+    letter-spacing: 0.1em;
+    font-family: var(--font-mono);
+    background: color-mix(in srgb, var(--color-primary) 12%, var(--color-bg));
   }
 
   .unit-card__image-panel-letters {
     position: relative;
     z-index: 1;
-    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+    text-shadow: 0 0 12px color-mix(in srgb, var(--color-accent) 40%, transparent);
   }
 
-  /* Hide the small avatar on desktop — image panel replaces it */
+  /* HUD corner brackets on image panel */
+  .unit-card__hud-corners {
+    position: absolute;
+    inset: 6px;
+    pointer-events: none;
+    z-index: 4;
+  }
+
+  .unit-card__hud-corners::before,
+  .unit-card__hud-corners::after {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-color: var(--color-accent);
+    border-style: solid;
+    opacity: 0.5;
+  }
+
+  .unit-card__hud-corners::before {
+    top: 0;
+    left: 0;
+    border-width: 1px 0 0 1px;
+  }
+
+  .unit-card__hud-corners::after {
+    top: 0;
+    right: 0;
+    border-width: 1px 1px 0 0;
+  }
+
+  .unit-card__hud-corners-bottom::before,
+  .unit-card__hud-corners-bottom::after {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-color: var(--color-accent);
+    border-style: solid;
+    opacity: 0.5;
+  }
+
+  .unit-card__hud-corners-bottom {
+    position: absolute;
+    inset: 6px;
+    pointer-events: none;
+    z-index: 4;
+  }
+
+  .unit-card__hud-corners-bottom::before {
+    bottom: 0;
+    left: 0;
+    border-width: 0 0 1px 1px;
+  }
+
+  .unit-card__hud-corners-bottom::after {
+    bottom: 0;
+    right: 0;
+    border-width: 0 1px 1px 0;
+  }
+
+  /* Overlay badges on image panel */
+  .unit-card__image-overlay {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    z-index: 5;
+  }
+
+  /* Hide the small avatar on desktop */
   .unit-card__avatar {
     display: none;
   }
 
-  /* Make stat bar vertical-friendly */
+  /* Info section — clean HUD */
+  .unit-card__info {
+    padding: 0;
+  }
+
+  /* Stat bar — flat HUD style */
   .unit-card__stats {
-    margin: 0 6px 4px;
-    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0;
+    padding: 6px 10px;
+    border-radius: 0;
+    background: color-mix(in srgb, var(--color-bg) 60%, transparent);
+    border-top: 1px solid var(--color-border);
+    border-bottom: none;
+    box-shadow: none;
   }
 
   .unit-card__name {
-    font-size: 1rem;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0;
+  }
+
+  /* Points — mono style */
+  .unit-card__points {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 12px;
+    text-shadow: none;
+  }
+
+  .unit-card__points-label {
+    font-size: 9px;
+    letter-spacing: 1px;
+  }
+
+  /* Delta badge */
+  .unit-card__delta {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 600;
+    border-radius: 0;
+    padding: 1px 4px;
+  }
+
+  /* Type badge — HUD pill style */
+  .unit-card__type-badge {
+    padding: 2px 7px;
+    border-radius: 0;
+    font-size: 9px;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    letter-spacing: 1px;
+    background: none;
+    box-shadow: none;
+    border: 1px solid color-mix(in srgb, var(--color-accent) 35%, transparent);
+    color: var(--color-accent);
+  }
+
+  .unit-card__type-badge::after {
+    display: none;
+  }
+
+  /* Paint bar on desktop */
+  .unit-card__paint-bar {
+    display: flex;
+    height: 3px;
+    width: 100%;
+  }
+
+  /* Favorite — gold glow */
+  .unit-card__fav-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 2px;
+    font-size: 12px;
+    line-height: 1;
+  }
+
+  .unit-card__fav-btn--active {
+    color: var(--color-gold);
+    text-shadow: 0 0 6px var(--color-gold);
+  }
+
+  /* Compare checkbox — HUD square */
+  .unit-card__compare-check {
+    width: 16px;
+    height: 16px;
+    border: 1px solid var(--color-accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: var(--color-accent);
+  }
+
+  .unit-card__compare-check--active {
+    background: color-mix(in srgb, var(--color-accent) 15%, transparent);
+  }
+
+  /* Shimmer — subtler on HUD */
+  .unit-card--epic-hero .unit-card__shimmer {
+    background: linear-gradient(
+      105deg,
+      transparent 40%,
+      color-mix(in srgb, var(--color-accent) 3%, transparent) 45%,
+      color-mix(in srgb, var(--color-accent) 6%, transparent) 50%,
+      color-mix(in srgb, var(--color-accent) 3%, transparent) 55%,
+      transparent 60%
+    );
   }
 }
 
-/* === AVATAR BADGE === */
+
+/* === AVATAR BADGE (mobile only) === */
 .unit-card__avatar {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 42px;
   height: 42px;
-  border-radius: 6px;
+  border-radius: 0;
   font-weight: 800;
   font-size: 0.875rem;
   letter-spacing: 0.05em;
@@ -313,7 +416,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 4px;
+  border-radius: 0;
 }
 
 /* Engraved inner border on avatar */
@@ -322,42 +425,24 @@
   position: absolute;
   inset: 2px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
+  border-radius: 0;
   pointer-events: none;
 }
 
 
-/* === STAT BAR — Engraved Plate === */
+/* === STAT BAR — flat HUD (mobile) === */
 .unit-card__stats {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 0 8px 4px;
+  margin: 0;
   padding: 5px 10px;
-  border-radius: 4px;
+  border-radius: 0;
   position: relative;
   z-index: 2;
-
-  /* Recessed plate effect */
-  background:
-    repeating-linear-gradient(
-      90deg,
-      transparent,
-      rgba(255, 255, 255, 0.006) 1px,
-      transparent 2px,
-      transparent 3px
-    ),
-    linear-gradient(
-      180deg,
-      rgba(0, 0, 0, 0.35) 0%,
-      rgba(0, 0, 0, 0.25) 40%,
-      rgba(0, 0, 0, 0.3) 100%
-    );
-  border-top: 1px solid rgba(0, 0, 0, 0.3);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-  box-shadow:
-    inset 0 1px 3px rgba(0, 0, 0, 0.3),
-    0 1px 0 rgba(255, 255, 255, 0.03);
+  background: color-mix(in srgb, var(--color-bg) 60%, transparent);
+  border-top: 1px solid var(--color-border);
+  box-shadow: none;
 }
 
 
@@ -485,80 +570,44 @@
 }
 
 
-/* === LIST CARD — Armory plate with crosshatch + gold trim === */
+/* === LIST CARD — flat HUD style === */
 .list-card {
   position: relative;
-  border-radius: 6px;
+  border-radius: 0;
   padding: 12px 14px;
   cursor: pointer;
   isolation: isolate;
   overflow: hidden;
-
-  /* Faction surface base */
-  background:
-    /* Fine crosshatch pattern */
-    repeating-linear-gradient(
-      45deg,
-      transparent,
-      transparent 7px,
-      rgba(255, 255, 255, 0.03) 7px,
-      rgba(255, 255, 255, 0.03) 8px
-    ),
-    repeating-linear-gradient(
-      -45deg,
-      transparent,
-      transparent 7px,
-      rgba(255, 255, 255, 0.03) 7px,
-      rgba(255, 255, 255, 0.03) 8px
-    ),
-    /* Metallic body gradient */
-    linear-gradient(
-      165deg,
-      color-mix(in srgb, var(--color-surface) 80%, #000) 0%,
-      var(--color-surface) 30%,
-      color-mix(in srgb, var(--color-surface) 90%, #fff) 50%,
-      var(--color-surface) 70%,
-      color-mix(in srgb, var(--color-surface) 60%, var(--color-primary)) 100%
-    );
-
-  /* Gold outer border */
-  border: 1px solid color-mix(in srgb, #c4a535 50%, transparent);
-
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: none;
 }
 
-/* Gold inner frame */
-.list-card::before {
-  content: '';
-  position: absolute;
-  inset: 3px;
-  border: 1px solid color-mix(in srgb, #c4a535 25%, transparent);
-  border-radius: 3px;
-  pointer-events: none;
-  z-index: 5;
-}
-
-/* Top edge gold highlight */
+/* Hidden on mobile HUD */
+.list-card::before,
 .list-card::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 10px;
-  right: 10px;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in srgb, #c4a535 35%, transparent) 25%,
-    color-mix(in srgb, #c4a535 60%, transparent) 50%,
-    color-mix(in srgb, #c4a535 35%, transparent) 75%,
-    transparent
-  );
-  pointer-events: none;
-  z-index: 5;
+  display: none;
+}
+
+/* Desktop HUD list card */
+@media (min-width: 1024px) {
+  .list-card {
+    border-radius: 0;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    box-shadow: none;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .list-card:hover {
+    border-color: var(--color-accent);
+  }
+
+  .list-card::before,
+  .list-card::after {
+    display: none;
+  }
 }
 
 

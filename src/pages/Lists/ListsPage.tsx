@@ -9,6 +9,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { FactionPicker } from '@/components/domain/FactionPicker'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { HudTopBar, HudBtn, HudBar, HudPanel, HudPill, MTopBar } from '@/components/ui/Hud'
 import type { PointsLimit } from '@/types/armyList.types'
 import type { Detachment } from '@/types/gameData.types'
 
@@ -75,7 +76,7 @@ function SwipeableListItem({
 
   return (
     <div
-      className="relative mb-3 overflow-hidden rounded-lg"
+      className="relative mb-3 overflow-hidden"
       style={{ minHeight: '44px' }}
       data-faction={factionId}
     >
@@ -177,144 +178,195 @@ export function ListsPage() {
     return calculateTotalPoints(list.units, faction?.datasheets)
   }
 
+  const createFormContent = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <input
+        type="text"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Nom de la liste"
+        className="w-full px-3 py-2 bg-transparent outline-none min-h-[44px] lg:rounded-none lg:border-solid"
+        style={{ color: 'var(--color-text)', border: '1px solid var(--color-border)', borderRadius: 8, fontFamily: 'var(--font-sans)' }}
+        aria-label="Nom de la liste"
+      />
+      <div>
+        <p className="text-sm mb-2" style={{ color: 'var(--color-text-muted)' }}>Limite de points</p>
+        <div className="flex gap-3">
+          {pointsOptions.map((pts) => {
+            const metal = pts === 1000 ? 'bronze' : pts === 2000 ? 'silver' : 'gold'
+            return (
+              <button key={pts} className={`btn-points btn-points--${metal} ${pointsLimit === pts ? 'btn-points--selected' : ''}`} onClick={() => setPointsLimit(pts)}>
+                {pts}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+      {factionIndex && (
+        <div>
+          <p className="text-sm mb-2" style={{ color: 'var(--color-text-muted)' }}>Faction</p>
+          <FactionPicker
+            factions={factionIndex.factions}
+            onSelect={handleSelectFaction}
+            selectedSlug={selectedFaction}
+            detachments={factionDetachments}
+            selectedDetachment={selectedDetachment}
+            onDetachmentChange={(det) => { setSelectedDetachment(det); setDetachment(det?.name ?? '') }}
+          />
+        </div>
+      )}
+      <div className="flex gap-2 mt-2">
+        <Button variant="primary" onClick={handleCreate} disabled={!name.trim() || !selectedFaction}>Créer</Button>
+        <Button variant="ghost" onClick={() => setShowForm(false)}>Annuler</Button>
+      </div>
+    </div>
+  )
+
+  // Empty state
   if (allLists.length === 0 && !showForm) {
     return (
-      <div className="p-4">
-        <h1 className="font-bold mb-4" style={{ fontSize: 'var(--text-xl)' }}>Mes Listes</h1>
-        <EmptyState
-          title="Pas encore de liste ?"
-          description="Crée ta première liste d'armée pour préparer tes parties."
-          actionLabel="Créer ma première liste"
-          onAction={() => setShowForm(true)}
-        />
-      </div>
+      <>
+        <div className="hidden lg:block">
+          <HudTopBar title="Mes Listes" sub="Arsenal" actions={<HudBtn variant="primary" onClick={() => setShowForm(true)}>+ Nouvelle Liste</HudBtn>} />
+          <div style={{ padding: '40px 24px', maxWidth: 500, margin: '0 auto' }}>
+            <EmptyState title="Pas encore de liste ?" description="Crée ta première liste d'armée pour préparer tes parties." actionLabel="Créer ma première liste" onAction={() => setShowForm(true)} />
+          </div>
+        </div>
+        <div className="lg:hidden">
+          <MTopBar title="Mes Listes" sub="Arsenal" actions={<HudBtn variant="primary" onClick={() => setShowForm(true)} style={{ padding: '4px 10px', fontSize: 9 }}>+ Nouvelle</HudBtn>} />
+          <div style={{ padding: 16 }}>
+            <EmptyState title="Pas encore de liste ?" description="Crée ta première liste d'armée pour préparer tes parties." actionLabel="Créer ma première liste" onAction={() => setShowForm(true)} />
+          </div>
+        </div>
+      </>
     )
   }
 
   return (
-    <div className="p-4">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <h1 className="font-bold" style={{ fontSize: 'var(--text-xl)' }}>Mes Listes</h1>
-          {isAuthenticated && syncing && (
-            <span className="text-xs px-2 py-0.5 rounded" style={{ backgroundColor: 'var(--color-accent)', color: '#fff', opacity: 0.8 }}>
-              Sync...
-            </span>
+    <>
+      {/* ══════ DESKTOP HUD ══════ */}
+      <div className="hidden lg:block">
+        <HudTopBar
+          title="Mes Listes"
+          sub="Arsenal"
+          actions={
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              {isAuthenticated && syncing && (
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--color-accent)', letterSpacing: 1 }}>SYNC...</span>
+              )}
+              {!showForm && <HudBtn variant="primary" onClick={() => setShowForm(true)}>+ Nouvelle Liste</HudBtn>}
+            </div>
+          }
+        />
+        <div style={{ padding: '16px 24px 24px' }}>
+          {showForm && (
+            <HudPanel title="Nouvelle Liste" style={{ marginBottom: 20 }}>
+              <div style={{ padding: 16 }}>{createFormContent}</div>
+            </HudPanel>
           )}
+
+          {/* Lists grid — 2 columns on desktop */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+            {allLists.map((list) => {
+              const pts = totalPoints(list.id)
+              const pct = Math.min(100, (pts / list.pointsLimit) * 100)
+              const overBudget = pts > list.pointsLimit
+              return (
+                <div
+                  key={list.id}
+                  onClick={() => navigate(`/lists/${list.id}`)}
+                  style={{
+                    border: '1px solid var(--color-border)',
+                    background: 'var(--color-surface)',
+                    padding: '14px 16px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 8,
+                    transition: 'border-color 0.15s',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--color-accent)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--color-border)')}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+                        {list.name}
+                      </span>
+                      {isAuthenticated && list.remoteId && (
+                        <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-success)', letterSpacing: 1 }}>SYNC</span>
+                      )}
+                    </div>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 600, color: overBudget ? 'var(--color-error)' : 'var(--color-accent)', flexShrink: 0 }}>
+                      {pts}<span style={{ color: 'var(--color-text-muted)', fontSize: 11 }}>/{list.pointsLimit}</span>
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 10, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)', letterSpacing: 0.5 }}>
+                      {list.detachment} {'\u00b7'} {countSquads(list.units)} esc.
+                    </span>
+                    <div style={{ flex: 1 }}>
+                      <HudBar value={pct} max={100} color={overBudget ? 'var(--color-error)' : 'var(--color-accent)'} height={3} />
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
-        {!showForm && (
-          <Button variant="primary" size="sm" onClick={() => setShowForm(true)}>
-            + Nouvelle
-          </Button>
-        )}
       </div>
 
-      {showForm && (
-        <div
-          className="rounded-lg p-4 mb-4"
-          style={{ backgroundColor: 'var(--color-surface)' }}
-        >
-          <h2 className="font-semibold mb-3" style={{ fontSize: 'var(--text-lg)', color: 'var(--color-text)' }}>
-            Nouvelle liste
-          </h2>
-
-          <div className="flex flex-col gap-3">
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Nom de la liste"
-              className="w-full rounded-lg px-3 py-2 bg-transparent outline-none min-h-[44px]"
-              style={{ color: 'var(--color-text)', border: '1px solid var(--color-text-muted)' }}
-              aria-label="Nom de la liste"
-            />
-
-            <div>
-              <p className="text-sm mb-2" style={{ color: 'var(--color-text-muted)' }}>Limite de points</p>
-              <div className="flex gap-3">
-                {pointsOptions.map((pts) => {
-                  const metal = pts === 1000 ? 'bronze' : pts === 2000 ? 'silver' : 'gold'
-                  return (
-                    <button
-                      key={pts}
-                      className={`btn-points btn-points--${metal} ${pointsLimit === pts ? 'btn-points--selected' : ''}`}
-                      onClick={() => setPointsLimit(pts)}
-                    >
-                      {pts}
-                    </button>
-                  )
-                })}
-              </div>
+      {/* ══════ MOBILE HUD ══════ */}
+      <div className="lg:hidden">
+        <MTopBar
+          title="Mes Listes"
+          sub="Arsenal"
+          actions={
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              {isAuthenticated && syncing && (
+                <HudPill color="var(--color-accent)">SYNC</HudPill>
+              )}
+              {!showForm && <HudBtn variant="primary" onClick={() => setShowForm(true)} style={{ padding: '4px 10px', fontSize: 9 }}>+ Nouvelle</HudBtn>}
             </div>
+          }
+        />
+        <div style={{ padding: 12 }}>
+          {showForm && (
+            <HudPanel title="Nouvelle Liste" style={{ marginBottom: 12 }}>
+              <div style={{ padding: 12 }}>{createFormContent}</div>
+            </HudPanel>
+          )}
 
-            {factionIndex && (
-              <div>
-                <p className="text-sm mb-2" style={{ color: 'var(--color-text-muted)' }}>Faction</p>
-                <FactionPicker
-                  factions={factionIndex.factions}
-                  onSelect={handleSelectFaction}
-                  selectedSlug={selectedFaction}
-                  detachments={factionDetachments}
-                  selectedDetachment={selectedDetachment}
-                  onDetachmentChange={(det) => {
-                    setSelectedDetachment(det)
-                    setDetachment(det?.name ?? '')
-                  }}
-                />
-              </div>
-            )}
-
-            <div className="flex gap-2 mt-2">
-              <Button variant="primary" onClick={handleCreate} disabled={!name.trim() || !selectedFaction}>
-                Créer
-              </Button>
-              <Button variant="ghost" onClick={() => setShowForm(false)}>
-                Annuler
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {allLists.map((list) => (
-        <SwipeableListItem
-          key={list.id}
-          factionId={list.factionId}
-          onTap={() => navigate(`/lists/${list.id}`)}
-          onDelete={() => deleteList(list.id)}
-        >
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold" style={{ color: 'var(--color-text)' }}>{list.name}</h3>
-            {isAuthenticated && (
-              <>
-                <span
-                  className="text-[10px] px-1.5 py-0.5 rounded"
-                  style={{
-                    backgroundColor: list.remoteId ? 'var(--color-success)' : 'var(--color-warning)',
-                    color: '#fff',
-                    opacity: 0.9,
-                  }}
-                  title={list.remoteId ? 'Synchronisée' : 'Locale uniquement'}
-                >
-                  {list.remoteId ? '☁' : '📱'}
-                </span>
-                {list.remoteId && (
-                  <span
-                    className="text-[10px] px-1 py-0.5 rounded"
-                    style={{ color: 'var(--color-text-muted)', opacity: 0.8 }}
-                    title={list.isPublic ? 'Publique' : 'Privée'}
-                  >
-                    {list.isPublic ? '🔓' : '🔒'}
+          {allLists.map((list) => {
+            const pts = totalPoints(list.id)
+            const pct = Math.min(100, (pts / list.pointsLimit) * 100)
+            const overBudget = pts > list.pointsLimit
+            return (
+              <SwipeableListItem key={list.id} factionId={list.factionId} onTap={() => navigate(`/lists/${list.id}`)} onDelete={() => deleteList(list.id)}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {list.name}
+                    </span>
+                    {isAuthenticated && list.remoteId && <HudPill color="var(--color-success)">SYNC</HudPill>}
+                  </div>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 600, color: overBudget ? 'var(--color-error)' : 'var(--color-accent)', flexShrink: 0 }}>
+                    {pts}<span style={{ color: 'var(--color-text-muted)', fontSize: 10 }}>/{list.pointsLimit}</span>
                   </span>
-                )}
-              </>
-            )}
-          </div>
-          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-            {list.factionId} · {list.detachment} · {countSquads(list.units)} escouade{countSquads(list.units) > 1 ? 's' : ''} · {totalPoints(list.id)}/{list.pointsLimit} pts
-          </p>
-        </SwipeableListItem>
-      ))}
-    </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 10, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)', letterSpacing: 0.5 }}>
+                    {list.detachment} {'\u00b7'} {countSquads(list.units)} esc.
+                  </span>
+                  <div style={{ flex: 1 }}>
+                    <HudBar value={pct} max={100} color={overBudget ? 'var(--color-error)' : 'var(--color-accent)'} height={3} />
+                  </div>
+                </div>
+              </SwipeableListItem>
+            )
+          })}
+        </div>
+      </div>
+    </>
   )
 }

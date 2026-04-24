@@ -71,6 +71,13 @@ const paintDotColors: Record<PaintStatus, string> = {
   done: 'var(--color-success)',
 }
 
+const paintBarColors: Record<PaintStatus, string> = {
+  unassembled: '#536577',
+  assembled: '#f0b540',
+  'in-progress': 'var(--color-accent)',
+  done: '#5ee0a0',
+}
+
 const statLabels = ['M', 'T', 'Sv', 'W', 'Ld', 'OC'] as const
 
 export function UnitCard({ datasheet, owned, instances, onClick, selectable, selected, onToggleSelect }: UnitCardProps) {
@@ -96,21 +103,25 @@ export function UnitCard({ datasheet, owned, instances, onClick, selectable, sel
   }
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={handleClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick() } }}
       className={`unit-card unit-card--${variant} animate-fade-in`}
       style={{
         color: 'var(--color-text)',
         outline: selected ? '2px solid var(--color-accent)' : 'none',
         outlineOffset: '-2px',
+        cursor: 'pointer',
       }}
     >
       {/* Shimmer overlay for Epic Heroes */}
       {variant === 'epic-hero' && <div className="unit-card__shimmer" />}
 
-      {/* Favorite star */}
+      {/* ── MOBILE: Favorite star (absolute positioned) ── */}
       <button
-        className="absolute top-1 right-1 z-10 bg-transparent border-none cursor-pointer p-1"
+        className="absolute top-1 right-1 z-10 bg-transparent border-none cursor-pointer p-1 lg:hidden"
         style={{ color: isFavorite ? 'var(--color-warning, #f59e0b)' : 'var(--color-text-muted)', fontSize: '0.85rem' }}
         onClick={(e) => { e.stopPropagation(); toggleFavorite(datasheet.id) }}
         aria-label={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
@@ -118,20 +129,20 @@ export function UnitCard({ datasheet, owned, instances, onClick, selectable, sel
         {isFavorite ? '\u2605' : '\u2606'}
       </button>
 
-      {/* Compare checkbox */}
+      {/* ── MOBILE: Compare checkbox ── */}
       {selectable && (
         <div
-          className="absolute top-1 left-1 z-10 w-5 h-5 rounded-full flex items-center justify-center"
+          className="absolute top-1 left-1 z-10 w-5 h-5 rounded-full flex items-center justify-center lg:hidden"
           style={{
             backgroundColor: selected ? 'var(--color-accent)' : 'rgba(0,0,0,0.4)',
             border: '2px solid var(--color-accent)',
           }}
         >
-          {selected && <span className="text-white text-xs font-bold">\u2713</span>}
+          {selected && <span className="text-white text-xs font-bold">{'\u2713'}</span>}
         </div>
       )}
 
-      {/* Desktop: full-height image on the left */}
+      {/* ── IMAGE PANEL ── */}
       {hasImage && (
         <div className="unit-card__image-panel">
           <img
@@ -142,6 +153,22 @@ export function UnitCard({ datasheet, owned, instances, onClick, selectable, sel
             loading="lazy"
           />
           <div className="unit-card__image-panel-fade" />
+          {/* HUD corner brackets (desktop only, rendered via CSS) */}
+          <div className="unit-card__hud-corners" />
+          <div className="unit-card__hud-corners-bottom" />
+          {/* Overlay badges on image */}
+          <div className="unit-card__image-overlay">
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+              {style.badge && (
+                <span className="unit-card__type-badge">
+                  <T text={style.badge} category="keyword" />
+                </span>
+              )}
+            </div>
+            <span className="unit-card__points" style={{ fontSize: 12 }}>
+              {points && <>{points} <span className="unit-card__points-label">PTS</span></>}
+            </span>
+          </div>
         </div>
       )}
       {!hasImage && (
@@ -152,10 +179,24 @@ export function UnitCard({ datasheet, owned, instances, onClick, selectable, sel
           }}
         >
           <span className="unit-card__image-panel-letters">{initials}</span>
+          <div className="unit-card__hud-corners" />
+          <div className="unit-card__hud-corners-bottom" />
+          <div className="unit-card__image-overlay">
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+              {style.badge && (
+                <span className="unit-card__type-badge">
+                  <T text={style.badge} category="keyword" />
+                </span>
+              )}
+            </div>
+            <span className="unit-card__points" style={{ fontSize: 12 }}>
+              {points && <>{points} <span className="unit-card__points-label">PTS</span></>}
+            </span>
+          </div>
         </div>
       )}
 
-      {/* Right side info wrapper (desktop) / full card content (mobile) */}
+      {/* ── INFO SECTION ── */}
       <div className="unit-card__info">
         {/* Top section: Avatar + Name */}
         <div className="flex items-center gap-2.5 p-3 pb-2" style={{ position: 'relative', zIndex: 2 }}>
@@ -182,7 +223,8 @@ export function UnitCard({ datasheet, owned, instances, onClick, selectable, sel
           </div>
           <div className="flex flex-col min-w-0 flex-1">
             <T text={datasheet.name} category="unit" className="unit-card__name truncate" />
-            <div className="flex items-center gap-1.5 mt-0.5">
+            {/* Mobile: points under name */}
+            <div className="flex items-center gap-1.5 mt-0.5 lg:hidden">
               {points && (
                 <span className="unit-card__points">
                   {points} <span className="unit-card__points-label">PTS</span>
@@ -194,10 +236,41 @@ export function UnitCard({ datasheet, owned, instances, onClick, selectable, sel
                 </span>
               )}
             </div>
+            {/* Desktop: role + delta */}
+            <div className="hidden lg:flex items-center gap-2 mt-0.5">
+              <span style={{ fontSize: 10, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)', letterSpacing: 0.5, textTransform: 'uppercase' as const }}>
+                {datasheet.role || 'Unit'}
+              </span>
+              {delta !== 0 && (
+                <span className={`unit-card__delta ${delta > 0 ? 'unit-card__delta--up' : 'unit-card__delta--down'}`}>
+                  {delta > 0 ? `+${delta}` : delta}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Desktop: Favorite + Compare (top right of info section) */}
+          <div className="hidden lg:flex items-center gap-2" style={{ position: 'absolute', top: 10, right: 10 }}>
+            {selectable && (
+              <div
+                className={`unit-card__compare-check ${selected ? 'unit-card__compare-check--active' : ''}`}
+                onClick={(e) => { e.stopPropagation(); onToggleSelect?.() }}
+              >
+                {selected && '\u2713'}
+              </div>
+            )}
+            <button
+              className={`unit-card__fav-btn ${isFavorite ? 'unit-card__fav-btn--active' : ''}`}
+              style={{ color: isFavorite ? 'var(--color-gold)' : 'var(--color-text-muted)' }}
+              onClick={(e) => { e.stopPropagation(); toggleFavorite(datasheet.id) }}
+              aria-label={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+            >
+              {isFavorite ? '\u2605' : '\u2606'}
+            </button>
           </div>
         </div>
 
-        {/* Stat line — engraved plate */}
+        {/* Stat line */}
         {profile && (
           <div className="unit-card__stats">
             {statLabels.map((stat) => {
@@ -217,8 +290,8 @@ export function UnitCard({ datasheet, owned, instances, onClick, selectable, sel
           </div>
         )}
 
-        {/* Footer: badges + ownership */}
-        <div className="flex items-center gap-1.5 px-3 py-2 flex-wrap" style={{ position: 'relative', zIndex: 2 }}>
+        {/* ── MOBILE: Footer badges + ownership ── */}
+        <div className="flex items-center gap-1.5 px-3 py-2 flex-wrap lg:hidden" style={{ position: 'relative', zIndex: 2 }}>
           {style.badge && (
             <span
               className="unit-card__type-badge"
@@ -254,7 +327,29 @@ export function UnitCard({ datasheet, owned, instances, onClick, selectable, sel
             </div>
           )}
         </div>
+
+        {/* ── DESKTOP: Ownership + paint bar ── */}
+        {owned !== undefined && owned > 0 && (
+          <div className="hidden lg:flex items-center gap-2 px-3 py-1.5" style={{ borderTop: '1px solid var(--color-border)' }}>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--color-success)', fontWeight: 600 }}>
+              x{owned}
+            </span>
+            {instances && instances.length > 0 && (
+              <div className="unit-card__paint-bar" style={{ flex: 1 }}>
+                {instances.map((status, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      flex: 1,
+                      background: paintBarColors[status],
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
-    </button>
+    </div>
   )
 }

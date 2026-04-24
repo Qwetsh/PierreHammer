@@ -74,45 +74,53 @@ export function FactionPickerModal({ factions, detachments, onFactionChosen, onS
     return (
       <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} onClick={onClose}>
         <div
-          className="w-full max-w-md rounded-xl p-5 max-h-[80vh] lg:max-w-lg lg:p-6 overflow-y-auto"
-          style={{ backgroundColor: 'var(--color-bg)' }}
+          className="w-full max-w-md p-5 max-h-[80vh] lg:max-w-lg lg:p-6 overflow-y-auto"
+          style={{ backgroundColor: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center gap-3 mb-4">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
             <div
-              className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold"
-              style={{ backgroundColor: theme.primary, color: theme.accent }}
+              style={{
+                width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-mono)',
+                backgroundColor: theme.primary, color: theme.accent, border: '1px solid var(--color-border)',
+              }}
             >
               {getInitials(factionName)}
             </div>
             <div>
-              <h3 className="font-bold text-sm" style={{ color: 'var(--color-text)' }}><T text={factionName} category="faction" /></h3>
-              <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Choisis un détachement</p>
+              <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--color-text)' }}><T text={factionName} category="faction" /></div>
+              <div style={{ fontSize: 9, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)', letterSpacing: 1, textTransform: 'uppercase' }}>Choisis un détachement</div>
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {detachments.map((det) => (
               <button
                 key={det.id}
-                className="text-left rounded-lg p-3 border-none cursor-pointer transition-colors"
-                style={{ backgroundColor: theme.surface, color: 'var(--color-text)' }}
                 onClick={() => onSelect(selectedFaction, det)}
+                style={{
+                  textAlign: 'left', padding: '10px 12px', cursor: 'pointer',
+                  backgroundColor: 'var(--color-surface)', color: 'var(--color-text)',
+                  border: '1px solid var(--color-border)', fontSize: 12,
+                }}
               >
-                <span className="font-medium text-sm"><T text={det.name} category="detachment" /></span>
+                <span style={{ fontWeight: 600 }}><T text={det.name} category="detachment" /></span>
                 {det.rule && (
-                  <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
+                  <div style={{ fontSize: 10, marginTop: 4, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>
                     {det.rule.name}
-                  </p>
+                  </div>
                 )}
               </button>
             ))}
           </div>
 
           <button
-            className="mt-3 text-xs bg-transparent border-none cursor-pointer"
-            style={{ color: 'var(--color-text-muted)' }}
             onClick={() => setSelectedFaction(null)}
+            style={{
+              marginTop: 12, fontSize: 10, background: 'transparent', border: 'none',
+              color: 'var(--color-text-muted)', cursor: 'pointer', fontFamily: 'var(--font-mono)',
+            }}
           >
             ← Changer de faction
           </button>
@@ -123,29 +131,22 @@ export function FactionPickerModal({ factions, detachments, onFactionChosen, onS
 
   // Faction chosen but detachments not loaded yet — show loading
   if (selectedFaction && detachments.length === 0) {
-    const theme = getThemeForFaction(selectedFaction)
     const factionName = factions.find((f) => f.slug === selectedFaction)?.name ?? selectedFaction
     return (
       <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} onClick={onClose}>
         <div
-          className="w-full max-w-md rounded-xl p-5 text-center"
-          style={{ backgroundColor: 'var(--color-bg)' }}
+          className="w-full max-w-md p-5 text-center"
+          style={{ backgroundColor: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div
-              className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold"
-              style={{ backgroundColor: theme.primary, color: theme.accent }}
-            >
-              {getInitials(factionName)}
-            </div>
-            <h3 className="font-bold text-sm" style={{ color: 'var(--color-text)' }}><T text={factionName} category="faction" /></h3>
-          </div>
-          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Chargement des détachements...</p>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)', marginBottom: 8 }}><T text={factionName} category="faction" /></div>
+          <div style={{ fontSize: 10, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)', letterSpacing: 1 }}>Chargement des détachements...</div>
           <button
-            className="mt-3 text-xs bg-transparent border-none cursor-pointer"
-            style={{ color: 'var(--color-text-muted)' }}
             onClick={() => setSelectedFaction(null)}
+            style={{
+              marginTop: 12, fontSize: 10, background: 'transparent', border: 'none',
+              color: 'var(--color-text-muted)', cursor: 'pointer', fontFamily: 'var(--font-mono)',
+            }}
           >
             ← Changer de faction
           </button>
@@ -158,51 +159,68 @@ export function FactionPickerModal({ factions, detachments, onFactionChosen, onS
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} onClick={onClose}>
       <div
-        className="w-full max-w-md rounded-xl p-5 max-h-[80vh] lg:max-w-lg lg:p-6 overflow-y-auto"
-        style={{ backgroundColor: 'var(--color-bg)' }}
+        className="w-full max-w-md p-5 max-h-[80vh] lg:max-w-lg lg:p-6 overflow-y-auto"
+        style={{ backgroundColor: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="font-bold text-base mb-3" style={{ color: 'var(--color-text)' }}>Choisir une faction</h3>
+        <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-accent)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>
+          {'\u25b8'} Choisir une faction
+        </div>
 
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Rechercher..."
-          className="w-full rounded-lg px-3 py-2 text-sm mb-3 border-none outline-none"
-          style={{ backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+          style={{
+            width: '100%', padding: '8px 10px', fontSize: 12, marginBottom: 12,
+            backgroundColor: 'var(--color-surface)', color: 'var(--color-text)',
+            border: '1px solid var(--color-border)', outline: 'none', fontFamily: 'var(--font-mono)',
+          }}
           autoFocus
         />
 
-        <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-3">
           {filteredFactions.map((faction) => {
             const theme = getThemeForFaction(faction.slug)
             return (
               <button
                 key={faction.id}
-                className="flex items-center gap-2 rounded-lg p-2.5 border-none cursor-pointer transition-colors"
-                style={{ backgroundColor: theme.surface, color: 'var(--color-text)' }}
                 onClick={() => {
                   setSelectedFaction(faction.slug)
                   onFactionChosen?.(faction.slug)
                 }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
+                  backgroundColor: 'var(--color-surface)', color: 'var(--color-text)',
+                  border: '1px solid var(--color-border)', cursor: 'pointer', fontSize: 11,
+                }}
               >
                 <div
-                  className="w-8 h-8 rounded flex items-center justify-center text-xs font-bold shrink-0"
-                  style={{ backgroundColor: theme.primary, color: theme.accent }}
+                  style={{
+                    width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 9, fontWeight: 700, fontFamily: 'var(--font-mono)', flexShrink: 0,
+                    backgroundColor: theme.primary, color: theme.accent, border: '1px solid var(--color-border)',
+                  }}
                 >
                   {getInitials(faction.name)}
                 </div>
-                <span className="text-xs font-medium truncate"><T text={faction.name} category="faction" /></span>
+                <span style={{ fontSize: 11, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <T text={faction.name} category="faction" />
+                </span>
               </button>
             )
           })}
         </div>
 
         <button
-          className="mt-4 w-full text-center text-xs bg-transparent border-none cursor-pointer"
-          style={{ color: 'var(--color-text-muted)' }}
           onClick={onClose}
+          style={{
+            marginTop: 16, width: '100%', textAlign: 'center', fontSize: 10,
+            background: 'transparent', border: '1px solid var(--color-border)',
+            color: 'var(--color-text-muted)', cursor: 'pointer', padding: '6px 0',
+            fontFamily: 'var(--font-mono)', letterSpacing: 0.5,
+          }}
         >
           Annuler
         </button>
