@@ -20,27 +20,19 @@ function getAuthContext(): { userId: string } | null {
   return { userId: user.id }
 }
 
-function withSuppressedRealtime(fn: () => Promise<unknown>) {
-  suppressRealtime = true
-  fn()
-    .catch((e) => console.error('Collection sync error:', e))
-    .finally(() => { suppressRealtime = false })
-}
-
 function syncItemInBackground(item: CollectionItem) {
   const auth = getAuthContext()
   if (!auth) return
-  withSuppressedRealtime(() => syncService.upsertCollectionItem(item, auth.userId))
+  syncService.upsertCollectionItem(item, auth.userId).catch(() => {})
 }
 
 function syncDeleteInBackground(datasheetId: string) {
   const auth = getAuthContext()
   if (!auth) return
-  withSuppressedRealtime(() => syncService.deleteCollectionItem(auth.userId, datasheetId))
+  syncService.deleteCollectionItem(auth.userId, datasheetId).catch(() => {})
 }
 
 let unsubscribeRealtime: (() => void) | null = null
-let suppressRealtime = false
 
 interface CollectionState {
   items: Record<string, CollectionItem>
@@ -177,17 +169,19 @@ export const useCollectionStore = create<CollectionState>()(
       syncOnLogin: async () => {
         const auth = getAuthContext()
         if (!auth) return
+        console.log('[collection] syncOnLogin start')
         set({ syncing: true })
         try {
           const remoteItems = await syncService.fetchRemoteCollection(auth.userId)
+          console.log('[collection] remote items:', Object.keys(remoteItems).length)
 
-          // Remote is always source of truth
+          // Remote is source of truth — replace local
           set({ items: remoteItems, syncing: false })
 
-          // Subscribe to realtime changes
+          // Subscribe to realtime changes from other devices
           if (unsubscribeRealtime) unsubscribeRealtime()
           unsubscribeRealtime = syncService.subscribeToCollection(auth.userId, (event, item, datasheetId) => {
-            if (suppressRealtime || !datasheetId) return
+            console.log('[collection] realtime callback:', event, datasheetId)
             if (event === 'delete') {
               set((state) => {
                 if (!(datasheetId in state.items)) return state
@@ -201,7 +195,7 @@ export const useCollectionStore = create<CollectionState>()(
             }
           })
         } catch (e) {
-          console.error('syncOnLogin collection error:', e)
+          console.error('[collection] syncOnLogin error:', e)
           set({ syncing: false })
         }
       },

@@ -40,7 +40,7 @@ export async function fetchRemoteCollection(userId: string): Promise<Record<stri
       .select('*')
       .eq('user_id', userId)
     if (error) {
-      console.error('fetchRemoteCollection error:', error.message)
+      console.error('[collection-sync] fetch error:', error.message)
       return {}
     }
     const items: Record<string, CollectionItem> = {}
@@ -49,7 +49,7 @@ export async function fetchRemoteCollection(userId: string): Promise<Record<stri
     }
     return items
   } catch (e) {
-    console.error('fetchRemoteCollection exception:', e)
+    console.error('[collection-sync] fetch exception:', e)
     return {}
   }
 }
@@ -57,16 +57,18 @@ export async function fetchRemoteCollection(userId: string): Promise<Record<stri
 export async function upsertCollectionItem(item: CollectionItem, userId: string): Promise<boolean> {
   if (!isSupabaseConfigured || !supabase) return false
   try {
+    const payload = toRemote(item, userId)
+    console.log('[collection-sync] upsert:', payload.datasheet_id)
     const { error } = await supabase
       .from('ph_collection_items')
-      .upsert(toRemote(item, userId), { onConflict: 'user_id,datasheet_id' })
+      .upsert(payload, { onConflict: 'user_id,datasheet_id' })
     if (error) {
-      console.error('upsertCollectionItem error:', error.message)
+      console.error('[collection-sync] upsert error:', error.message)
       return false
     }
     return true
   } catch (e) {
-    console.error('upsertCollectionItem exception:', e)
+    console.error('[collection-sync] upsert exception:', e)
     return false
   }
 }
@@ -74,26 +76,22 @@ export async function upsertCollectionItem(item: CollectionItem, userId: string)
 export async function deleteCollectionItem(userId: string, datasheetId: string): Promise<boolean> {
   if (!isSupabaseConfigured || !supabase) return false
   try {
+    console.log('[collection-sync] delete:', datasheetId)
     const { error } = await supabase
       .from('ph_collection_items')
       .delete()
       .eq('user_id', userId)
       .eq('datasheet_id', datasheetId)
     if (error) {
-      console.error('deleteCollectionItem error:', error.message)
+      console.error('[collection-sync] delete error:', error.message)
       return false
     }
+    console.log('[collection-sync] delete OK:', datasheetId)
     return true
   } catch (e) {
-    console.error('deleteCollectionItem exception:', e)
+    console.error('[collection-sync] delete exception:', e)
     return false
   }
-}
-
-type RealtimePayload = {
-  eventType: 'INSERT' | 'UPDATE' | 'DELETE'
-  new: RemoteCollectionItem
-  old: { id: string; datasheet_id: string }
 }
 
 type CollectionChangeCallback = (
@@ -108,6 +106,7 @@ export function subscribeToCollection(
 ): () => void {
   if (!isSupabaseConfigured || !supabase) return () => {}
 
+  console.log('[collection-sync] subscribing to realtime')
   const channel = supabase
     .channel(`ph_collection:${userId}`)
     .on(
@@ -118,11 +117,15 @@ export function subscribeToCollection(
         table: 'ph_collection_items',
         filter: `user_id=eq.${userId}`,
       },
-      ((payload: RealtimePayload) => {
+      ((payload: { eventType: string; new: RemoteCollectionItem; old: Record<string, string> }) => {
+        console.log('[collection-sync] realtime event:', payload.eventType, payload)
         if (payload.eventType === 'DELETE') {
-          callback('delete', null, payload.old.datasheet_id)
-        } else {
-          callback('upsert', toLocal(payload.new), payload.new.datasheet_id)
+          const dsId = payload.old?.datasheet_id
+          if (dsId) callback('delete', null, dsId)
+        } else if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+          if (payload.new?.datasheet_id) {
+            callback('upsert', toLocal(payload.new), payload.new.datasheet_id)
+          }
         }
       }) as never,
     )
@@ -130,27 +133,5 @@ export function subscribeToCollection(
 
   return () => {
     supabase!.removeChannel(channel)
-  }
-}
-
-export async function pushFullCollection(
-  items: Record<string, CollectionItem>,
-  userId: string,
-): Promise<boolean> {
-  if (!isSupabaseConfigured || !supabase) return false
-  try {
-    const rows = Object.values(items).map((item) => toRemote(item, userId))
-    if (rows.length === 0) return true
-    const { error } = await supabase
-      .from('ph_collection_items')
-      .upsert(rows, { onConflict: 'user_id,datasheet_id' })
-    if (error) {
-      console.error('pushFullCollection error:', error.message)
-      return false
-    }
-    return true
-  } catch (e) {
-    console.error('pushFullCollection exception:', e)
-    return false
   }
 }

@@ -23,12 +23,34 @@ export const useAuthStore = create<AuthState>()((set) => ({
       return
     }
 
+    const triggerSync = (session: { user: User }) => {
+      import('@/stores/listsStore').then(({ useListsStore }) => {
+        useListsStore.getState().syncOnLogin()
+      })
+      import('@/stores/collectionStore').then(({ useCollectionStore }) => {
+        useCollectionStore.getState().syncOnLogin()
+      })
+      import('@/services/customImageSyncService').then(async ({ syncLocalToRemote, syncRemoteToLocal }) => {
+        const { getCustomImageBlob, listCustomImageIds, hasCustomImage, saveCustomImageBlob } = await import('@/stores/customImageStore')
+        const userId = session.user.id
+        const localIds = await listCustomImageIds()
+        await syncLocalToRemote(userId, getCustomImageBlob, localIds)
+        await syncRemoteToLocal(userId, hasCustomImage, saveCustomImageBlob)
+      })
+    }
+
+    let hasSynced = false
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       set({
         user: session?.user ?? null,
         isAuthenticated: !!session?.user,
         loading: false,
       })
+      if (session?.user && !hasSynced) {
+        hasSynced = true
+        triggerSync(session)
+      }
     })
 
     supabase.auth.onAuthStateChange((_event, session) => {
@@ -38,24 +60,9 @@ export const useAuthStore = create<AuthState>()((set) => ({
         isAuthenticated: !!session?.user,
         loading: false,
       })
-      // Trigger sync on login (lazy imports to avoid circular deps)
-      if (!wasAuthenticated && session?.user) {
-        import('@/stores/listsStore').then(({ useListsStore }) => {
-          useListsStore.getState().syncOnLogin()
-        })
-        import('@/stores/collectionStore').then(({ useCollectionStore }) => {
-          useCollectionStore.getState().syncOnLogin()
-        })
-        // Sync custom images on login
-        import('@/services/customImageSyncService').then(async ({ syncLocalToRemote, syncRemoteToLocal }) => {
-          const { getCustomImageBlob, listCustomImageIds, hasCustomImage, saveCustomImageBlob } = await import('@/stores/customImageStore')
-          const userId = session!.user.id
-          // Upload local images missing on remote
-          const localIds = await listCustomImageIds()
-          await syncLocalToRemote(userId, getCustomImageBlob, localIds)
-          // Download remote images missing locally
-          await syncRemoteToLocal(userId, hasCustomImage, saveCustomImageBlob)
-        })
+      if (!wasAuthenticated && session?.user && !hasSynced) {
+        hasSynced = true
+        triggerSync(session)
       }
     })
   },
