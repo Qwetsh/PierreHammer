@@ -53,7 +53,7 @@ interface InlineSimulatorProps {
   onBack: () => void
 }
 
-export function InlineSimulator({ attackerDatasheet, attackerFaction, attackerFactionSlug, onBack }: InlineSimulatorProps) {
+export function InlineSimulator({ attackerDatasheet, attackerFaction, attackerFactionSlug: _attackerFactionSlug, onBack }: InlineSimulatorProps) {
   const { factionIndex } = useGameData()
   const loadedFactions = useGameDataStore((s) => s.loadedFactions)
   const loadFaction = useGameDataStore((s) => s.loadFaction)
@@ -778,24 +778,6 @@ export function InlineSimulator({ attackerDatasheet, attackerFaction, attackerFa
           onClose={() => setShowDefEnhancementPicker(false)}
         />
       )}
-    </div>
-  )
-}
-
-function ResultBar({ label, value, max, detail }: { label: string; value: number; max: number; detail?: string }) {
-  const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0
-  return (
-    <div style={{ marginBottom: 6 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 2 }}>
-        <span style={{ color: 'var(--color-text)' }}>{label}</span>
-        <span style={{ color: 'var(--color-accent)', fontFamily: 'var(--font-mono)' }}>
-          {round(value)}
-          {detail && <span style={{ color: 'var(--color-text-muted)' }}> {detail}</span>}
-        </span>
-      </div>
-      <div style={{ height: 4, background: 'var(--color-bg-input, var(--color-surface))', border: '1px solid var(--color-border)', overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${pct}%`, background: 'var(--color-accent)', boxShadow: '0 0 6px color-mix(in srgb, var(--color-accent) 40%, transparent)', transition: 'width 0.3s' }} />
-      </div>
     </div>
   )
 }

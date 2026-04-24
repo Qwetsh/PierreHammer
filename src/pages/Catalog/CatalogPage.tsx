@@ -6,9 +6,7 @@ import { FactionPicker } from '@/components/domain/FactionPicker'
 import { UnitCard } from '@/components/domain/UnitCard'
 import { UnitSheet } from '@/components/domain/UnitSheet'
 import { InlineSimulator } from '@/components/domain/Simulator/InlineSimulator'
-import { SearchBar } from '@/components/ui/SearchBar'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { Button } from '@/components/ui/Button'
 import { CompareBar } from '@/components/domain/CompareBar'
 import { HudTopBar, HudSearch, HudChip, HudBtn, MTopBar } from '@/components/ui/Hud'
 import { useCollectionStore } from '@/stores/collectionStore'
@@ -17,7 +15,7 @@ import { useComparatorStore } from '@/stores/comparatorStore'
 import { useListsStore } from '@/stores/listsStore'
 import { isCharacter, canEquipEnhancement } from '@/utils/enhancementUtils'
 import { usePreferencesStore } from '@/stores/preferencesStore'
-import type { Datasheet } from '@/types/gameData.types'
+import type { Datasheet, Faction } from '@/types/gameData.types'
 
 type SortKey = 'name' | 'points' | 'role'
 
@@ -56,7 +54,6 @@ function sortDatasheets(items: Datasheet[], sortBy: SortKey): Datasheet[] {
 }
 
 export function CatalogPage() {
-  const navigate = useNavigate()
   const { factionIndex, selectedFaction, selectedFactionSlug, isLoading, error, loadFaction, selectFaction } = useGameData()
   const [query, setQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState<string | 'all'>('all')
@@ -523,7 +520,7 @@ function UnitDetailModal({
 }: {
   datasheet: Datasheet
   factionId: string
-  faction: { name: string; detachments?: { name: string; enhancements?: { name: string; cost: number; description: string; keywords?: string[] }[] }[] }
+  faction: Faction | null
   collectionItems: Record<string, { instances: string[] }>
   addItem: (id: string, factionId: string) => void
   addInstance: (id: string) => void

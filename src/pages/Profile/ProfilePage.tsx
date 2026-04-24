@@ -11,7 +11,7 @@ import { useFriendsStore } from '@/stores/friendsStore'
 import { isSupabaseConfigured } from '@/lib/supabase'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
-import { HudTopBar, HudPanel, HudStat, HudBtn, HudBar, MTopBar, MSection } from '@/components/ui/Hud'
+import { HudTopBar, HudPanel, HudStat, HudBtn, MTopBar, MSection } from '@/components/ui/Hud'
 import { useAchievements } from '@/hooks/useAchievements'
 import { useGameDataStore } from '@/stores/gameDataStore'
 
