@@ -10,11 +10,13 @@ interface PreferencesState {
   hasSeenSplash: boolean
   colorVisionMode: ColorVisionMode
   favoriteFactionSlug: string | null
+  showCalculatorFab: boolean
   setActiveFaction: (factionId: string | null) => void
   setActiveList: (listId: string | null) => void
   markSplashSeen: () => void
   setColorVisionMode: (mode: ColorVisionMode) => void
   setFavoriteFaction: (slug: string | null) => void
+  setShowCalculatorFab: (show: boolean) => void
 }
 
 export const usePreferencesStore = create<PreferencesState>()(
@@ -26,12 +28,14 @@ export const usePreferencesStore = create<PreferencesState>()(
       hasSeenSplash: false,
       colorVisionMode: 'normal',
       favoriteFactionSlug: null,
+      showCalculatorFab: true,
 
       setActiveFaction: (factionId) => set({ activeFactionId: factionId }),
       setActiveList: (listId) => set({ activeListId: listId }),
       markSplashSeen: () => set({ hasSeenSplash: true }),
       setColorVisionMode: (mode) => set({ colorVisionMode: mode }),
       setFavoriteFaction: (slug) => set({ favoriteFactionSlug: slug }),
+      setShowCalculatorFab: (show) => set({ showCalculatorFab: show }),
     }),
     {
       name: 'pierrehammer-preferences',

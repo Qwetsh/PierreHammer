@@ -332,6 +332,8 @@ export function ProfilePage() {
   const setColorVisionMode = usePreferencesStore((s) => s.setColorVisionMode)
   const favoriteFactionSlug = usePreferencesStore((s) => s.favoriteFactionSlug)
   const setFavoriteFaction = usePreferencesStore((s) => s.setFavoriteFaction)
+  const showCalculatorFab = usePreferencesStore((s) => s.showCalculatorFab)
+  const setShowCalculatorFab = usePreferencesStore((s) => s.setShowCalculatorFab)
   const factionIndex = useGameDataStore((s) => s.factionIndex)
   const factions: FactionSummary[] = factionIndex?.factions ?? []
   const favoriteFactionName = favoriteFactionSlug ? factions.find((f) => f.slug === favoriteFactionSlug)?.name ?? null : null
@@ -449,6 +451,30 @@ export function ProfilePage() {
                     <span style={{ float: 'right', fontSize: 9, color: 'var(--color-text-muted)' }}>Changer</span>
                   </button>
                 )}
+
+                {/* Calculator FAB toggle */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--color-border)' }}>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--color-text)' }}>Calculateur rapide</div>
+                    <div style={{ fontSize: 9, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>
+                      Bouton flottant sur toutes les pages
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowCalculatorFab(!showCalculatorFab)}
+                    style={{
+                      width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer', position: 'relative',
+                      backgroundColor: showCalculatorFab ? 'var(--color-accent)' : 'var(--color-border)',
+                      transition: 'background-color 0.2s',
+                    }}
+                  >
+                    <span style={{
+                      position: 'absolute', top: 2, width: 16, height: 16, borderRadius: 8,
+                      backgroundColor: 'var(--color-bg)', transition: 'left 0.2s',
+                      left: showCalculatorFab ? 18 : 2,
+                    }} />
+                  </button>
+                </div>
               </div>
             </HudPanel>
 
@@ -599,6 +625,30 @@ export function ProfilePage() {
                 <span style={{ float: 'right', fontSize: 9, color: 'var(--color-text-muted)' }}>Changer</span>
               </button>
             )}
+
+            {/* Calculator FAB toggle */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--color-border)' }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--color-text)' }}>Calculateur rapide</div>
+                <div style={{ fontSize: 9, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>
+                  Bouton flottant sur toutes les pages
+                </div>
+              </div>
+              <button
+                onClick={() => setShowCalculatorFab(!showCalculatorFab)}
+                style={{
+                  width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer', position: 'relative',
+                  backgroundColor: showCalculatorFab ? 'var(--color-accent)' : 'var(--color-border)',
+                  transition: 'background-color 0.2s',
+                }}
+              >
+                <span style={{
+                  position: 'absolute', top: 2, width: 16, height: 16, borderRadius: 8,
+                  backgroundColor: 'var(--color-bg)', transition: 'left 0.2s',
+                  left: showCalculatorFab ? 18 : 2,
+                }} />
+              </button>
+            </div>
           </div>
 
           {/* Accessibility */}
