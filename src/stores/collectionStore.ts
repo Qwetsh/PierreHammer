@@ -181,23 +181,20 @@ export const useCollectionStore = create<CollectionState>()(
         try {
           const remoteItems = await syncService.fetchRemoteCollection(auth.userId)
           const localItems = get().items
+          const hasRemote = Object.keys(remoteItems).length > 0
+          const hasLocal = Object.keys(localItems).length > 0
 
-          // Merge: remote wins for existing keys, local-only items get pushed
-          const merged: Record<string, CollectionItem> = { ...remoteItems }
-          const localOnly: CollectionItem[] = []
+          let merged: Record<string, CollectionItem>
 
-          for (const [key, localItem] of Object.entries(localItems)) {
-            if (!merged[key]) {
-              merged[key] = localItem
-              localOnly.push(localItem)
-            }
-          }
-
-          // Push local-only items to remote
-          if (localOnly.length > 0) {
-            for (const item of localOnly) {
-              await syncService.upsertCollectionItem(item, auth.userId)
-            }
+          if (hasRemote) {
+            // Remote is source of truth — replace local entirely
+            merged = remoteItems
+          } else if (hasLocal) {
+            // First sync: no remote data, push local items up
+            merged = localItems
+            await syncService.pushFullCollection(localItems, auth.userId)
+          } else {
+            merged = {}
           }
 
           set({ items: merged, syncing: false })
