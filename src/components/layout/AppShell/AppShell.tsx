@@ -38,6 +38,8 @@ function DraggableFab({ onClick }: { onClick: () => void }) {
   const startTouch = useRef({ x: 0, y: 0 })
   const startPos = useRef({ x: 0, y: 0 })
   const fabRef = useRef<HTMLButtonElement>(null)
+  const onClickRef = useRef(onClick)
+  onClickRef.current = onClick
 
   // Keep position in bounds on resize
   useEffect(() => {
@@ -46,56 +48,85 @@ function DraggableFab({ onClick }: { onClick: () => void }) {
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
-  const endDrag = useCallback((clientX: number, clientY: number) => {
-    if (!dragging.current) return
-    dragging.current = false
-    if (hasMoved.current) {
-      const final = clamp({ x: startPos.current.x + (clientX - startTouch.current.x), y: startPos.current.y + (clientY - startTouch.current.y) })
-      setPos(final)
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(final))
-    } else {
-      onClick()
+  // All drag + tap logic via native listeners (React synthetic events are unreliable in mobile emulation)
+  useEffect(() => {
+    const el = fabRef.current
+    if (!el) return
+
+    const beginDrag = (clientX: number, clientY: number) => {
+      dragging.current = true
+      hasMoved.current = false
+      startTouch.current = { x: clientX, y: clientY }
+      const rect = el.getBoundingClientRect()
+      startPos.current = { x: rect.left, y: rect.top }
     }
-  }, [onClick])
 
-  const onPointerDown = useCallback((e: React.PointerEvent) => {
-    e.preventDefault()
-    dragging.current = true
-    hasMoved.current = false
-    startTouch.current = { x: e.clientX, y: e.clientY }
-    startPos.current = { ...pos }
-  }, [pos])
+    const moveDrag = (clientX: number, clientY: number) => {
+      if (!dragging.current) return
+      const dx = clientX - startTouch.current.x
+      const dy = clientY - startTouch.current.y
+      if (!hasMoved.current && Math.abs(dx) < 6 && Math.abs(dy) < 6) return
+      hasMoved.current = true
+      setPos(clamp({ x: startPos.current.x + dx, y: startPos.current.y + dy }))
+    }
 
-  const onPointerMove = useCallback((e: React.PointerEvent) => {
-    if (!dragging.current) return
-    const dx = e.clientX - startTouch.current.x
-    const dy = e.clientY - startTouch.current.y
-    if (!hasMoved.current && Math.abs(dx) < 4 && Math.abs(dy) < 4) return
-    hasMoved.current = true
-    setPos(clamp({ x: startPos.current.x + dx, y: startPos.current.y + dy }))
+    const endDrag = () => {
+      if (!dragging.current) return
+      dragging.current = false
+      if (hasMoved.current) {
+        setPos((p) => {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(p))
+          return p
+        })
+      } else {
+        onClickRef.current()
+      }
+    }
+
+    // --- Touch ---
+    const onTouchStart = (e: TouchEvent) => {
+      beginDrag(e.touches[0].clientX, e.touches[0].clientY)
+    }
+    const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault()
+      moveDrag(e.touches[0].clientX, e.touches[0].clientY)
+    }
+    const onTouchEnd = (e: TouchEvent) => {
+      // Prevent synthetic click from closing the modal backdrop instantly
+      if (!hasMoved.current) e.preventDefault()
+      endDrag()
+    }
+
+    // --- Mouse (desktop) ---
+    const onMouseDown = (e: MouseEvent) => {
+      e.preventDefault()
+      beginDrag(e.clientX, e.clientY)
+      const onMouseMove = (ev: MouseEvent) => moveDrag(ev.clientX, ev.clientY)
+      const onMouseUp = () => {
+        window.removeEventListener('mousemove', onMouseMove)
+        window.removeEventListener('mouseup', onMouseUp)
+        endDrag()
+      }
+      window.addEventListener('mousemove', onMouseMove)
+      window.addEventListener('mouseup', onMouseUp)
+    }
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true })
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    el.addEventListener('touchend', onTouchEnd)
+    el.addEventListener('mousedown', onMouseDown)
+
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchmove', onTouchMove)
+      el.removeEventListener('touchend', onTouchEnd)
+      el.removeEventListener('mousedown', onMouseDown)
+    }
   }, [])
-
-  const onPointerUp = useCallback((e: React.PointerEvent) => {
-    endDrag(e.clientX, e.clientY)
-  }, [endDrag])
-
-  const onPointerCancel = useCallback(() => {
-    // On mobile, pointercancel can fire instead of pointerup — treat as tap
-    if (dragging.current && !hasMoved.current) {
-      dragging.current = false
-      onClick()
-    } else {
-      dragging.current = false
-    }
-  }, [onClick])
 
   return (
     <button
       ref={fabRef}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerCancel}
       className="fixed z-50 flex items-center justify-center rounded-full border-none cursor-grab active:cursor-grabbing select-none"
       style={{
         left: pos.x,
@@ -109,7 +140,7 @@ function DraggableFab({ onClick }: { onClick: () => void }) {
       }}
       title="Calculateur"
     >
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }}>
         <rect x="4" y="2" width="16" height="20" rx="2" />
         <line x1="8" y1="6" x2="16" y2="6" />
         <line x1="8" y1="10" x2="10" y2="10" />
