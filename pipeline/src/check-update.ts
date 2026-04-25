@@ -61,8 +61,15 @@ export async function checkUpdate(): Promise<void> {
 
   console.log(`\n🆕 Nouvelle mise à jour détectée ! Lancement du pipeline...\n`)
 
-  console.log('━━━ Étape 1: Download ━━━')
-  await download()
+  try {
+    console.log('━━━ Étape 1: Download ━━━')
+    await download()
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error(`\n❌ Pipeline arrêté: ${msg}`)
+    process.exitCode = 1
+    return
+  }
 
   console.log('\n━━━ Étape 2: Parse ━━━')
   const result = await parseData()
@@ -74,7 +81,15 @@ export async function checkUpdate(): Promise<void> {
   }
 
   console.log('\n━━━ Étape 3: Validate ━━━')
-  validate(result)
+  const { valid, issues } = validate(result)
+  // Allow known issues (some datasheets legitimately have no points) but block if too many
+  const criticalIssues = issues.filter((i) => !i.includes("n'a pas d'options de points") && !i.includes("n'a aucune datasheet"))
+  if (criticalIssues.length > 0) {
+    console.error(`\n❌ Pipeline arrêté: ${criticalIssues.length} problème(s) critique(s) de validation`)
+    for (const issue of criticalIssues) console.error(`  - ${issue}`)
+    process.exitCode = 1
+    return
+  }
 
   console.log('\n━━━ Étape 4: Generate ━━━')
   await generate(result)

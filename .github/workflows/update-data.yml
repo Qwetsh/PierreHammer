@@ -24,6 +24,12 @@ jobs:
       - name: Install pipeline dependencies
         run: cd pipeline && npm ci
 
+      - name: Restore last-update cache
+        uses: actions/cache@v4
+        with:
+          path: pipeline/.last-update
+          key: wahapedia-last-update
+
       - name: Run data pipeline check
         run: cd pipeline && npm run check-update
 

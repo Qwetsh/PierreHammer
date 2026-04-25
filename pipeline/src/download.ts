@@ -71,6 +71,6 @@ export async function download(): Promise<void> {
   console.log(`\n📊 Résumé: ${successCount}/${total} fichiers téléchargés avec succès`)
 
   if (successCount < total) {
-    process.exitCode = 1
+    throw new Error(`${total - successCount} fichier(s) CSV n'ont pas pu être téléchargés`)
   }
 }
