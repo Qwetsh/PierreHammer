@@ -113,10 +113,13 @@ export async function generate(result: ParseResult): Promise<void> {
     console.log(`🖼️ ${imageCacheSize} image URLs chargées depuis le cache`)
   }
 
+  // Factions to exclude from output (not real playable armies)
+  const excludedFactions = new Set(['TL', 'UN', 'UA']) // Adeptus Titanicus, Unaligned Forces, Unbound Adversaries
+
   // Generate factions.json index (with representative image per faction)
   const factionsIndex = {
     lastUpdate,
-    factions: Array.from(result.factions.values()).map((f) => {
+    factions: Array.from(result.factions.values()).filter((f) => !excludedFactions.has(f.id)).map((f) => {
       // Find first datasheet with an image to use as faction banner
       const bannerImage = f.datasheetIds
         .map((id) => imageCache[id])
@@ -139,6 +142,7 @@ export async function generate(result: ParseResult): Promise<void> {
   let totalDatasheets = 0
 
   for (const faction of result.factions.values()) {
+    if (excludedFactions.has(faction.id)) continue
     const slug = toKebabCase(faction.name)
     const datasheets = faction.datasheetIds
       .map((id) => result.datasheets.get(id))

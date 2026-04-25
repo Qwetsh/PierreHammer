@@ -37,23 +37,11 @@
       "imageUrl": "https://static.wikia.nocookie.net/warhammer40k/images/0/0a/Eldrad_Ulthran-0.jpg/revision/latest/scale-to-width-down/400?cb=20160902185928"
     },
     {
-      "id": "TL",
-      "name": "Adeptus Titanicus",
-      "slug": "adeptus-titanicus",
-      "datasheetCount": 4
-    },
-    {
       "id": "ORK",
       "name": "Orks",
       "slug": "orks",
       "datasheetCount": 87,
       "imageUrl": "https://static.wikia.nocookie.net/warhammer40k/images/c/c5/DeathSkulls_Warboss.jpg/revision/latest/scale-to-width-down/400?cb=20140726045705"
-    },
-    {
-      "id": "UN",
-      "name": "Unaligned Forces",
-      "slug": "unaligned-forces",
-      "datasheetCount": 20
     },
     {
       "id": "GK",
@@ -173,12 +161,6 @@
       "slug": "drukhari",
       "datasheetCount": 47,
       "imageUrl": "https://static.wikia.nocookie.net/warhammer40k/images/b/b5/Dark_Eldar_Archon3.jpg/revision/latest/scale-to-width-down/400?cb=20110622042202"
-    },
-    {
-      "id": "UA",
-      "name": "Unbound Adversaries",
-      "slug": "unbound-adversaries",
-      "datasheetCount": 0
     }
   ]
 }
