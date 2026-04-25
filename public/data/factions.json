@@ -1,166 +1,184 @@
 {
-  "lastUpdate": "2026-04-01",
+  "lastUpdate": "2026-04-24 17:26:08",
   "factions": [
     {
-      "id": "imperial-agents",
+      "id": "AoI",
       "name": "Imperial Agents",
       "slug": "imperial-agents",
-      "datasheetCount": 45,
-      "imageUrl": "/PierreHammer/img/factions/imperial-agents-banner.webp"
+      "datasheetCount": 46,
+      "imageUrl": "https://static.wikia.nocookie.net/warhammer40k/images/4/47/Vindicare_Assassin_Takes_Aim.jpg/revision/latest/scale-to-width-down/400?cb=20150601191316"
     },
     {
-      "id": "astra-militarum",
+      "id": "AM",
       "name": "Astra Militarum",
       "slug": "astra-militarum",
-      "datasheetCount": 128,
-      "imageUrl": "/PierreHammer/img/factions/astra-militarum.jpg"
+      "datasheetCount": 133,
+      "imageUrl": "https://static.wikia.nocookie.net/warhammer40k/images/8/81/Primarca_Leman_Russ_2.jpg/revision/latest/scale-to-width-down/400?cb=20111205230352"
     },
     {
-      "id": "genestealer-cults",
+      "id": "GC",
       "name": "Genestealer Cults",
       "slug": "genestealer-cults",
       "datasheetCount": 136,
-      "imageUrl": "/PierreHammer/img/factions/genestealer-cults.jpg"
+      "imageUrl": "https://static.wikia.nocookie.net/warhammer40k/images/2/2d/PatriarchMini.jpg/revision/latest/scale-to-width-down/400?cb=20190217232102"
     },
     {
-      "id": "necrons",
+      "id": "NEC",
       "name": "Necrons",
       "slug": "necrons",
       "datasheetCount": 64,
-      "imageUrl": "/PierreHammer/img/factions/necrons.jpg"
+      "imageUrl": "https://static.wikia.nocookie.net/warhammer40k/images/b/b9/Immortal_Necron.jpg/revision/latest/scale-to-width-down/400?cb=20151004230127"
     },
     {
-      "id": "aeldari",
+      "id": "AE",
       "name": "Aeldari",
       "slug": "aeldari",
       "datasheetCount": 97,
-      "imageUrl": "/PierreHammer/img/factions/aeldari.jpg"
+      "imageUrl": "https://static.wikia.nocookie.net/warhammer40k/images/0/0a/Eldrad_Ulthran-0.jpg/revision/latest/scale-to-width-down/400?cb=20160902185928"
     },
     {
-      "id": "orks",
+      "id": "TL",
+      "name": "Adeptus Titanicus",
+      "slug": "adeptus-titanicus",
+      "datasheetCount": 4
+    },
+    {
+      "id": "ORK",
       "name": "Orks",
       "slug": "orks",
-      "datasheetCount": 86,
-      "imageUrl": "/PierreHammer/img/factions/orks.jpg"
+      "datasheetCount": 87,
+      "imageUrl": "https://static.wikia.nocookie.net/warhammer40k/images/c/c5/DeathSkulls_Warboss.jpg/revision/latest/scale-to-width-down/400?cb=20140726045705"
     },
     {
-      "id": "grey-knights",
+      "id": "UN",
+      "name": "Unaligned Forces",
+      "slug": "unaligned-forces",
+      "datasheetCount": 20
+    },
+    {
+      "id": "GK",
       "name": "Grey Knights",
       "slug": "grey-knights",
       "datasheetCount": 31,
-      "imageUrl": "/PierreHammer/img/factions/grey-knights.jpg"
+      "imageUrl": "https://static.wikia.nocookie.net/warhammer40k/images/8/84/KaldorDraigo01.jpg/revision/latest/scale-to-width-down/400?cb=20130817190221"
     },
     {
-      "id": "t-au-empire",
-      "name": "T'au Empire",
+      "id": "TAU",
+      "name": "T’au Empire",
       "slug": "t-au-empire",
       "datasheetCount": 63,
-      "imageUrl": "/PierreHammer/img/factions/t-au-empire.jpg"
+      "imageUrl": "https://static.wikia.nocookie.net/warhammer40k/images/1/13/Battlesuit1.JPG/revision/latest/scale-to-width-down/400?cb=20130609083051"
     },
     {
-      "id": "leagues-of-votann",
+      "id": "LoV",
       "name": "Leagues of Votann",
       "slug": "leagues-of-votann",
       "datasheetCount": 22,
-      "imageUrl": "/PierreHammer/img/factions/leagues-of-votann.jpg"
+      "imageUrl": "https://static.wikia.nocookie.net/warhammer40k/images/2/24/UthartheDestinedMini.jpg/revision/latest/scale-to-width-down/400?cb=20230206163854"
     },
     {
-      "id": "adeptus-mechanicus",
+      "id": "AdM",
       "name": "Adeptus Mechanicus",
       "slug": "adeptus-mechanicus",
-      "datasheetCount": 36,
-      "imageUrl": "/PierreHammer/img/factions/adeptus-mechanicus.jpg"
+      "datasheetCount": 39,
+      "imageUrl": "https://static.wikia.nocookie.net/warhammer40k/images/0/08/Archmagos_Dominus_Belisarius_Cawl.jpg/revision/latest/scale-to-width-down/400?cb=20170414203353"
     },
     {
-      "id": "thousand-sons",
+      "id": "TS",
       "name": "Thousand Sons",
       "slug": "thousand-sons",
       "datasheetCount": 60,
-      "imageUrl": "/PierreHammer/img/factions/thousand-sons.jpg"
+      "imageUrl": "https://static.wikia.nocookie.net/warhammer40k/images/c/c4/ChaiosSorcerer8thEditionMini.jpg/revision/latest/scale-to-width-down/400?cb=20191106213013"
     },
     {
-      "id": "death-guard",
+      "id": "DG",
       "name": "Death Guard",
       "slug": "death-guard",
       "datasheetCount": 71,
-      "imageUrl": "/PierreHammer/img/factions/death-guard.jpg"
+      "imageUrl": "https://static.wikia.nocookie.net/warhammer40k/images/2/2f/DeathGuardBadge.png/revision/latest/scale-to-width-down/400?cb=20190111222147"
     },
     {
-      "id": "emperor-s-children",
-      "name": "Emperor's Children",
+      "id": "EC",
+      "name": "Emperor’s Children",
       "slug": "emperor-s-children",
-      "datasheetCount": 22,
-      "imageUrl": "/PierreHammer/img/factions/emperor-s-children.png"
+      "datasheetCount": 23,
+      "imageUrl": "https://static.wikia.nocookie.net/warhammer40k/images/e/ed/DaemonPrimarchFulgrimMiniDetails.jpg/revision/latest/scale-to-width-down/400?cb=20241226180106"
     },
     {
-      "id": "world-eaters",
+      "id": "WE",
       "name": "World Eaters",
       "slug": "world-eaters",
       "datasheetCount": 58,
-      "imageUrl": "/PierreHammer/img/factions/world-eaters.jpg"
+      "imageUrl": "https://static.wikia.nocookie.net/warhammer40k/images/a/a7/AngronDaemonPrimarchDetailsMini.jpg/revision/latest/scale-to-width-down/400?cb=20241230175208"
     },
     {
-      "id": "chaos-knights",
+      "id": "QT",
       "name": "Chaos Knights",
       "slug": "chaos-knights",
       "datasheetCount": 37,
-      "imageUrl": "/PierreHammer/img/factions/chaos-knights.jpg"
+      "imageUrl": "https://static.wikia.nocookie.net/warhammer40k/images/3/31/Cerastus_Knight-Acheron_Crucible_of_Enlightenment.jpg/revision/latest/scale-to-width-down/400?cb=20150423200528"
     },
     {
-      "id": "chaos-daemons",
+      "id": "CD",
       "name": "Chaos Daemons",
       "slug": "chaos-daemons",
       "datasheetCount": 106,
-      "imageUrl": "/PierreHammer/img/factions/Chaosdemons.jpg"
+      "imageUrl": "https://static.wikia.nocookie.net/warhammer40k/images/c/c7/Karanak8thEd.jpg/revision/latest/scale-to-width-down/400?cb=20190228170758"
     },
     {
-      "id": "imperial-knights",
+      "id": "QI",
       "name": "Imperial Knights",
       "slug": "imperial-knights",
-      "datasheetCount": 27,
-      "imageUrl": "/PierreHammer/img/factions/Imperialknight.jpg"
+      "datasheetCount": 28,
+      "imageUrl": "https://static.wikia.nocookie.net/warhammer40k/images/5/56/KnightPaladinMini.jpg/revision/latest/scale-to-width-down/400?cb=20180619050537"
     },
     {
-      "id": "space-marines",
+      "id": "SM",
       "name": "Space Marines",
       "slug": "space-marines",
-      "datasheetCount": 299,
-      "imageUrl": "/PierreHammer/img/factions/space-marines.webp"
+      "datasheetCount": 298,
+      "imageUrl": "https://static.wikia.nocookie.net/warhammer40k/images/e/ec/ApothecaryBiologis.png/revision/latest/scale-to-width-down/400?cb=20230604183207"
     },
     {
-      "id": "tyranids",
+      "id": "TYR",
       "name": "Tyranids",
       "slug": "tyranids",
       "datasheetCount": 56,
-      "imageUrl": "/PierreHammer/img/factions/Tyranid.jpg"
+      "imageUrl": "https://static.wikia.nocookie.net/warhammer40k/images/3/36/Hive_Tyrant.jpg/revision/latest/scale-to-width-down/400?cb=20151005085613"
     },
     {
-      "id": "adeptus-custodes",
+      "id": "AC",
       "name": "Adeptus Custodes",
       "slug": "adeptus-custodes",
       "datasheetCount": 31,
-      "imageUrl": "/PierreHammer/img/factions/adeptus-custodes.jpg"
+      "imageUrl": "https://static.wikia.nocookie.net/warhammer40k/images/d/d5/CustodianGuard1.png/revision/latest/scale-to-width-down/400?cb=20180201040615"
     },
     {
-      "id": "adepta-sororitas",
+      "id": "AS",
       "name": "Adepta Sororitas",
       "slug": "adepta-sororitas",
-      "datasheetCount": 37,
-      "imageUrl": "/PierreHammer/img/factions/adepta-sororitas.jpg"
+      "datasheetCount": 38,
+      "imageUrl": "https://static.wikia.nocookie.net/warhammer40k/images/c/c1/Crusaders_SP.jpg/revision/latest/scale-to-width-down/400?cb=20160227230933"
     },
     {
-      "id": "chaos-space-marines",
+      "id": "CSM",
       "name": "Chaos Space Marines",
       "slug": "chaos-space-marines",
       "datasheetCount": 112,
-      "imageUrl": "/PierreHammer/img/factions/chaos-space-marines.jpg"
+      "imageUrl": "https://static.wikia.nocookie.net/warhammer40k/images/b/b6/Alpha-Rho-25_vs._Drach_nyen.jpg/revision/latest/scale-to-width-down/400?cb=20161225070612"
     },
     {
-      "id": "drukhari",
+      "id": "DRU",
       "name": "Drukhari",
       "slug": "drukhari",
       "datasheetCount": 47,
-      "imageUrl": "/PierreHammer/img/factions/drukhari.jpg"
+      "imageUrl": "https://static.wikia.nocookie.net/warhammer40k/images/b/b5/Dark_Eldar_Archon3.jpg/revision/latest/scale-to-width-down/400?cb=20110622042202"
+    },
+    {
+      "id": "UA",
+      "name": "Unbound Adversaries",
+      "slug": "unbound-adversaries",
+      "datasheetCount": 0
     }
   ]
 }

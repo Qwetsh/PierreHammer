@@ -41,8 +41,10 @@ async function parseCsvFile<T>(filename: string): Promise<T[]> {
           columns: true,
           skip_empty_lines: true,
           relax_column_count: true,
+          relax_quotes: true,
           trim: true,
           delimiter: '|',
+          bom: true,
         })
       )
       .on('data', (record: T) => records.push(record))
@@ -92,7 +94,7 @@ function parseWeapons(rawWargear: RawWargear[], datasheetId: string): Weapon[] {
       S: w.S,
       AP: w.AP,
       D: w.D,
-      abilities: w.abilities,
+      abilities: w.description,
     }))
 }
 
@@ -100,7 +102,7 @@ function parseAbilities(rawAbilities: RawAbility[], datasheetId: string): Abilit
   return rawAbilities
     .filter((a) => a.datasheet_id === datasheetId)
     .map((a) => ({
-      id: a.id,
+      id: a.ability_id,
       name: a.name,
       description: a.description,
       type: a.type,
@@ -123,7 +125,7 @@ function parsePointOptions(rawPoints: RawPoints[], datasheetId: string): PointOp
     .filter((p) => p.datasheet_id === datasheetId)
     .map((p) => ({
       cost: parseInt(p.cost, 10) || 0,
-      models: p.models,
+      models: p.description,
     }))
 }
 
@@ -155,24 +157,24 @@ export async function parseData(): Promise<ParseResult> {
     rawDatasheets = await parseCsvFile<RawDatasheet>('Datasheets.csv')
     console.log(`  ✅ ${rawDatasheets.length} datasheets`)
 
-    console.log('  Parsing Abilities.csv...')
-    rawAbilities = await parseCsvFile<RawAbility>('Abilities.csv')
+    console.log('  Parsing Datasheets_abilities.csv...')
+    rawAbilities = await parseCsvFile<RawAbility>('Datasheets_abilities.csv')
     console.log(`  ✅ ${rawAbilities.length} abilities`)
 
-    console.log('  Parsing Keywords.csv...')
-    rawKeywords = await parseCsvFile<RawKeyword>('Keywords.csv')
+    console.log('  Parsing Datasheets_keywords.csv...')
+    rawKeywords = await parseCsvFile<RawKeyword>('Datasheets_keywords.csv')
     console.log(`  ✅ ${rawKeywords.length} keywords`)
 
-    console.log('  Parsing Models.csv...')
-    rawModels = await parseCsvFile<RawModel>('Models.csv')
+    console.log('  Parsing Datasheets_models.csv...')
+    rawModels = await parseCsvFile<RawModel>('Datasheets_models.csv')
     console.log(`  ✅ ${rawModels.length} models`)
 
-    console.log('  Parsing Wargear.csv...')
-    rawWargear = await parseCsvFile<RawWargear>('Wargear.csv')
+    console.log('  Parsing Datasheets_wargear.csv...')
+    rawWargear = await parseCsvFile<RawWargear>('Datasheets_wargear.csv')
     console.log(`  ✅ ${rawWargear.length} wargear`)
 
-    console.log('  Parsing Datasheets_points.csv...')
-    rawPoints = await parseCsvFile<RawPoints>('Datasheets_points.csv')
+    console.log('  Parsing Datasheets_models_cost.csv...')
+    rawPoints = await parseCsvFile<RawPoints>('Datasheets_models_cost.csv')
     console.log(`  ✅ ${rawPoints.length} point options`)
 
     console.log('  Parsing Stratagems.csv...')
@@ -214,13 +216,13 @@ export async function parseData(): Promise<ParseResult> {
       factionId: raw.faction_id,
       sourceId: raw.source_id,
       role: raw.role,
-      unitComposition: raw.unit_composition,
+      unitComposition: '',
       transport: raw.transport,
-      leader: raw.leader,
+      leader: raw.leader_head,
       loadout: raw.loadout,
       keywords: parseKeywords(rawKeywords, raw.id),
       damagedDescription: raw.damaged_description,
-      damagedRange: raw.damaged_range,
+      damagedRange: raw.damaged_w,
       profiles: parseProfiles(rawModels, raw.id),
       weapons: parseWeapons(rawWargear, raw.id),
       abilities: parseAbilities(rawAbilities, raw.id),

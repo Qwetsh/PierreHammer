@@ -27,3 +27,4 @@ dist-ssr
 # Pipeline temp files
 pipeline/csv/
 pipeline/node_modules/
+pipeline/.last-update

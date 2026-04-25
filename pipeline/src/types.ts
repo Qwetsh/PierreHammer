@@ -10,19 +10,23 @@ export interface RawDatasheet {
   name: string
   faction_id: string
   source_id: string
+  legend: string
   role: string
-  unit_composition: string
-  transport: string
-  leader: string
   loadout: string
-  keywords: string
+  transport: string
+  virtual: string
+  leader_head: string
+  leader_footer: string
+  damaged_w: string
   damaged_description: string
-  damaged_range: string
+  link: string
 }
 
 export interface RawAbility {
-  id: string
   datasheet_id: string
+  line: string
+  ability_id: string
+  model: string
   name: string
   description: string
   type: string
@@ -53,21 +57,24 @@ export interface RawModel {
 export interface RawWargear {
   datasheet_id: string
   line: string
+  line_in_wargear: string
+  dice: string
   name: string
-  type: string
+  description: string
   range: string
+  type: string
   A: string
   BS_WS: string
   S: string
   AP: string
   D: string
-  abilities: string
 }
 
 export interface RawPoints {
   datasheet_id: string
+  line: string
+  description: string
   cost: string
-  models: string
 }
 
 export interface RawStratagem {

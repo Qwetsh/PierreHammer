@@ -8,7 +8,7 @@ import { validate } from './validate.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const LAST_UPDATE_FILE = join(__dirname, '..', '.last-update')
-const REMOTE_URL = 'https://wahapedia.ru/wh40k10ed/TheData/Last_update.csv'
+const REMOTE_URL = 'https://wahapedia.ru/wh40k10ed/Last_update.csv'
 
 async function getLocalDate(): Promise<string | null> {
   try {
