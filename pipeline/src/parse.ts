@@ -5,6 +5,7 @@ import { parse as csvParse } from 'csv-parse'
 import type {
   RawFaction,
   RawDatasheet,
+  RawAbilityDef,
   RawAbility,
   RawKeyword,
   RawModel,
@@ -98,16 +99,20 @@ function parseWeapons(rawWargear: RawWargear[], datasheetId: string): Weapon[] {
     }))
 }
 
-function parseAbilities(rawAbilities: RawAbility[], datasheetId: string): Ability[] {
+function parseAbilities(rawAbilities: RawAbility[], datasheetId: string, abilityDefs: Map<string, RawAbilityDef>): Ability[] {
   return rawAbilities
     .filter((a) => a.datasheet_id === datasheetId)
-    .map((a) => ({
-      id: a.ability_id,
-      name: a.name,
-      description: a.description,
-      type: a.type,
-      parameter: a.parameter,
-    }))
+    .map((a) => {
+      // Resolve ability name/description from global definitions when referenced by ID
+      const def = a.ability_id ? abilityDefs.get(a.ability_id) : undefined
+      return {
+        id: a.ability_id,
+        name: a.name || def?.name || '',
+        description: a.description || def?.description || '',
+        type: a.type,
+        parameter: a.parameter,
+      }
+    })
 }
 
 function parseKeywords(rawKeywords: RawKeyword[], datasheetId: string): Keyword[] {
@@ -139,6 +144,7 @@ export async function parseData(): Promise<ParseResult> {
   // Parse all CSV files
   let rawFactions: RawFaction[]
   let rawDatasheets: RawDatasheet[]
+  let rawAbilityDefs: RawAbilityDef[]
   let rawAbilities: RawAbility[]
   let rawKeywords: RawKeyword[]
   let rawModels: RawModel[]
@@ -156,6 +162,10 @@ export async function parseData(): Promise<ParseResult> {
     console.log('  Parsing Datasheets.csv...')
     rawDatasheets = await parseCsvFile<RawDatasheet>('Datasheets.csv')
     console.log(`  ✅ ${rawDatasheets.length} datasheets`)
+
+    console.log('  Parsing Abilities.csv...')
+    rawAbilityDefs = await parseCsvFile<RawAbilityDef>('Abilities.csv')
+    console.log(`  ✅ ${rawAbilityDefs.length} ability definitions`)
 
     console.log('  Parsing Datasheets_abilities.csv...')
     rawAbilities = await parseCsvFile<RawAbility>('Datasheets_abilities.csv')
@@ -198,6 +208,12 @@ export async function parseData(): Promise<ParseResult> {
   // Build faction map
   const factions = parseFactions(rawFactions)
 
+  // Build ability definitions lookup
+  const abilityDefs = new Map<string, RawAbilityDef>()
+  for (const def of rawAbilityDefs) {
+    abilityDefs.set(def.id, def)
+  }
+
   // Build datasheet map with linked entities
   const datasheets = new Map<string, Datasheet>()
   console.log('\n🔗 Liaison des entités...')
@@ -225,7 +241,7 @@ export async function parseData(): Promise<ParseResult> {
       damagedRange: raw.damaged_w,
       profiles: parseProfiles(rawModels, raw.id),
       weapons: parseWeapons(rawWargear, raw.id),
-      abilities: parseAbilities(rawAbilities, raw.id),
+      abilities: parseAbilities(rawAbilities, raw.id, abilityDefs),
       pointOptions: parsePointOptions(rawPoints, raw.id),
     }
 

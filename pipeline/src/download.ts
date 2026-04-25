@@ -7,6 +7,7 @@ const BASE_URL = 'https://wahapedia.ru/wh40k10ed'
 const CSV_FILES = [
   'Factions.csv',
   'Datasheets.csv',
+  'Abilities.csv',
   'Datasheets_abilities.csv',
   'Datasheets_keywords.csv',
   'Datasheets_models.csv',

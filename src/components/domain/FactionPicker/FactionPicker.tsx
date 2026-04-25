@@ -52,15 +52,32 @@ const factionThemes: Record<string, FactionTheme> = {
 
 const defaultTheme: FactionTheme = { primary: '#4a6fa5', accent: '#4fd4ff', surface: '#1a1a2e', tag: '???' }
 
-function FactionImage({ url, name }: { url: string; name: string }) {
+const localImageOverrides: Record<string, string> = {
+  'tyranids': 'Tyranid.jpg',
+  'chaos-daemons': 'Chaosdemons.jpg',
+  'imperial-knights': 'Imperialknight.jpg',
+  'imperial-agents': 'imperial-agents-banner.webp',
+  'space-marines': 'space-marines.webp',
+  'emperor-s-children': 'emperor-s-children.png',
+}
+
+function FactionImage({ slug, fallbackUrl, name }: { slug: string; fallbackUrl?: string; name: string }) {
+  const filename = localImageOverrides[slug] ?? `${slug}.jpg`
+  const [src, setSrc] = useState(`${import.meta.env.BASE_URL}img/factions/${filename}`)
   const [error, setError] = useState(false)
   if (error) return null
   return (
     <img
-      src={url}
+      src={src}
       alt={name}
       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-      onError={() => setError(true)}
+      onError={() => {
+        if (fallbackUrl && src !== fallbackUrl) {
+          setSrc(fallbackUrl)
+        } else {
+          setError(true)
+        }
+      }}
       loading="lazy"
     />
   )
@@ -133,7 +150,7 @@ export function FactionPicker({
                       linear-gradient(180deg, #0a121c 0%, #05080e 100%)`,
                   }}>
                     {/* Faction photo */}
-                    {faction.imageUrl && <FactionImage url={faction.imageUrl} name={faction.name} />}
+                    <FactionImage slug={faction.slug} fallbackUrl={faction.imageUrl} name={faction.name} />
 
                     {/* Scanlines overlay */}
                     <div style={{

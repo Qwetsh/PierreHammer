@@ -22,6 +22,14 @@ export interface RawDatasheet {
   link: string
 }
 
+export interface RawAbilityDef {
+  id: string
+  name: string
+  legend: string
+  faction_id: string
+  description: string
+}
+
 export interface RawAbility {
   datasheet_id: string
   line: string
