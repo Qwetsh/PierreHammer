@@ -87,7 +87,7 @@ export function DashboardPage() {
   // Points changes from last update (no expiration — always show last known diffs)
   const diffs = usePointsHistoryStore((s) => s.diffs)
   const { pointsChanges, pointsChangesDate } = useMemo(() => {
-    const changes: { id: string; name: string; factionName: string; delta: number }[] = []
+    const changes: { id: string; name: string; factionName: string; factionSlug: string; delta: number }[] = []
     let latestDate: string | null = null
     for (const [slug, diff] of Object.entries(diffs)) {
       if (!latestDate || diff.detectedAt > latestDate) latestDate = diff.detectedAt
@@ -96,7 +96,7 @@ export function DashboardPage() {
         const ds = faction?.datasheets?.find((d) => d.id === unitId)
         const name = ds?.name ?? unitId.substring(0, 20)
         const factionName = faction?.name ?? slug
-        changes.push({ id: unitId, name, factionName, delta })
+        changes.push({ id: unitId, name, factionName, factionSlug: slug, delta })
       }
     }
     changes.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
@@ -217,12 +217,14 @@ export function DashboardPage() {
               {pointsChanges.slice(0, 8).map((c) => (
                 <div
                   key={c.id}
+                  onClick={() => navigate(`/catalog/${c.factionSlug}/${c.id}`)}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     padding: '8px 12px',
                     borderBottom: '1px solid var(--color-border)',
                     gap: 8,
+                    cursor: 'pointer',
                   }}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -441,12 +443,14 @@ export function DashboardPage() {
                 {pointsChanges.slice(0, 10).map((c) => (
                   <div
                     key={c.id}
+                    onClick={() => navigate(`/catalog/${c.factionSlug}/${c.id}`)}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       padding: '8px 12px',
                       borderBottom: '1px solid var(--color-border)',
                       gap: 8,
+                      cursor: 'pointer',
                     }}
                   >
                     <div style={{ flex: 1, minWidth: 0 }}>

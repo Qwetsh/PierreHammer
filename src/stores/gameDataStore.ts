@@ -53,10 +53,7 @@ export const useGameDataStore = create<GameDataState>((set, get) => ({
   },
 
   loadFaction: async (slug: string) => {
-    if (get().loadedFactions[slug]) {
-      set({ selectedFactionSlug: slug })
-      return
-    }
+    if (get().loadedFactions[slug]) return
     if (get().failedFactions.has(slug) || get().loadingFactions.has(slug)) return
     set((state) => ({
       loadingFactions: new Set(state.loadingFactions).add(slug),
@@ -70,7 +67,6 @@ export const useGameDataStore = create<GameDataState>((set, get) => ({
         loading.delete(slug)
         return {
           loadedFactions: { ...state.loadedFactions, [slug]: faction },
-          selectedFactionSlug: slug,
           loadingFactions: loading,
         }
       })

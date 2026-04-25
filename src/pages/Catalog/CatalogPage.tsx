@@ -78,8 +78,9 @@ export function CatalogPage() {
     if (!hasAutoLoaded.current && favoriteFactionSlug && factionIndex && !selectedFactionSlug) {
       hasAutoLoaded.current = true
       loadFaction(favoriteFactionSlug)
+      selectFaction(favoriteFactionSlug)
     }
-  }, [favoriteFactionSlug, factionIndex, selectedFactionSlug, loadFaction])
+  }, [favoriteFactionSlug, factionIndex, selectedFactionSlug, loadFaction, selectFaction])
 
   const datasheets = selectedFaction?.datasheets ?? []
 
@@ -194,7 +195,7 @@ export function CatalogPage() {
               </span>
             }
           />
-          <FactionPicker factions={factionIndex.factions} onSelect={(slug) => { if (slug) loadFaction(slug) }} />
+          <FactionPicker factions={factionIndex.factions} onSelect={(slug) => { if (slug) { loadFaction(slug); selectFaction(slug) } }} />
         </div>
         {/* Mobile */}
         <div className="lg:hidden">
@@ -209,7 +210,7 @@ export function CatalogPage() {
               ) : undefined
             }
           />
-          <FactionPicker factions={factionIndex.factions} onSelect={(slug) => { if (slug) loadFaction(slug) }} />
+          <FactionPicker factions={factionIndex.factions} onSelect={(slug) => { if (slug) { loadFaction(slug); selectFaction(slug) } }} />
         </div>
       </>
     )

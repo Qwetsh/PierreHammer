@@ -14,6 +14,9 @@ import { HudPill } from '@/components/ui/Hud'
 import { T } from '@/components/ui/TranslatableText'
 import type { Weapon, Datasheet, Detachment, Enhancement, Faction } from '@/types/gameData.types'
 import type { CombatResult, AbilityEffect } from '@/types/combat.types'
+import { buildExplanations, type NamedEffect } from '@/utils/combatExplainer'
+import { getKeywordDescription } from '@/utils/keywordDescriptions'
+import { StepExplainer } from './StepExplainer'
 
 function mergeEffects(a: AbilityEffect, b: AbilityEffect): AbilityEffect {
   return {
@@ -160,6 +163,39 @@ export function InlineSimulator({ attackerDatasheet, attackerFaction, attackerFa
   const weaponKeywords = weapon ? parseWeaponKeywords(weapon.abilities) : null
   const weaponType: 'ranged' | 'melee' = weapon?.type === 'Melee' || weapon?.range === 'Melee' ? 'melee' : 'ranged'
 
+  const explanations = useMemo(() => {
+    if (!result || !weapon || !defender.datasheet) return null
+    const ap = attackerDatasheet.profiles[0]
+    const dp = defender.datasheet.profiles[0]
+    if (!ap || !dp || !weaponKeywords) return null
+
+    const atkSources: NamedEffect[] = [{ source: 'Capacites', effects: extractCombatEffects(attackerDatasheet) }]
+    if (attackerEnhancement) atkSources.push({ source: attackerEnhancement.name, effects: extractEnhancementEffects(attackerEnhancement) })
+    for (const strat of attackerStratagems) {
+      if (activeAttackerStrats.has(strat.id)) {
+        const eff = parseStratagemEffect(strat)
+        if (eff) atkSources.push({ source: strat.name, effects: eff })
+      }
+    }
+
+    const defSources: NamedEffect[] = []
+    if (defender.datasheet) defSources.push({ source: 'Capacites', effects: extractCombatEffects(defender.datasheet) })
+    if (defender.enhancement) defSources.push({ source: defender.enhancement.name, effects: extractEnhancementEffects(defender.enhancement) })
+    for (const strat of defenderStratagems) {
+      if (activeDefenderStrats.has(strat.id)) {
+        const eff = parseStratagemEffect(strat)
+        if (eff) defSources.push({ source: strat.name, effects: eff })
+      }
+    }
+
+    return buildExplanations({
+      weapon, weaponKeywords, attackerCount: modelCount,
+      defenderCount: defender.modelCount, attackerProfile: ap, defenderProfile: dp,
+      attackerEffects, defenderEffects, result, halfRange, charged, stationary, inCover,
+      attackerSources: atkSources, defenderSources: defSources,
+    })
+  }, [result, weapon, attackerDatasheet, defender, modelCount, weaponKeywords, attackerEffects, defenderEffects, halfRange, charged, stationary, inCover, attackerEnhancement, attackerStratagems, activeAttackerStrats, defenderStratagems, activeDefenderStrats])
+
   const filteredAttackerStrats = attackerStratagems.filter((s) => isStratagemRelevant(s, weaponType))
   const filteredDefenderStrats = defenderStratagems.filter((s) => isStratagemRelevant(s, weaponType))
 
@@ -216,8 +252,15 @@ export function InlineSimulator({ attackerDatasheet, attackerFaction, attackerFa
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
         {/* Attacker header */}
         <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', padding: 12 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)', marginBottom: 4 }}>
-            <T text={attackerDatasheet.name} category="unit" />
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)' }}>
+              <T text={attackerDatasheet.name} category="unit" />
+            </div>
+            {attackerDatasheet.pointOptions[0] && (
+              <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--color-accent)', fontWeight: 600 }}>
+                {attackerDatasheet.pointOptions[0].cost} pts
+              </span>
+            )}
           </div>
           <div style={{ fontSize: 10, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>
             <T text={attackerFaction.name} category="faction" />
@@ -323,8 +366,15 @@ export function InlineSimulator({ attackerDatasheet, attackerFaction, attackerFa
               </>
             ) : (
               <>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)', marginBottom: 4 }}>
-                  <T text={defender.datasheet.name} category="unit" />
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)' }}>
+                    <T text={defender.datasheet.name} category="unit" />
+                  </div>
+                  {defender.datasheet.pointOptions[0] && (
+                    <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--color-error, #ef4444)', fontWeight: 600 }}>
+                      {defender.datasheet.pointOptions[0].cost} pts
+                    </span>
+                  )}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ fontSize: 10, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>
@@ -399,7 +449,15 @@ export function InlineSimulator({ attackerDatasheet, attackerFaction, attackerFa
           </button>
           {activeKeywords.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
-              {activeKeywords.map((kw) => <HudPill key={kw}>{kw}</HudPill>)}
+              {activeKeywords.map((kw) => {
+                const desc = getKeywordDescription(kw)
+                if (desc.length === 0) return <HudPill key={kw}>{kw}</HudPill>
+                return (
+                  <StepExplainer key={kw} lines={desc} color="var(--color-accent)" inline>
+                    <HudPill>{kw}</HudPill>
+                  </StepExplainer>
+                )
+              })}
             </div>
           )}
         </div>
@@ -602,69 +660,79 @@ export function InlineSimulator({ attackerDatasheet, attackerFaction, attackerFa
             </div>
             <div style={{ display: 'flex', background: 'var(--color-surface)', border: '1px solid var(--color-border)', alignItems: 'stretch' }}>
               {/* Attaques */}
-              <div style={stepStyle}>
-                <div style={labelStyle}>Attaques</div>
-                <div style={valueStyle('var(--color-text)')}>{round(result.attacksTotal)}</div>
-                <div style={detailStyle}>{modelCount} moy.</div>
-                <div style={barBg}>
-                  <div style={{ height: '100%', width: '100%', background: 'var(--color-text-muted)' }} />
+              <StepExplainer lines={explanations?.attacks.lines ?? []} color="var(--color-text-muted)" align="left">
+                <div style={stepStyle}>
+                  <div style={labelStyle}>Attaques</div>
+                  <div style={valueStyle('var(--color-text)')}>{round(result.attacksTotal)}</div>
+                  <div style={detailStyle}>{modelCount} moy.</div>
+                  <div style={barBg}>
+                    <div style={{ height: '100%', width: '100%', background: 'var(--color-text-muted)' }} />
+                  </div>
                 </div>
-              </div>
+              </StepExplainer>
 
               <div style={separatorStyle} />
               <div style={arrowStyle}>{'\u25b8'}</div>
 
               {/* Touches */}
-              <div style={stepStyle}>
-                <div style={labelStyle}>Touches</div>
-                <div style={valueStyle('#22d3ee')}>{round(result.hitsExpected)}</div>
-                <div style={detailStyle}>{result.steps.hitThreshold > 0 ? `${result.steps.hitThreshold}+` : 'auto'} · {hitPct}%</div>
-                <div style={barBg}>
-                  <div style={{ height: '100%', width: `${hitPct}%`, background: '#22d3ee', transition: 'width 0.3s' }} />
+              <StepExplainer lines={explanations?.hits.lines ?? []} color="#22d3ee">
+                <div style={stepStyle}>
+                  <div style={labelStyle}>Touches</div>
+                  <div style={valueStyle('#22d3ee')}>{round(result.hitsExpected)}</div>
+                  <div style={detailStyle}>{result.steps.hitThreshold > 0 ? `${result.steps.hitThreshold}+` : 'auto'} · {hitPct}%</div>
+                  <div style={barBg}>
+                    <div style={{ height: '100%', width: `${hitPct}%`, background: '#22d3ee', transition: 'width 0.3s' }} />
+                  </div>
                 </div>
-              </div>
+              </StepExplainer>
 
               <div style={separatorStyle} />
               <div style={arrowStyle}>{'\u25b8'}</div>
 
               {/* Blessures */}
-              <div style={stepStyle}>
-                <div style={labelStyle}>Blessures</div>
-                <div style={valueStyle('#fbbf24')}>{round(result.woundsExpected)}</div>
-                <div style={detailStyle}>{result.steps.woundThreshold}+ · {woundPct}%</div>
-                <div style={barBg}>
-                  <div style={{ height: '100%', width: `${woundPct}%`, background: '#fbbf24', transition: 'width 0.3s' }} />
+              <StepExplainer lines={explanations?.wounds.lines ?? []} color="#fbbf24">
+                <div style={stepStyle}>
+                  <div style={labelStyle}>Blessures</div>
+                  <div style={valueStyle('#fbbf24')}>{round(result.woundsExpected)}</div>
+                  <div style={detailStyle}>{result.steps.woundThreshold}+ · {woundPct}%</div>
+                  <div style={barBg}>
+                    <div style={{ height: '100%', width: `${woundPct}%`, background: '#fbbf24', transition: 'width 0.3s' }} />
+                  </div>
                 </div>
-              </div>
+              </StepExplainer>
 
               <div style={separatorStyle} />
               <div style={arrowStyle}>{'\u25b8'}</div>
 
               {/* Non sauvées */}
-              <div style={stepStyle}>
-                <div style={labelStyle}>Non sauvées</div>
-                <div style={valueStyle('#f472b6')}>{round(result.unsavedWounds)}</div>
-                <div style={detailStyle}>{result.steps.usedInvuln ? 'inv' : 'sv'}{result.steps.saveThreshold}+ · {savePct}%</div>
-                <div style={barBg}>
-                  <div style={{ height: '100%', width: `${savePct}%`, background: '#f472b6', transition: 'width 0.3s' }} />
+              <StepExplainer lines={explanations?.saves.lines ?? []} color="#f472b6">
+                <div style={stepStyle}>
+                  <div style={labelStyle}>Non sauvées</div>
+                  <div style={valueStyle('#f472b6')}>{round(result.unsavedWounds)}</div>
+                  <div style={detailStyle}>{result.steps.usedInvuln ? 'inv' : 'sv'}{result.steps.saveThreshold}+ · {savePct}%</div>
+                  <div style={barBg}>
+                    <div style={{ height: '100%', width: `${savePct}%`, background: '#f472b6', transition: 'width 0.3s' }} />
+                  </div>
                 </div>
-              </div>
+              </StepExplainer>
 
               <div style={separatorStyle} />
               <div style={arrowStyle}>{'\u25b8'}</div>
 
               {/* Dégâts */}
-              <div style={stepStyle}>
-                <div style={labelStyle}>Dégâts</div>
-                <div style={valueStyle('#f472b6')}>{round(finalDmg)}</div>
-                <div style={detailStyle}>
-                  × {result.steps.avgDamagePerWound} dmg
-                  {result.steps.fnpThreshold ? ` · FnP ${result.steps.fnpThreshold}+` : ''}
+              <StepExplainer lines={explanations?.damage.lines ?? []} color="#f472b6">
+                <div style={stepStyle}>
+                  <div style={labelStyle}>Dégâts</div>
+                  <div style={valueStyle('#f472b6')}>{round(finalDmg)}</div>
+                  <div style={detailStyle}>
+                    × {result.steps.avgDamagePerWound} dmg
+                    {result.steps.fnpThreshold ? ` · FnP ${result.steps.fnpThreshold}+` : ''}
+                  </div>
+                  <div style={barBg}>
+                    <div style={{ height: '100%', width: '100%', background: '#f472b6', transition: 'width 0.3s' }} />
+                  </div>
                 </div>
-                <div style={barBg}>
-                  <div style={{ height: '100%', width: '100%', background: '#f472b6', transition: 'width 0.3s' }} />
-                </div>
-              </div>
+              </StepExplainer>
 
               {/* = separator */}
               <div style={{ display: 'flex', alignItems: 'center', padding: '0 8px', fontSize: 18, color: 'var(--color-text-muted)', fontWeight: 300 }}>=</div>

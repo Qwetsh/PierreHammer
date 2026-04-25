@@ -148,11 +148,18 @@ export function SimulatorCard({
               className="rounded-lg p-2.5 flex-1 flex flex-col gap-2"
               style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}
             >
-              {/* Unit name + change */}
+              {/* Unit name + points + change */}
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium truncate lg:text-base" style={{ color: 'var(--color-text)' }}>
-                  <T text={datasheet.name} category="unit" />
-                </span>
+                <div className="flex items-baseline gap-1.5 min-w-0">
+                  <span className="text-sm font-medium truncate lg:text-base" style={{ color: 'var(--color-text)' }}>
+                    <T text={datasheet.name} category="unit" />
+                  </span>
+                  {datasheet.pointOptions[0] && (
+                    <span className="text-[10px] shrink-0 lg:text-xs" style={{ fontFamily: 'var(--font-mono)', color: theme!.accent, fontWeight: 600 }}>
+                      {datasheet.pointOptions[0].cost}pts
+                    </span>
+                  )}
+                </div>
                 <button
                   className="text-[10px] bg-transparent border-none cursor-pointer shrink-0 lg:text-xs"
                   style={{ color: theme!.accent }}
