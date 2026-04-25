@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useExportImport } from '@/hooks/useExportImport'
 import { useCollectionStore } from '@/stores/collectionStore'
@@ -12,7 +12,7 @@ import { isSupabaseConfigured } from '@/lib/supabase'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import { HudTopBar, HudPanel, HudStat, HudBtn, MTopBar, MSection } from '@/components/ui/Hud'
-import { useAchievements } from '@/hooks/useAchievements'
+import { useAchievements, type Achievement, type AchievementCategory } from '@/hooks/useAchievements'
 import { useGameDataStore } from '@/stores/gameDataStore'
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_-]{3,20}$/
@@ -243,28 +243,210 @@ function AuthSection() {
   )
 }
 
-function AchievementsGrid() {
-  const achievements = useAchievements()
+function BadgeTooltip({ achievement, anchorRef, onClose }: { achievement: Achievement; anchorRef: React.RefObject<HTMLDivElement | null>; onClose: () => void }) {
+  const tooltipRef = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+
+  useEffect(() => {
+    const anchor = anchorRef.current
+    const tooltip = tooltipRef.current
+    if (!anchor || !tooltip) return
+
+    const anchorRect = anchor.getBoundingClientRect()
+    const tooltipRect = tooltip.getBoundingClientRect()
+    const pad = 8
+
+    // Try above, then below
+    let top = anchorRect.top - tooltipRect.height - 6
+    if (top < pad) top = anchorRect.bottom + 6
+
+    // Center horizontally, clamp to viewport
+    let left = anchorRect.left + anchorRect.width / 2 - tooltipRect.width / 2
+    left = Math.max(pad, Math.min(left, window.innerWidth - tooltipRect.width - pad))
+
+    setPos({ top, left })
+  }, [anchorRef])
+
+  // Close on outside click/touch
+  useEffect(() => {
+    const handler = (e: MouseEvent | TouchEvent) => {
+      if (tooltipRef.current && !tooltipRef.current.contains(e.target as Node) && anchorRef.current && !anchorRef.current.contains(e.target as Node)) {
+        onClose()
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    document.addEventListener('touchstart', handler)
+    return () => {
+      document.removeEventListener('mousedown', handler)
+      document.removeEventListener('touchstart', handler)
+    }
+  }, [onClose, anchorRef])
+
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-      {achievements.map((a) => (
-        <div
-          key={a.id}
-          style={{
-            border: `1px solid ${a.unlocked ? 'var(--color-accent)' : 'var(--color-border)'}`,
-            background: a.unlocked ? 'color-mix(in srgb, var(--color-accent) 6%, transparent)' : 'var(--color-surface)',
-            padding: '10px 6px',
-            textAlign: 'center',
-            opacity: a.unlocked ? 1 : 0.4,
-          }}
-        >
-          <div style={{ fontSize: 20, lineHeight: 1 }}>{a.icon}</div>
-          <div style={{ fontSize: 8, fontFamily: 'var(--font-mono)', color: a.unlocked ? 'var(--color-accent)' : 'var(--color-text-muted)', letterSpacing: 0.5, marginTop: 4, textTransform: 'uppercase' }}>
-            {a.label}
+    <div
+      ref={tooltipRef}
+      style={{
+        position: 'fixed',
+        top: pos?.top ?? -9999,
+        left: pos?.left ?? -9999,
+        zIndex: 100,
+        background: 'var(--color-surface)',
+        border: `1px solid ${achievement.unlocked ? 'var(--color-accent)' : 'var(--color-border)'}`,
+        padding: '8px 12px',
+        maxWidth: 220,
+        pointerEvents: 'auto',
+        opacity: pos ? 1 : 0,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+        <span style={{ fontSize: 16 }}>{achievement.icon}</span>
+        <span style={{ fontSize: 11, fontWeight: 600, color: achievement.unlocked ? 'var(--color-accent)' : 'var(--color-text)', fontFamily: 'var(--font-mono)' }}>
+          {achievement.label}
+        </span>
+      </div>
+      <div style={{ fontSize: 10, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)', lineHeight: 1.4 }}>
+        {achievement.description}
+      </div>
+      {achievement.target > 1 && (
+        <div style={{ marginTop: 6 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+            <span style={{ fontSize: 8, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>
+              {achievement.current}/{achievement.target}
+            </span>
+            <span style={{ fontSize: 8, color: achievement.unlocked ? 'var(--color-success)' : 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>
+              {Math.round((achievement.current / achievement.target) * 100)}%
+            </span>
+          </div>
+          <div style={{ height: 4, background: 'var(--color-bg-input)', border: '1px solid var(--color-border)' }}>
+            <div style={{
+              height: '100%',
+              width: `${Math.round((achievement.current / achievement.target) * 100)}%`,
+              background: achievement.unlocked ? 'var(--color-success)' : CATEGORY_META[achievement.category].color,
+              backgroundImage: achievement.unlocked
+                ? undefined
+                : `repeating-linear-gradient(90deg, ${CATEGORY_META[achievement.category].color} 0 3px, rgba(0,0,0,0.25) 3px 4px)`,
+            }} />
           </div>
         </div>
-      ))}
+      )}
+      {achievement.unlocked && achievement.target <= 1 && (
+        <div style={{ fontSize: 8, color: 'var(--color-success)', fontFamily: 'var(--font-mono)', marginTop: 4, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+          Débloqué
+        </div>
+      )}
     </div>
+  )
+}
+
+const CATEGORY_META: Record<Achievement['category'], { label: string; color: string }> = {
+  paint: { label: 'Peinture', color: 'var(--color-success)' },
+  collection: { label: 'Collection', color: 'var(--color-accent)' },
+  factions: { label: 'Factions', color: 'var(--color-warning)' },
+  lists: { label: 'Listes', color: 'var(--color-magenta)' },
+  social: { label: 'Social', color: 'var(--color-gold)' },
+}
+
+function AchievementsGrid() {
+  const achievements = useAchievements()
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const badgeRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const hoverTimeout = useRef<ReturnType<typeof setTimeout>>(null)
+
+  const handleClose = useCallback(() => setActiveId(null), [])
+
+  const activeAchievement = activeId ? achievements.find((a) => a.id === activeId) : null
+
+  // Group by category preserving order
+  const groups = useMemo(() => {
+    const ordered: AchievementCategory[] = ['paint', 'collection', 'factions', 'lists', 'social']
+    return ordered
+      .map((cat) => ({ category: cat, ...CATEGORY_META[cat], items: achievements.filter((a) => a.category === cat) }))
+      .filter((g) => g.items.length > 0)
+  }, [achievements])
+
+  return (
+    <>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {groups.map((group) => {
+          const done = group.items.filter((a) => a.unlocked).length
+          return (
+            <div key={group.category}>
+              {/* Category header */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <span style={{ width: 3, height: 14, background: group.color, flexShrink: 0 }} />
+                <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: group.color, letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: 600 }}>
+                  {group.label}
+                </span>
+                <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)' }}>
+                  {done}/{group.items.length}
+                </span>
+                <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
+              </div>
+              {/* Badges row */}
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(group.items.length, 3)}, 1fr)`, gap: 8 }}>
+                {group.items.map((a) => {
+                  const progressPct = a.target > 1 ? Math.round((a.current / a.target) * 100) : 0
+                  const catColor = group.color
+                  return (
+                    <div
+                      key={a.id}
+                      ref={(el) => { badgeRefs.current[a.id] = el }}
+                      onClick={() => setActiveId(activeId === a.id ? null : a.id)}
+                      onMouseEnter={() => {
+                        hoverTimeout.current = setTimeout(() => setActiveId(a.id), 200)
+                      }}
+                      onMouseLeave={() => {
+                        if (hoverTimeout.current) clearTimeout(hoverTimeout.current)
+                        setActiveId(null)
+                      }}
+                      style={{
+                        borderLeft: `3px solid ${a.unlocked ? catColor : 'var(--color-border)'}`,
+                        border: `1px solid ${a.unlocked ? catColor : 'var(--color-border)'}`,
+                        borderLeftWidth: 3,
+                        background: a.unlocked ? `color-mix(in srgb, ${catColor} 6%, transparent)` : 'var(--color-surface)',
+                        padding: '10px 6px 8px',
+                        textAlign: 'center',
+                        opacity: a.unlocked ? 1 : 0.5,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <div style={{ fontSize: 20, lineHeight: 1 }}>{a.icon}</div>
+                      <div style={{ fontSize: 8, fontFamily: 'var(--font-mono)', color: a.unlocked ? catColor : 'var(--color-text-muted)', letterSpacing: 0.5, marginTop: 4, textTransform: 'uppercase' }}>
+                        {a.label}
+                      </div>
+                      {a.target > 1 && (
+                        <div style={{ marginTop: 6, padding: '0 4px' }}>
+                          <div style={{ height: 4, background: 'var(--color-bg-input)', border: '1px solid var(--color-border)' }}>
+                            <div style={{
+                              height: '100%',
+                              width: `${progressPct}%`,
+                              background: a.unlocked ? catColor : catColor,
+                              backgroundImage: a.unlocked
+                                ? undefined
+                                : `repeating-linear-gradient(90deg, ${catColor} 0 3px, rgba(0,0,0,0.25) 3px 4px)`,
+                            }} />
+                          </div>
+                          <div style={{ fontSize: 7, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', marginTop: 2 }}>
+                            {a.current}/{a.target}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      {activeAchievement && badgeRefs.current[activeAchievement.id] && (
+        <BadgeTooltip
+          achievement={activeAchievement}
+          anchorRef={{ current: badgeRefs.current[activeAchievement.id] }}
+          onClose={handleClose}
+        />
+      )}
+    </>
   )
 }
 

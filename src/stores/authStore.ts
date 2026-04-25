@@ -12,6 +12,8 @@ interface AuthState {
   signOut: () => Promise<void>
 }
 
+let hasSynced = false
+
 export const useAuthStore = create<AuthState>()((set) => ({
   user: null,
   loading: true,
@@ -38,8 +40,6 @@ export const useAuthStore = create<AuthState>()((set) => ({
         await syncRemoteToLocal(userId, hasCustomImage, saveCustomImageBlob)
       })
     }
-
-    let hasSynced = false
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       set({

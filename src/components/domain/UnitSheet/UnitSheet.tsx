@@ -120,101 +120,132 @@ export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddT
   const hasImage = imageUrl && !imgError
   const longPressHandlers = useLongPress(() => setShowPhotoMenu(true))
 
-  return (
-    <div className="pb-8">
-      {/* Section 1 — Header with background image (long-press for photo menu) */}
-      <div className="unit-sheet__header mb-4 relative" {...longPressHandlers} style={{ touchAction: 'pan-y' }}>
-        {hasImage && (
-          <div className="unit-sheet__header-bg">
-            <img
-              src={imageUrl}
-              alt=""
-              className="unit-sheet__header-bg-img"
-              onError={() => setImgError(true)}
-            />
-            <div className="unit-sheet__header-overlay" />
-          </div>
-        )}
-        <div className="unit-sheet__header-content">
-          <div className="flex items-start gap-2">
-            <h1 className="font-bold flex-1" style={{ fontSize: 'var(--text-2xl)' }}>
-              <T text={datasheet.name} category="unit" />
-            </h1>
-            {isEpicHero(datasheet) && (
-              <span
-                className="text-xs px-2 py-1 rounded shrink-0"
-                style={{ backgroundColor: 'var(--color-card-epic)', color: '#fff' }}
-              >
-                <T text="Epic Hero" category="keyword" />
-              </span>
-            )}
-          </div>
-          {datasheet.pointOptions.length > 0 && (
-            <p style={{ color: 'var(--color-accent)' }}>
-              {datasheet.pointOptions.map((p) => `${p.cost} pts (${p.models})`).join(' / ')}
-            </p>
-          )}
-          <div className="flex items-center gap-3 mt-1">
-            <p
-              className="text-sm"
-              style={{ color: ownedCount > 0 ? 'var(--color-success)' : 'var(--color-text-muted)' }}
-            >
-              {ownedCount > 0 ? `Possédé: ${ownedCount}` : 'Non possédé'}
-            </p>
-            {/* Desktop photo button (visible on lg+) */}
-            {!isMobile && (
-              <button
-                className="text-xs px-2 py-1 rounded border-none cursor-pointer"
-                style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: 'var(--color-text)' }}
-                onClick={(e) => { e.stopPropagation(); setShowPhotoMenu(true) }}
-              >
-                {customImageUrl ? 'Changer la photo' : 'Ajouter une photo'}
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Photo menu (long-press on mobile, button on desktop) */}
-        {showPhotoMenu && (
-          <div
-            className="absolute inset-0 z-20 flex items-center justify-center"
-            style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
-            onClick={() => setShowPhotoMenu(false)}
+  const photoMenu = showPhotoMenu && (
+    <div
+      className="absolute inset-0 z-20 flex items-center justify-center"
+      style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
+      onClick={() => setShowPhotoMenu(false)}
+    >
+      <div
+        className="flex flex-col gap-1 rounded-xl p-2"
+        style={{ backgroundColor: 'var(--color-surface)', minWidth: '180px' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          className="text-left text-sm px-3 py-2 rounded-lg border-none cursor-pointer"
+          style={{ backgroundColor: 'transparent', color: 'var(--color-text)' }}
+          onClick={() => { fileInputRef.current?.click(); setShowPhotoMenu(false) }}
+        >
+          {customImageUrl ? 'Changer la photo' : 'Ajouter une photo'}
+        </button>
+        {customImageUrl && (
+          <button
+            className="text-left text-sm px-3 py-2 rounded-lg border-none cursor-pointer"
+            style={{ backgroundColor: 'transparent', color: 'var(--color-error, #ef4444)' }}
+            onClick={() => { removeCustomImage(); setShowPhotoMenu(false) }}
           >
-            <div
-              className="flex flex-col gap-1 rounded-xl p-2"
-              style={{ backgroundColor: 'var(--color-surface)', minWidth: '180px' }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                className="text-left text-sm px-3 py-2 rounded-lg border-none cursor-pointer"
-                style={{ backgroundColor: 'transparent', color: 'var(--color-text)' }}
-                onClick={() => { fileInputRef.current?.click(); setShowPhotoMenu(false) }}
-              >
-                {customImageUrl ? 'Changer la photo' : 'Ajouter une photo'}
-              </button>
-              {customImageUrl && (
-                <button
-                  className="text-left text-sm px-3 py-2 rounded-lg border-none cursor-pointer"
-                  style={{ backgroundColor: 'transparent', color: 'var(--color-error, #ef4444)' }}
-                  onClick={() => { removeCustomImage(); setShowPhotoMenu(false) }}
-                >
-                  Supprimer la photo
-                </button>
-              )}
-              <button
-                className="text-left text-sm px-3 py-2 rounded-lg border-none cursor-pointer"
-                style={{ backgroundColor: 'transparent', color: 'var(--color-text-muted)' }}
-                onClick={() => setShowPhotoMenu(false)}
-              >
-                Annuler
-              </button>
-            </div>
-          </div>
+            Supprimer la photo
+          </button>
+        )}
+        <button
+          className="text-left text-sm px-3 py-2 rounded-lg border-none cursor-pointer"
+          style={{ backgroundColor: 'transparent', color: 'var(--color-text-muted)' }}
+          onClick={() => setShowPhotoMenu(false)}
+        >
+          Annuler
+        </button>
+      </div>
+    </div>
+  )
+
+  const unitInfo = (
+    <>
+      <div className="flex items-start gap-1">
+        <h1
+          className="font-bold flex-1"
+          style={{
+            fontSize: isMobileScreen ? 'var(--text-base)' : 'var(--text-2xl)',
+            ...(isMobileScreen ? { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' } : {}),
+          }}
+        >
+          <T text={datasheet.name} category="unit" />
+        </h1>
+        {isEpicHero(datasheet) && (
+          <span
+            className="text-xs px-2 py-0.5 rounded shrink-0"
+            style={{ backgroundColor: 'var(--color-card-epic)', color: '#fff' }}
+          >
+            <T text="Epic Hero" category="keyword" />
+          </span>
         )}
       </div>
+      {datasheet.pointOptions.length > 0 && (
+        <p className={isMobileScreen ? 'text-xs' : 'text-sm'} style={{ color: 'var(--color-accent)' }}>
+          {datasheet.pointOptions.map((p) => `${p.cost} pts (${p.models})`).join(' / ')}
+        </p>
+      )}
+      <p
+        className="text-xs"
+        style={{ color: ownedCount > 0 ? 'var(--color-success)' : 'var(--color-text-muted)' }}
+      >
+        {ownedCount > 0 ? `Possédé: ${ownedCount}` : 'Non possédé'}
+      </p>
+    </>
+  )
 
-      {/* Photo custom */}
+  const primaryButtons = (
+    <div className="flex flex-col gap-1.5">
+      {ownedCount === 0 ? (
+        <Button variant="primary" size="sm" onClick={onAddToCollection}>
+          {isMobileScreen ? 'Collection +' : 'Ajouter à ma collection'}
+        </Button>
+      ) : (
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => onUpdateQuantity?.(ownedCount - 1)}
+            aria-label="Diminuer la quantité"
+          >
+            −
+          </Button>
+          <span className="text-sm font-medium min-w-[2ch] text-center" style={{ color: 'var(--color-text)' }}>
+            {ownedCount}
+          </span>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => onUpdateQuantity?.(ownedCount + 1)}
+            aria-label="Augmenter la quantité"
+          >
+            +
+          </Button>
+        </div>
+      )}
+      <Button variant="secondary" size="sm" disabled={!onAddToList} onClick={onAddToList}>
+        {isMobileScreen ? 'Liste +' : 'Ajouter à une liste'}
+      </Button>
+    </div>
+  )
+
+  const secondaryButtons = (onSimulate || onCompare) ? (
+    <div className="flex items-center gap-3">
+      {onSimulate && (
+        <Button variant="ghost" size="sm" onClick={onSimulate}>
+          Simuler
+        </Button>
+      )}
+      {onCompare && (
+        <Button variant="ghost" size="sm" onClick={onCompare}>
+          Comparer
+        </Button>
+      )}
+    </div>
+  ) : null
+
+  return (
+    <div className="pb-8">
+      {/* Photo custom input */}
       <input
         ref={fileInputRef}
         type="file"
@@ -227,49 +258,52 @@ export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddT
         }}
       />
 
-      {/* Section 2 — Actions */}
-      <div className="flex items-center gap-3 mb-2 flex-wrap">
-        {ownedCount === 0 ? (
-          <Button variant="primary" size="sm" onClick={onAddToCollection}>
-            Ajouter à ma collection
-          </Button>
-        ) : (
-          <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => onUpdateQuantity?.(ownedCount - 1)}
-              aria-label="Diminuer la quantité"
+      {hasImage ? (
+        <>
+          <div className="flex mb-2" style={{ gap: isMobileScreen ? 12 : 20, height: isMobileScreen ? 225 : undefined }}>
+            {/* Left — Portrait image */}
+            <div
+              className="relative shrink-0 rounded-lg overflow-hidden"
+              style={{ width: isMobileScreen ? 140 : 200, height: '100%', aspectRatio: isMobileScreen ? undefined : '3/4' }}
+              {...longPressHandlers}
             >
-              −
-            </Button>
-            <span className="text-sm font-medium min-w-[2ch] text-center" style={{ color: 'var(--color-text)' }}>
-              {ownedCount}
-            </span>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => onUpdateQuantity?.(ownedCount + 1)}
-              aria-label="Augmenter la quantité"
-            >
-              +
-            </Button>
+              <img
+                src={imageUrl}
+                alt={datasheet.name}
+                className="w-full h-full object-cover"
+                style={{ objectPosition: 'center top' }}
+                onError={() => setImgError(true)}
+              />
+              {photoMenu}
+              <button
+                className="absolute bottom-2 right-2 text-xs px-2 py-1 rounded border-none cursor-pointer"
+                style={{ backgroundColor: 'rgba(0,0,0,0.6)', color: '#fff' }}
+                onClick={(e) => { e.stopPropagation(); setShowPhotoMenu(true) }}
+              >
+                {customImageUrl ? 'Changer' : 'Photo'}
+              </button>
+            </div>
+            {/* Right — Info + primary buttons, contained to image height */}
+            <div className="flex flex-col justify-between flex-1 min-w-0 overflow-hidden">
+              <div>{unitInfo}</div>
+              <div>{primaryButtons}</div>
+            </div>
           </div>
-        )}
-        <Button variant="secondary" size="sm" disabled={!onAddToList} onClick={onAddToList}>
-          Ajouter à une liste
-        </Button>
-        {onSimulate && (
-          <Button variant="ghost" size="sm" onClick={onSimulate}>
-            Simuler
-          </Button>
-        )}
-        {onCompare && (
-          <Button variant="ghost" size="sm" onClick={onCompare}>
-            Comparer
-          </Button>
-        )}
-      </div>
+          {secondaryButtons && <div className="mb-4">{secondaryButtons}</div>}
+        </>
+      ) : (
+        <>
+          <div className="unit-sheet__header mb-4 relative">
+            <div className="unit-sheet__header-content">
+              {unitInfo}
+            </div>
+          </div>
+          <div className="mb-2">
+            {primaryButtons}
+            {secondaryButtons && <div className="mt-2">{secondaryButtons}</div>}
+          </div>
+        </>
+      )}
 
       {/* Section 3 — Profil */}
       {datasheet.profiles.length > 0 && (

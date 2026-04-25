@@ -52,16 +52,18 @@ export function DashboardPage() {
   const loadedFactions = useGameDataStore((s) => s.loadedFactions)
   const factionIndex = useGameDataStore((s) => s.factionIndex)
   const factionRows = useCollectionByFaction()
+  const diffs = usePointsHistoryStore((s) => s.diffs)
 
   useEffect(() => { loadFactionIndex() }, [loadFactionIndex])
 
-  // Load factions that have owned units (for name resolution)
+  // Load factions that have owned units or point diffs (for name resolution)
   useEffect(() => {
-    const ownedFactionIds = new Set(Object.values(collectionItems).map((i) => i.factionId))
-    for (const slug of ownedFactionIds) {
+    const needed = new Set(Object.values(collectionItems).map((i) => i.factionId))
+    for (const slug of Object.keys(diffs)) needed.add(slug)
+    for (const slug of needed) {
       if (!loadedFactions[slug]) loadFaction(slug)
     }
-  }, [collectionItems, loadedFactions, loadFaction])
+  }, [collectionItems, diffs, loadedFactions, loadFaction])
 
   // Workshop units: any unit with at least one non-done instance
   const workshopUnits = useMemo(() => {
@@ -85,7 +87,6 @@ export function DashboardPage() {
   }, [collectionItems, loadedFactions])
 
   // Points changes from last update (no expiration — always show last known diffs)
-  const diffs = usePointsHistoryStore((s) => s.diffs)
   const { pointsChanges, pointsChangesDate } = useMemo(() => {
     const changes: { id: string; name: string; factionName: string; factionSlug: string; delta: number }[] = []
     let latestDate: string | null = null

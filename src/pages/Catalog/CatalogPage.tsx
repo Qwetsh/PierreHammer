@@ -561,51 +561,101 @@ function UnitDetailModal({
     }
   }
 
+  const isMobileModal = typeof window !== 'undefined' && window.innerWidth < 1024
+  const [dragY, setDragY] = useState(0)
+  const [dragging, setDragging] = useState(false)
+  const dragStartY = useRef(0)
+  const modalRef = useRef<HTMLDivElement>(null)
+
+  const handleDragStart = useCallback((clientY: number) => {
+    if (!isMobileModal) return
+    const el = modalRef.current
+    if (el && el.scrollTop > 0) return
+    dragStartY.current = clientY
+    setDragging(true)
+  }, [isMobileModal])
+
+  const handleDragMove = useCallback((clientY: number) => {
+    if (!dragging) return
+    const dy = clientY - dragStartY.current
+    setDragY(Math.max(0, dy))
+  }, [dragging])
+
+  const handleDragEnd = useCallback(() => {
+    if (!dragging) return
+    setDragging(false)
+    if (dragY > 120) {
+      onClose()
+    }
+    setDragY(0)
+  }, [dragging, dragY, onClose])
+
   return (
     <div
       data-scroll-lock
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
+      className="fixed inset-0 z-50 flex items-end lg:items-center justify-center"
+      style={{
+        backgroundColor: `rgba(0,0,0,${0.6 - Math.min(dragY / 500, 0.4)})`,
+        backdropFilter: 'blur(6px)',
+        WebkitBackdropFilter: 'blur(6px)',
+      }}
       onClick={onClose}
     >
       <div
+        ref={modalRef}
         className="unit-detail-modal"
         style={{
-          width: '95%',
+          width: isMobileModal ? '100%' : '95%',
           maxWidth: simMode ? 1000 : 600,
-          maxHeight: '90vh',
+          maxHeight: isMobileModal ? '92vh' : '90vh',
           overflowY: 'auto',
           background: 'var(--color-bg)',
           border: '1px solid var(--color-border)',
+          borderBottom: isMobileModal ? 'none' : '1px solid var(--color-border)',
+          borderRadius: isMobileModal ? '16px 16px 0 0' : undefined,
           padding: 16,
+          paddingTop: isMobileModal ? 8 : 16,
           position: 'relative',
-          animation: 'modal-slide-up 0.25s ease',
-          transition: 'max-width 0.3s ease',
+          animation: isMobileModal ? 'modal-slide-up 0.25s ease' : 'modal-slide-up 0.25s ease',
+          transform: dragY > 0 ? `translateY(${dragY}px)` : undefined,
+          transition: dragging ? 'none' : 'transform 0.25s ease',
         }}
         onClick={(e) => e.stopPropagation()}
+        onTouchStart={(e) => handleDragStart(e.touches[0].clientY)}
+        onTouchMove={(e) => handleDragMove(e.touches[0].clientY)}
+        onTouchEnd={handleDragEnd}
       >
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          style={{
-            position: 'sticky',
-            top: 0,
-            float: 'right',
-            background: 'var(--color-surface)',
-            border: '1px solid var(--color-border)',
-            color: 'var(--color-text-muted)',
-            width: 32,
-            height: 32,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            fontSize: 16,
-            zIndex: 10,
-          }}
-        >
-          {'\u2715'}
-        </button>
+        {/* Mobile: drag handle */}
+        {isMobileModal && (
+          <div className="flex justify-center mb-2" style={{ paddingTop: 4, paddingBottom: 4 }}>
+            <div style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: 'var(--color-text-muted)', opacity: 0.5 }} />
+          </div>
+        )}
+
+        {/* Desktop: close button */}
+        {!isMobileModal && (
+          <button
+            onClick={onClose}
+            style={{
+              position: 'sticky',
+              top: 0,
+              float: 'right',
+              background: 'var(--color-surface)',
+              border: '1px solid var(--color-border)',
+              color: 'var(--color-text-muted)',
+              width: 32,
+              height: 32,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontSize: 16,
+              zIndex: 10,
+            }}
+          >
+            {'\u2715'}
+          </button>
+        )}
 
         {simMode ? (
           <InlineSimulator
