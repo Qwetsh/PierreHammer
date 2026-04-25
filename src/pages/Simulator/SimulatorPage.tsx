@@ -815,7 +815,7 @@ export function SimulatorPage() {
                 {/* Desktop: horizontal pipeline */}
                 <div className="hidden lg:block">
                   <div style={{ display: 'flex', background: 'var(--color-surface)', border: '1px solid var(--color-border)', alignItems: 'stretch' }}>
-                    <StepExplainer lines={explanations?.attacks.lines ?? []} color="var(--color-text-muted)" align="left">
+                    <StepExplainer lines={explanations?.attacks.lines ?? []} color="var(--color-text-muted)">
                       <div style={stepStyle}>
                         <div style={labelStyle}>Attaques</div>
                         <div style={valueStyle('var(--color-text)')}>{round(result.attacksTotal)}</div>
