@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useParams, useNavigate } from 'react-router'
+import { useParams, useNavigate, useLocation } from 'react-router'
 import { useGameDataStore } from '@/stores/gameDataStore'
 import { useGameData } from '@/hooks/useGameData'
 import { resolveCombat } from '@/utils/combatEngine'
@@ -50,15 +50,46 @@ interface SideState {
 
 const emptySide: SideState = { factionSlug: null, detachment: null, datasheet: null, weapon: null, enhancement: null, modelCount: 5 }
 
-export function SimulatorPage() {
-  const { factionId, datasheetId } = useParams<{ factionId?: string; datasheetId?: string }>()
+interface SimulatorPageProps {
+  /** When provided, the component is in "embedded" mode (e.g. inside a modal) */
+  onClose?: () => void
+  /** Pre-fill attacker faction */
+  initialAttackerFaction?: string
+  /** Pre-fill attacker datasheet */
+  initialAttackerDs?: string
+  /** Pre-fill defender faction */
+  initialDefenderFaction?: string
+  /** Pre-fill defender datasheet */
+  initialDefenderDs?: string
+  /** Filter attacker weapons to only these keys (format: "ranged:Name" / "melee:Name") */
+  initialAttackerWeapons?: string[]
+}
+
+export function SimulatorPage({
+  onClose,
+  initialAttackerFaction,
+  initialAttackerDs,
+  initialDefenderFaction,
+  initialDefenderDs,
+  initialAttackerWeapons,
+}: SimulatorPageProps = {}) {
+  const { factionId: routeFactionId, datasheetId: routeDatasheetId } = useParams<{ factionId?: string; datasheetId?: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const { factionIndex } = useGameData()
   const loadedFactions = useGameDataStore((s) => s.loadedFactions)
   const loadFaction = useGameDataStore((s) => s.loadFaction)
 
+  // Props take priority over URL params / nav state
+  const factionId = initialAttackerFaction ?? routeFactionId
+  const datasheetId = initialAttackerDs ?? routeDatasheetId
+
+  const navState = location.state as { defenderFactionSlug?: string; defenderDatasheetId?: string } | null
+  const defFactionSlug = initialDefenderFaction ?? navState?.defenderFactionSlug ?? null
+  const defDatasheetId = initialDefenderDs ?? navState?.defenderDatasheetId ?? null
+
   const [attacker, setAttacker] = useState<SideState>({ ...emptySide, factionSlug: factionId ?? null })
-  const [defender, setDefender] = useState<SideState>({ ...emptySide })
+  const [defender, setDefender] = useState<SideState>({ ...emptySide, factionSlug: defFactionSlug })
 
   // Toggles
   const [halfRange, setHalfRange] = useState(false)
@@ -95,23 +126,51 @@ export function SimulatorPage() {
   }, [defender.factionSlug, loadFaction])
 
   // Handle URL params (coming from a datasheet page)
+  const isMeleeW = (w: { type: string; range: string }) => w.type === 'Melee' || w.range === 'Melee'
+  const toWeaponKey = (w: { type: string; range: string; name: string }) => `${isMeleeW(w) ? 'melee' : 'ranged'}:${w.name}`
+
   useEffect(() => {
     if (factionId && datasheetId && loadedFactions[factionId]) {
       const faction = loadedFactions[factionId]
       const ds = faction.datasheets.find((d) => d.id === datasheetId)
       if (ds) {
         const det = faction.detachments?.[0] ?? null
+        const filteredWeapons = initialAttackerWeapons?.length
+          ? ds.weapons.filter((w) => initialAttackerWeapons.includes(toWeaponKey(w)))
+          : ds.weapons
         setAttacker({
           factionSlug: factionId,
           detachment: det,
           datasheet: ds,
-          weapon: ds.weapons[0] ?? null,
+          weapon: filteredWeapons[0] ?? ds.weapons[0] ?? null,
           enhancement: null,
           modelCount: parseInt(String(ds.pointOptions[0]?.models), 10) || 5,
         })
       }
     }
   }, [factionId, datasheetId, loadedFactions])
+
+  // Handle pre-filled defender (from game mode or props)
+  useEffect(() => {
+    if (defFactionSlug) loadFaction(defFactionSlug)
+  }, [defFactionSlug, loadFaction])
+
+  useEffect(() => {
+    if (!defFactionSlug || !defDatasheetId) return
+    const defFaction = loadedFactions[defFactionSlug]
+    if (!defFaction) return
+    const ds = defFaction.datasheets.find((d) => d.id === defDatasheetId)
+    if (!ds || defender.datasheet) return
+    const det = defFaction.detachments?.[0] ?? null
+    setDefender({
+      factionSlug: defFactionSlug,
+      detachment: det,
+      datasheet: ds,
+      weapon: null,
+      enhancement: null,
+      modelCount: parseInt(String(ds.pointOptions[0]?.models), 10) || 5,
+    })
+  }, [defFactionSlug, defDatasheetId, loadedFactions])
 
   // Derived data
   const attackerFaction = attacker.factionSlug ? loadedFactions[attacker.factionSlug] : null
@@ -276,33 +335,58 @@ export function SimulatorPage() {
   const attackerProfile = attacker.datasheet?.profiles[0]
   const defenderProfile = defender.datasheet?.profiles[0]
 
+  const embedded = !!onClose
+
   return (
     <>
-      {/* Desktop HUD top bar */}
-      <div className="hidden lg:block">
-        <HudTopBar title="Simulateur de Combat" sub="Tactique" />
-      </div>
-      <div className="-mx-4 px-1.5 pb-24 lg:mx-auto lg:px-6 lg:py-0 lg:pb-8 lg:max-w-5xl lg:min-h-[calc(100vh-60px)] lg:flex lg:flex-col lg:justify-center">
-        {/* Mobile header */}
-        <div className="lg:hidden" style={{ marginBottom: 8 }}>
-          <MTopBar
-            title="Simulateur"
-            sub="Tactique"
-            actions={
-              <button
-                style={{ background: 'transparent', border: '1px solid var(--color-border)', color: 'var(--color-accent)', padding: '4px 8px', fontFamily: 'var(--font-mono)', fontSize: 9, cursor: 'pointer' }}
-                onClick={() => navigate(-1)}
-              >
-                {'\u2190'} RETOUR
-              </button>
-            }
-          />
+      {/* Desktop HUD top bar (standalone only) */}
+      {!embedded && (
+        <div className="hidden lg:block">
+          <HudTopBar title="Simulateur de Combat" sub="Tactique" />
         </div>
+      )}
+      <div
+        className={embedded
+          ? ''
+          : '-mx-4 px-1.5 pb-24 lg:mx-auto lg:px-6 lg:py-0 lg:pb-8 lg:max-w-5xl lg:min-h-[calc(100vh-60px)] lg:flex lg:flex-col lg:justify-center'
+        }
+      >
+        {/* Embedded header */}
+        {embedded && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: 2, color: 'var(--color-accent)', textTransform: 'uppercase' }}>
+              {'\u25b8'} Simulateur de Combat
+            </div>
+            <button
+              style={{ background: 'transparent', border: '1px solid var(--color-border)', color: 'var(--color-accent)', padding: '4px 10px', fontFamily: 'var(--font-mono)', fontSize: 9, cursor: 'pointer' }}
+              onClick={onClose}
+            >
+              {'\u2715'} FERMER
+            </button>
+          </div>
+        )}
+        {/* Mobile header (standalone only) */}
+        {!embedded && (
+          <div className="lg:hidden" style={{ marginBottom: 8 }}>
+            <MTopBar
+              title="Simulateur"
+              sub="Tactique"
+              actions={
+                <button
+                  style={{ background: 'transparent', border: '1px solid var(--color-border)', color: 'var(--color-accent)', padding: '4px 8px', fontFamily: 'var(--font-mono)', fontSize: 9, cursor: 'pointer' }}
+                  onClick={() => navigate(-1)}
+                >
+                  {'\u2190'} RETOUR
+                </button>
+              }
+            />
+          </div>
+        )}
 
-        <div className="flex flex-col gap-3 lg:gap-4">
+        <div className={`flex flex-col ${embedded ? 'gap-2' : 'gap-3 lg:gap-4'}`}>
 
           {/* === ATTACKER & DEFENDER COLUMNS === */}
-          <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-4" style={{ alignItems: 'start' }}>
+          <div className={`flex flex-col gap-3 lg:grid lg:grid-cols-2 ${embedded ? 'lg:gap-3' : 'lg:gap-4'}`} style={{ alignItems: 'start' }}>
 
             {/* ===== ATTACKER COLUMN ===== */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
@@ -315,11 +399,11 @@ export function SimulatorPage() {
                 <button
                   onClick={() => setShowAtkFactionPicker(true)}
                   style={{
-                    width: '100%', minHeight: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    width: '100%', minHeight: embedded ? 60 : 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
                     background: 'var(--color-surface)', border: '2px dashed var(--color-border)', color: 'var(--color-text-muted)', cursor: 'pointer',
                   }}
                 >
-                  <span style={{ fontSize: 20 }}>{'\u2694'}</span>
+                  <span style={{ fontSize: embedded ? 16 : 20 }}>{'\u2694'}</span>
                   <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', letterSpacing: 1 }}>CHOISIR UNE FACTION</span>
                 </button>
               ) : (
@@ -515,11 +599,11 @@ export function SimulatorPage() {
                 <button
                   onClick={() => setShowDefFactionPicker(true)}
                   style={{
-                    width: '100%', minHeight: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    width: '100%', minHeight: embedded ? 60 : 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
                     background: 'var(--color-surface)', border: '2px dashed var(--color-border)', color: 'var(--color-text-muted)', cursor: 'pointer',
                   }}
                 >
-                  <span style={{ fontSize: 20 }}>{'\uD83D\uDEE1'}</span>
+                  <span style={{ fontSize: embedded ? 16 : 20 }}>{'\uD83D\uDEE1'}</span>
                   <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', letterSpacing: 1 }}>CHOISIR UNE FACTION</span>
                 </button>
               ) : (
@@ -764,19 +848,19 @@ export function SimulatorPage() {
             const finalDmg = result.steps.fnpThreshold ? result.damageAfterFnp : result.damageTotal
 
             const stepStyle: React.CSSProperties = {
-              flex: 1, padding: '12px 10px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minWidth: 0,
+              flex: 1, padding: embedded ? '8px 6px' : '12px 10px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minWidth: 0,
             }
             const labelStyle: React.CSSProperties = {
-              fontSize: 8, fontFamily: 'var(--font-mono)', letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 6,
+              fontSize: embedded ? 7 : 8, fontFamily: 'var(--font-mono)', letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: embedded ? 3 : 6,
             }
             const valueStyle = (color: string): React.CSSProperties => ({
-              fontSize: 28, fontWeight: 700, color, lineHeight: 1, marginBottom: 4,
+              fontSize: embedded ? 20 : 28, fontWeight: 700, color, lineHeight: 1, marginBottom: embedded ? 2 : 4,
             })
             const detailStyle: React.CSSProperties = {
-              fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', marginBottom: 6,
+              fontSize: embedded ? 8 : 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', marginBottom: embedded ? 3 : 6,
             }
             const barBg: React.CSSProperties = {
-              height: 3, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', marginTop: 'auto',
+              height: embedded ? 2 : 3, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', marginTop: 'auto',
             }
             const arrowStyle: React.CSSProperties = {
               display: 'flex', alignItems: 'center', color: 'var(--color-text-muted)', fontSize: 8, padding: '0 2px', opacity: 0.5,
@@ -888,17 +972,17 @@ export function SimulatorPage() {
                     <div style={{ display: 'flex', alignItems: 'center', padding: '0 8px', fontSize: 18, color: 'var(--color-text-muted)', fontWeight: 300 }}>=</div>
 
                     <div style={{
-                      padding: '12px 14px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
-                      borderLeft: '1px solid var(--color-border)', minWidth: 130,
+                      padding: embedded ? '8px 10px' : '12px 14px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
+                      borderLeft: '1px solid var(--color-border)', minWidth: embedded ? 100 : 130,
                     }}>
-                      <div style={{ fontSize: 8, fontFamily: 'var(--font-mono)', letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--color-error, #ef4444)', marginBottom: 6 }}>
+                      <div style={{ fontSize: embedded ? 7 : 8, fontFamily: 'var(--font-mono)', letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--color-error, #ef4444)', marginBottom: embedded ? 3 : 6 }}>
                         ≈ Modèles éliminés
                       </div>
-                      <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--color-error, #ef4444)', lineHeight: 1 }}>
+                      <div style={{ fontSize: embedded ? 24 : 32, fontWeight: 700, color: 'var(--color-error, #ef4444)', lineHeight: 1 }}>
                         {round(result.estimatedKills)}
-                        <span style={{ fontSize: 14, fontWeight: 400, color: 'var(--color-text-muted)' }}>/{defender.modelCount}</span>
+                        <span style={{ fontSize: embedded ? 11 : 14, fontWeight: 400, color: 'var(--color-text-muted)' }}>/{defender.modelCount}</span>
                       </div>
-                      <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', marginTop: 4 }}>
+                      <div style={{ fontSize: embedded ? 8 : 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', marginTop: 4 }}>
                         {killPct}% de l'unité
                       </div>
                     </div>
@@ -921,17 +1005,17 @@ export function SimulatorPage() {
 
           {/* Hints */}
           {attacker.datasheet && !attacker.weapon && (
-            <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--color-text-muted)', padding: 12 }}>
+            <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--color-text-muted)', padding: embedded ? 6 : 12 }}>
               Sélectionne une arme pour lancer la simulation
             </div>
           )}
           {attacker.weapon && !defender.datasheet && (
-            <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--color-text-muted)', padding: 12 }}>
+            <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--color-text-muted)', padding: embedded ? 6 : 12 }}>
               Sélectionne une cible pour voir les résultats
             </div>
           )}
           {!attacker.factionSlug && !defender.factionSlug && (
-            <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--color-text-muted)', padding: 20 }}>
+            <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--color-text-muted)', padding: embedded ? 8 : 20 }}>
               Choisis un attaquant et une cible pour simuler un combat
             </div>
           )}
@@ -974,7 +1058,10 @@ export function SimulatorPage() {
       )}
       {showAtkWeaponPicker && attacker.datasheet && (
         <WeaponPickerModal
-          weapons={attacker.datasheet.weapons}
+          weapons={initialAttackerWeapons?.length
+            ? attacker.datasheet.weapons.filter((w) => initialAttackerWeapons.includes(toWeaponKey(w)))
+            : attacker.datasheet.weapons
+          }
           selectedWeapon={attacker.weapon}
           onSelect={(w) => setAttacker((prev) => ({ ...prev, weapon: w }))}
           onClose={() => setShowAtkWeaponPicker(false)}

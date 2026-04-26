@@ -56,6 +56,7 @@ export function CatalogPage() {
   const { factionIndex, selectedFaction, selectedFactionSlug, isLoading, error, loadFaction, selectFaction } = useGameData()
   const [query, setQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState<string | 'all'>('all')
+  const [chapterFilter, setChapterFilter] = useState<string | 'all'>('all')
   const [sortBy, setSortBy] = useState<SortKey>('name')
   const [showLegends, setShowLegends] = useState(false)
   const [selectedKeywords, setSelectedKeywords] = useState<Set<string>>(new Set())
@@ -82,6 +83,9 @@ export function CatalogPage() {
     }
   }, [favoriteFactionSlug, factionIndex, selectedFactionSlug, loadFaction, selectFaction])
 
+  // Reset chapter filter when faction changes
+  useEffect(() => { setChapterFilter('all') }, [selectedFactionSlug])
+
   const datasheets = selectedFaction?.datasheets ?? []
 
   // Count Legends units for this faction
@@ -96,15 +100,48 @@ export function CatalogPage() {
     return datasheets.filter((ds) => !isLegendsUnit(ds))
   }, [datasheets, showLegends])
 
-  const roles = useMemo(() => {
-    const r = new Set(legendsFiltered.map((ds) => ds.role).filter(Boolean))
-    return Array.from(r).sort()
+  // Detect subfactions (chapters) — faction keywords that appear on some but not all units
+  const chapters = useMemo(() => {
+    const factionKwCounts = new Map<string, number>()
+    for (const ds of legendsFiltered) {
+      for (const k of ds.keywords) {
+        if (k.isFactionKeyword) factionKwCounts.set(k.keyword, (factionKwCounts.get(k.keyword) ?? 0) + 1)
+      }
+    }
+    // A chapter is a faction keyword that doesn't appear on ALL units (i.e. not the main faction keyword)
+    const total = legendsFiltered.length
+    return Array.from(factionKwCounts.entries())
+      .filter(([, count]) => count < total && count >= 2)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, count]) => ({ name, count }))
   }, [legendsFiltered])
+
+  const hasChapters = chapters.length > 1
+
+  // All chapter names for quick lookup
+  const chapterNames = useMemo(() => new Set(chapters.map((c) => c.name)), [chapters])
+
+  // Filter by chapter: show chapter-specific + generic (no chapter keyword) units
+  const chapterFiltered = useMemo(() => {
+    if (!hasChapters || chapterFilter === 'all') return legendsFiltered
+    return legendsFiltered.filter((ds) => {
+      const dsChapters = ds.keywords.filter((k) => k.isFactionKeyword && chapterNames.has(k.keyword))
+      // Generic unit (no chapter keyword) → show in all chapters
+      if (dsChapters.length === 0) return true
+      // Chapter-specific → show only if matches filter
+      return dsChapters.some((k) => k.keyword === chapterFilter)
+    })
+  }, [legendsFiltered, chapterFilter, hasChapters, chapterNames])
+
+  const roles = useMemo(() => {
+    const r = new Set(chapterFiltered.map((ds) => ds.role).filter(Boolean))
+    return Array.from(r).sort()
+  }, [chapterFiltered])
 
   // Extract all non-faction keywords for filter chips
   const allKeywords = useMemo(() => {
     const kw = new Map<string, number>()
-    for (const ds of legendsFiltered) {
+    for (const ds of chapterFiltered) {
       for (const k of ds.keywords) {
         if (!k.isFactionKeyword) {
           kw.set(k.keyword, (kw.get(k.keyword) ?? 0) + 1)
@@ -114,12 +151,12 @@ export function CatalogPage() {
     return Array.from(kw.entries())
       .sort((a, b) => b[1] - a[1]) // sort by frequency
       .map(([keyword]) => keyword)
-  }, [legendsFiltered])
+  }, [chapterFiltered])
 
   const roleFiltered = useMemo(() => {
-    if (roleFilter === 'all') return legendsFiltered
-    return legendsFiltered.filter((ds) => ds.role === roleFilter)
-  }, [legendsFiltered, roleFilter])
+    if (roleFilter === 'all') return chapterFiltered
+    return chapterFiltered.filter((ds) => ds.role === roleFilter)
+  }, [chapterFiltered, roleFilter])
 
   // Keyword filter
   const keywordFiltered = useMemo(() => {
@@ -280,6 +317,18 @@ export function CatalogPage() {
             {/* Search + filters */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
               <HudSearch value={query} onChange={setQuery} placeholder="Rechercher une unité..." />
+              {/* Chapters (subfactions) — separate row */}
+              {hasChapters && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: 1, color: 'var(--color-text-muted)', textTransform: 'uppercase', flexShrink: 0 }}>Chapitre</span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
+                    <HudChip active={chapterFilter === 'all'} onClick={() => setChapterFilter('all')}>Tous</HudChip>
+                    {chapters.map((ch) => (
+                      <HudChip key={ch.name} active={chapterFilter === ch.name} onClick={() => setChapterFilter(ch.name)}>{ch.name} ({ch.count})</HudChip>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6, alignItems: 'center' }}>
                 {/* Roles */}
                 {roles.length > 1 && (
@@ -370,6 +419,19 @@ export function CatalogPage() {
           />
           <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
             <HudSearch value={query} onChange={setQuery} placeholder="Rechercher une unité..." />
+
+            {/* Chapters (subfactions) */}
+            {hasChapters && (
+              <div>
+                <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: 1, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: 6 }}>Chapitre</div>
+                <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
+                  <HudChip active={chapterFilter === 'all'} onClick={() => setChapterFilter('all')}>Tous</HudChip>
+                  {chapters.map((ch) => (
+                    <HudChip key={ch.name} active={chapterFilter === ch.name} onClick={() => setChapterFilter(ch.name)}>{ch.name}</HudChip>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Roles */}
             {roles.length > 1 && (

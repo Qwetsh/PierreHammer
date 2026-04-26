@@ -104,6 +104,17 @@ h1, h2, h3 {
   left: 0;
 }
 
+/* AppShell main — bottom padding for mobile nav, none on desktop */
+.app-shell-main {
+  padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 16px);
+}
+
+@media (min-width: 1024px) {
+  .app-shell-main {
+    padding-bottom: 0;
+  }
+}
+
 /* ── HUD Utilities (desktop only) ── */
 @media (min-width: 1024px) {
   /* HUD scan lines overlay */

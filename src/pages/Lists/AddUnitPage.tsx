@@ -34,6 +34,7 @@ export function AddUnitPage() {
 
   const [query, setQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState<string | 'all'>('all')
+  const [ownedOnly, setOwnedOnly] = useState(false)
   const [selectedDatasheet, setSelectedDatasheet] = useState<Datasheet | null>(null)
   const [enhancementPicker, setEnhancementPicker] = useState<{
     datasheet: Datasheet
@@ -62,9 +63,11 @@ export function AddUnitPage() {
   }, [datasheets])
 
   const roleFiltered = useMemo(() => {
-    if (roleFilter === 'all') return datasheets
-    return datasheets.filter((ds) => ds.role === roleFilter)
-  }, [datasheets, roleFilter])
+    let filtered = datasheets
+    if (roleFilter !== 'all') filtered = filtered.filter((ds) => ds.role === roleFilter)
+    if (ownedOnly) filtered = filtered.filter((ds) => (collectionItems[ds.id]?.instances?.length ?? 0) > 0)
+    return filtered
+  }, [datasheets, roleFilter, ownedOnly, collectionItems])
 
   const extractFields = useCallback(extractSearchFields, [])
   const filteredDatasheets = useSearch(roleFiltered, query, extractFields)
@@ -189,6 +192,17 @@ export function AddUnitPage() {
           ))}
         </div>
       )}
+
+      {/* Owned-only toggle */}
+      <label className="flex items-center gap-2 mb-3 text-xs cursor-pointer select-none" style={{ color: 'var(--color-text-muted)' }}>
+        <input
+          type="checkbox"
+          checked={ownedOnly}
+          onChange={(e) => setOwnedOnly(e.target.checked)}
+          style={{ accentColor: 'var(--color-accent)', cursor: 'pointer' }}
+        />
+        Uniquement les figurines possédées
+      </label>
 
       {/* Grid */}
       {filteredDatasheets.length === 0 && query.trim().length >= 2 ? (

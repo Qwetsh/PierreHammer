@@ -135,7 +135,8 @@ function DraggableFab({ onClick }: { onClick: () => void }) {
         height: FAB_SIZE,
         backgroundColor: 'var(--color-accent)',
         color: '#ffffff',
-        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4), 0 0 12px color-mix(in srgb, var(--color-accent) 30%, transparent)',
+        opacity: 0.45,
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
         touchAction: 'none',
       }}
       title="Calculateur"
@@ -180,8 +181,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </a>
       <main
         id="main-content"
-        className="relative z-10 p-4 lg:ml-[200px] lg:p-0"
-        style={{ paddingBottom: 'calc(56px + env(safe-area-inset-bottom, 0px) + 16px)' }}
+        className="relative z-10 p-4 lg:ml-[200px] lg:p-0 app-shell-main"
       >
         {children}
       </main>

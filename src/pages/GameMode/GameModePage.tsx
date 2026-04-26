@@ -7,10 +7,10 @@ import { useAuthStore } from '@/stores/authStore'
 import { useFriendsStore } from '@/stores/friendsStore'
 import { useGameSessionStore } from '@/stores/gameSessionStore'
 import { fetchPublicLists } from '@/services/listsSyncService'
-import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { PartySwiper } from '@/features/game-mode/components/PartySwiper'
-import { ContextualSimulator } from '@/components/domain/ContextualSimulator/ContextualSimulator'
+import { HudBtn, HudPointsCounter, MSection } from '@/components/ui/Hud'
+import { UnitSheet } from '@/components/domain/UnitSheet/UnitSheet'
+import { SimulatorPage } from '@/pages/Simulator/SimulatorPage'
 import { calculateTotalPoints, resolveUnitPoints } from '@/utils/pointsCalculator'
 import type { ArmyList } from '@/types/armyList.types'
 import type { Datasheet, Detachment } from '@/types/gameData.types'
@@ -30,14 +30,32 @@ function isMultiWound(ds: Datasheet): boolean {
   return w > 1
 }
 
-
 function profileDisplayName(p: { username?: string | null; display_name?: string | null; id: string }): string {
   return p.username || p.display_name || p.id.slice(0, 8)
+}
+
+function useIsDesktop(breakpoint = 1024) {
+  const [v, setV] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= breakpoint : false)
+  useEffect(() => {
+    const mql = window.matchMedia(`(min-width: ${breakpoint}px)`)
+    const h = (e: MediaQueryListEvent) => setV(e.matches)
+    mql.addEventListener('change', h)
+    return () => mql.removeEventListener('change', h)
+  }, [breakpoint])
+  return v
+}
+
+// Stratagem type color
+function stratTypeColor(type: string): string {
+  if (type.toLowerCase().includes('battle tactic')) return 'var(--color-accent)'
+  if (type.toLowerCase().includes('epic')) return 'var(--color-purple)'
+  return 'var(--color-gold)'
 }
 
 export function GameModePage() {
   const { listId } = useParams<{ listId: string }>()
   const navigate = useNavigate()
+  const isDesktop = useIsDesktop()
   const list = useListsStore((s) => listId ? s.lists[listId] : undefined)
   const loadFaction = useGameDataStore((s) => s.loadFaction)
   const loadedFactions = useGameDataStore((s) => s.loadedFactions)
@@ -58,16 +76,22 @@ export function GameModePage() {
   const updateCasualty = useGameSessionStore((s) => s.updateCasualty)
   const resetCasualtyAction = useGameSessionStore((s) => s.resetCasualty)
 
-  const [swiperStartIndex, setSwiperStartIndex] = useState<number | null>(null)
+  const [viewingUnit, setViewingUnit] = useState<{ listUnit: ListUnit; ds: Datasheet } | null>(null)
   const [activeTab, setActiveTab] = useState<'units' | 'stratagems' | 'opponent'>('units')
   const [usedStratagems, setUsedStratagems] = useState<Set<string>>(new Set())
 
-  // Contextual simulation flow
   const [attackingUnit, setAttackingUnit] = useState<{ unit: ListUnit; ds: Datasheet } | null>(null)
   const [showTargetPicker, setShowTargetPicker] = useState(false)
-  const [simTarget, setSimTarget] = useState<{ unit: ListUnit; ds: Datasheet } | null>(null)
 
-  // Opponent selection flow
+  // Simulator modal state
+  const [simParams, setSimParams] = useState<{
+    attackerFaction: string
+    attackerDs: string
+    attackerWeapons: string[]
+    defenderFaction: string
+    defenderDs: string
+  } | null>(null)
+
   const [showOpponentPicker, setShowOpponentPicker] = useState(false)
   const [selectedFriend, setSelectedFriend] = useState<Profile | null>(null)
   const [friendLists, setFriendLists] = useState<(ArmyList & { remoteId: string })[]>([])
@@ -93,10 +117,8 @@ export function GameModePage() {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
       >
-        <div className="p-4">
-          <Button variant="ghost" onClick={() => navigate(-1)}>
-            ← Retour
-          </Button>
+        <div style={{ padding: 16 }}>
+          <HudBtn variant="ghost" onClick={() => navigate(-1)}>&#8592; Retour</HudBtn>
         </div>
         <div className="flex-1 flex items-center justify-center">
           <EmptyState
@@ -126,10 +148,6 @@ export function GameModePage() {
     })
   }
 
-  const unitDatasheets: Datasheet[] = list.units
-    .map((unit) => faction?.datasheets.find((ds) => ds.id === unit.datasheetId))
-    .filter((ds): ds is Datasheet => ds !== undefined)
-
   const handleSelectFriend = async (friend: Profile) => {
     setSelectedFriend(friend)
     setLoadingFriendLists(true)
@@ -148,6 +166,8 @@ export function GameModePage() {
     setFriendLists([])
   }
 
+  const opponentFaction = opponentList ? loadedFactions[opponentList.factionId] : null
+
   const handleEndSession = async (status: 'completed' | 'abandoned') => {
     await endSessionAction(status, {
       player1Faction: faction?.name ?? list.factionId,
@@ -161,609 +181,872 @@ export function GameModePage() {
   const handleAttack = (unit: ListUnit, ds: Datasheet) => {
     setAttackingUnit({ unit, ds })
     setShowTargetPicker(true)
-    setSimTarget(null)
   }
 
-  const handleSelectTarget = (unit: ListUnit, ds: Datasheet) => {
-    setSimTarget({ unit, ds })
+  const handleSelectTarget = (_unit: ListUnit, ds: Datasheet) => {
+    if (!attackingUnit) return
+    const defFactionId = hasSession && opponentList ? opponentList.factionId : list.factionId
     setShowTargetPicker(false)
+    setAttackingUnit(null)
+    setSimParams({
+      attackerFaction: list.factionId,
+      attackerDs: attackingUnit.ds.id,
+      attackerWeapons: attackingUnit.unit.selectedWeapons ?? [],
+      defenderFaction: defFactionId,
+      defenderDs: ds.id,
+    })
   }
 
-  // Find enhancement data from detachment
-  const findEnhancement = (listUnit: ListUnit, factionData: typeof faction | null) => {
-    if (!listUnit.enhancement || !factionData?.detachments) return undefined
-    for (const det of factionData.detachments) {
-      const enh = det.enhancements?.find((e) => e.id === listUnit.enhancement?.enhancementId || e.name === listUnit.enhancement?.enhancementName)
-      if (enh) return enh
-    }
-    return undefined
-  }
 
-  // Opponent faction data
-  const opponentFaction = opponentList ? loadedFactions[opponentList.factionId] : null
-
-  // Get friend display info from friendship
   const getFriendProfile = (f: { requester?: Profile; addressee?: Profile }): Profile | undefined => {
     if (!user) return undefined
     return f.requester?.id === user.id ? f.addressee : f.requester
   }
 
-  if (swiperStartIndex !== null && unitDatasheets.length > 0) {
-    return (
-      <PartySwiper
-        datasheets={unitDatasheets}
-        initialIndex={swiperStartIndex}
-        onClose={() => setSwiperStartIndex(null)}
-      />
-    )
-  }
+  const viewingDatasheet = viewingUnit?.ds ?? null
 
   const hasSession = !!activeSession
   const hasStratagems = detachment && detachment.stratagems.length > 0
 
+  // =============================================
+  // Shared unit row renderer
+  // =============================================
+  const renderUnitRow = (
+    listUnit: ListUnit,
+    i: number,
+    factionData: typeof faction,
+    cas: { modelsDestroyed: number; woundsRemaining: number | null } | null,
+    playerId: string,
+    isOpponent: boolean,
+  ) => {
+    const datasheet = factionData?.datasheets.find((ds) => ds.id === listUnit.datasheetId)
+    const totalModels = getModelCount(listUnit, datasheet)
+    const alive = cas ? totalModels - cas.modelsDestroyed : totalModels
+    const isDestroyed = cas ? alive <= 0 : false
+    const pts = resolveUnitPoints(listUnit, factionData?.datasheets)
+    const profile = datasheet?.profiles[0]
+
+    return (
+      <div
+        key={i}
+        style={{
+          background: 'var(--color-surface)',
+          border: '1px solid var(--color-border)',
+          padding: isDesktop ? '12px 16px' : '10px 12px',
+          opacity: isDestroyed ? 0.35 : 1,
+          transition: 'opacity 0.2s',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: isDesktop ? 14 : 8 }}>
+          {/* Unit image (desktop only) */}
+          {isDesktop && datasheet?.imageUrl && (
+            <img
+              src={datasheet.imageUrl}
+              alt={listUnit.datasheetName}
+              style={{
+                width: 40,
+                height: 40,
+                objectFit: 'cover',
+                borderRadius: 4,
+                background: 'var(--color-bg)',
+                flexShrink: 0,
+              }}
+            />
+          )}
+
+          {/* Name + stats */}
+          <div
+            style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}
+            onClick={() => {
+              if (!datasheet) return
+              setViewingUnit({ listUnit: listUnit, ds: datasheet })
+            }}
+          >
+            <div style={{
+              fontSize: isDesktop ? 14 : 13,
+              fontWeight: 600,
+              color: 'var(--color-text)',
+              textDecoration: isDestroyed ? 'line-through' : 'none',
+            }}>
+              <T text={listUnit.datasheetName} category="unit" />
+            </div>
+            {profile && isDesktop && (
+              <div style={{
+                fontSize: 10,
+                color: 'var(--color-text-muted)',
+                fontFamily: 'var(--font-mono)',
+                letterSpacing: 0.3,
+                marginTop: 2,
+              }}>
+                M{profile.M} T{profile.T} SV{profile.Sv} W{profile.W} LD{profile.Ld} OC{profile.OC}
+              </div>
+            )}
+            {listUnit.enhancement && (
+              <div style={{ fontSize: 10, color: 'var(--color-accent)', marginTop: 2 }}>
+                &#10022; {listUnit.enhancement.enhancementName} (+{listUnit.enhancement.cost} pts)
+              </div>
+            )}
+          </div>
+
+          {/* Action buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            {!isOpponent && datasheet && datasheet.weapons.length > 0 && (
+              <button
+                onClick={() => handleAttack(listUnit, datasheet)}
+                style={{
+                  padding: isDesktop ? '5px 12px' : '4px 8px',
+                  fontSize: 10,
+                  fontFamily: 'var(--font-mono)',
+                  letterSpacing: 0.5,
+                  fontWeight: 600,
+                  background: 'var(--color-accent)',
+                  color: '#000',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                ATTAQUER
+              </button>
+            )}
+            <span style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: isDesktop ? 14 : 12,
+              fontWeight: 600,
+              color: 'var(--color-accent)',
+              minWidth: isDesktop ? 50 : 40,
+              textAlign: 'right',
+            }}>
+              {pts} <span style={{ fontSize: 9, color: 'var(--color-text-muted)' }}>pts</span>
+            </span>
+          </div>
+        </div>
+
+        {/* Casualty tracking */}
+        {cas && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            marginTop: 8,
+            paddingTop: 8,
+            borderTop: '1px solid var(--color-border)',
+          }}>
+            {/* Model counter */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', letterSpacing: 0.5 }}>
+                MODELES
+              </span>
+              <button
+                style={{
+                  width: 24, height: 24,
+                  background: 'var(--color-bg)',
+                  border: '1px solid var(--color-border)',
+                  color: 'var(--color-error)',
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+                onClick={() => updateCasualty(playerId, listUnit.id, { modelsDestroyed: Math.min(cas.modelsDestroyed + 1, totalModels) })}
+                disabled={alive <= 0}
+              >
+                -
+              </button>
+              <span style={{
+                fontSize: 12,
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 600,
+                color: alive <= 0 ? 'var(--color-error)' : 'var(--color-text)',
+                minWidth: 32,
+                textAlign: 'center',
+              }}>
+                {alive}/{totalModels}
+              </span>
+              <button
+                style={{
+                  width: 24, height: 24,
+                  background: 'var(--color-bg)',
+                  border: '1px solid var(--color-border)',
+                  color: 'var(--color-success)',
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+                onClick={() => updateCasualty(playerId, listUnit.id, { modelsDestroyed: Math.max(cas.modelsDestroyed - 1, 0) })}
+                disabled={cas.modelsDestroyed <= 0}
+              >
+                +
+              </button>
+            </div>
+
+            {/* Wounds tracking for multi-wound single models */}
+            {datasheet && isMultiWound(datasheet) && totalModels === 1 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', letterSpacing: 0.5 }}>
+                  PV
+                </span>
+                <button
+                  style={{
+                    width: 22, height: 22,
+                    background: 'var(--color-bg)',
+                    border: '1px solid var(--color-border)',
+                    color: 'var(--color-error)',
+                    cursor: 'pointer',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                  onClick={() => {
+                    const maxW = parseInt(datasheet.profiles[0]?.W ?? '1', 10)
+                    const current = cas.woundsRemaining ?? maxW
+                    updateCasualty(playerId, listUnit.id, { woundsRemaining: Math.max(current - 1, 0) })
+                  }}
+                >
+                  -
+                </button>
+                <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--color-text)', minWidth: 28, textAlign: 'center' }}>
+                  {cas.woundsRemaining ?? parseInt(datasheet.profiles[0]?.W ?? '1', 10)}/{datasheet.profiles[0]?.W}
+                </span>
+                <button
+                  style={{
+                    width: 22, height: 22,
+                    background: 'var(--color-bg)',
+                    border: '1px solid var(--color-border)',
+                    color: 'var(--color-success)',
+                    cursor: 'pointer',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                  onClick={() => {
+                    const maxW = parseInt(datasheet.profiles[0]?.W ?? '1', 10)
+                    const current = cas.woundsRemaining ?? maxW
+                    updateCasualty(playerId, listUnit.id, { woundsRemaining: Math.min(current + 1, maxW) })
+                  }}
+                >
+                  +
+                </button>
+              </div>
+            )}
+
+            {/* Reset */}
+            {(cas.modelsDestroyed > 0 || cas.woundsRemaining !== null) && (
+              <button
+                style={{
+                  marginLeft: 'auto',
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 9,
+                  fontFamily: 'var(--font-mono)',
+                  color: 'var(--color-text-muted)',
+                  letterSpacing: 0.5,
+                }}
+                onClick={() => resetCasualtyAction(playerId, listUnit.id)}
+              >
+                RESET
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // =============================================
+  // Stratagems panel content
+  // =============================================
+  const stratagemContent = detachment && (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {/* Detachment rule */}
+      {detachment.rule && (
+        <div style={{
+          background: 'var(--color-surface)',
+          border: '1px solid var(--color-border)',
+          borderLeft: '3px solid var(--color-accent)',
+          padding: '12px 14px',
+        }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-accent)', marginBottom: 4 }}>
+            <T text={detachment.rule.name} category="detachment" />
+          </div>
+          {detachment.rule.legend && (
+            <p style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--color-text-muted)', marginBottom: 6 }}>
+              <T text={detachment.rule.legend} category="detachment" />
+            </p>
+          )}
+          <THtml
+            html={detachment.rule.description}
+            category="detachment"
+            style={{ fontSize: 11, lineHeight: 1.5, color: 'var(--color-text)' }}
+          />
+        </div>
+      )}
+
+      {detachment.stratagems.map((strat) => {
+        const isUsed = usedStratagems.has(strat.id)
+        const typeColor = stratTypeColor(strat.type)
+        return (
+          <button
+            key={strat.id}
+            style={{
+              textAlign: 'left',
+              width: '100%',
+              cursor: 'pointer',
+              background: 'var(--color-surface)',
+              border: '1px solid var(--color-border)',
+              padding: '10px 12px',
+              opacity: isUsed ? 0.4 : 1,
+              transition: 'opacity 0.15s',
+            }}
+            onClick={() => toggleStratagem(strat.id)}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 22,
+                height: 22,
+                fontSize: 12,
+                fontWeight: 700,
+                fontFamily: 'var(--font-mono)',
+                color: '#fff',
+                background: typeColor,
+                flexShrink: 0,
+              }}>
+                {strat.cpCost}
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)' }}>
+                  <T text={strat.name} category="stratagem" />
+                </div>
+                <div style={{
+                  fontSize: 9,
+                  fontFamily: 'var(--font-mono)',
+                  letterSpacing: 1,
+                  color: typeColor,
+                  textTransform: 'uppercase',
+                  marginTop: 2,
+                }}>
+                  {strat.type}
+                </div>
+                {strat.legend && (
+                  <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 4, lineHeight: 1.4 }}>
+                    <T text={strat.legend} category="stratagem" />
+                  </div>
+                )}
+                {isUsed && (
+                  <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', marginTop: 4 }}>
+                    UTILISE — cliquer pour reactiver
+                  </div>
+                )}
+              </div>
+            </div>
+          </button>
+        )
+      })}
+    </div>
+  )
+
+  // =============================================
+  // Centered modal helper
+  // =============================================
+  const renderModal = (onClose: () => void, content: React.ReactNode) => (
+    <div
+      data-scroll-lock
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 60,
+        background: 'rgba(0,0,0,0.5)',
+        backdropFilter: isDesktop ? 'blur(8px)' : undefined,
+        WebkitBackdropFilter: isDesktop ? 'blur(8px)' : undefined,
+        display: 'flex',
+        alignItems: isDesktop ? 'center' : 'flex-end',
+        justifyContent: 'center',
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: 'var(--color-bg)',
+          border: '1px solid var(--color-border)',
+          width: isDesktop ? '90%' : '100%',
+          maxWidth: isDesktop ? 500 : 'none',
+          maxHeight: isDesktop ? '70vh' : '70vh',
+          borderRadius: isDesktop ? 0 : '16px 16px 0 0',
+          overflowY: 'auto',
+          padding: isDesktop ? 20 : 16,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {content}
+      </div>
+    </div>
+  )
+
+  const playerId = user?.id ?? ''
+
+  // =============================================
+  // RENDER
+  // =============================================
   return (
     <motion.div
       data-scroll-lock
-      className="fixed inset-0 z-50 flex flex-col overflow-y-auto"
+      className="fixed inset-0 z-50 flex flex-col lg:left-[200px]"
       style={{ backgroundColor: 'var(--color-bg)' }}
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.2 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.15 }}
     >
-      <div
-        className="sticky top-0 z-10 p-3"
-        style={{ backgroundColor: 'var(--color-surface)' }}
-      >
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex flex-col">
-            <span className="font-bold text-sm" style={{ color: 'var(--color-text)' }}>
-              {hasSession && opponentProfile
-                ? `Vous vs ${profileDisplayName(opponentProfile)}`
-                : list.name}
-            </span>
-            <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-              {list.detachment} · {totalPoints}/{list.pointsLimit} pts
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            {hasSession && (
-              <Button variant="secondary" size="sm" onClick={() => handleEndSession('completed')}>
-                Terminer
-              </Button>
+      {/* ========= HEADER ========= */}
+      <div style={{
+        borderBottom: '1px solid var(--color-border)',
+        background: 'var(--color-bg-elevated)',
+        padding: isDesktop ? '14px 28px' : '10px 14px',
+        flexShrink: 0,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isDesktop ? 20 : 10 }}>
+            <div>
+              <div style={{
+                fontSize: 9,
+                fontFamily: 'var(--font-mono)',
+                letterSpacing: 2,
+                color: 'var(--color-accent)',
+                textTransform: 'uppercase',
+              }}>
+                &#9656; MODE PARTIE
+              </div>
+              <div style={{
+                fontSize: isDesktop ? 20 : 15,
+                fontWeight: 600,
+                color: 'var(--color-text)',
+                marginTop: 2,
+              }}>
+                {hasSession && opponentProfile
+                  ? `Vous vs ${profileDisplayName(opponentProfile)}`
+                  : list.name}
+              </div>
+              <div style={{
+                fontSize: 10,
+                fontFamily: 'var(--font-mono)',
+                color: 'var(--color-text-muted)',
+                letterSpacing: 0.5,
+                marginTop: 2,
+              }}>
+                {list.factionId} &middot; {list.detachment}
+              </div>
+            </div>
+            {isDesktop && (
+              <HudPointsCounter used={totalPoints} limit={list.pointsLimit} size="big" />
             )}
-            <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
-              Quitter
-            </Button>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {!isDesktop && (
+              <span style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 13,
+                fontWeight: 600,
+                color: totalPoints > list.pointsLimit ? 'var(--color-error)' : 'var(--color-accent)',
+              }}>
+                {totalPoints}/{list.pointsLimit}
+              </span>
+            )}
+            {isAuthenticated && !hasSession && friends.length > 0 && list.remoteId && (
+              <HudBtn variant="primary" onClick={() => setShowOpponentPicker(true)}>
+                Jouer contre...
+              </HudBtn>
+            )}
+            {hasSession && (
+              <HudBtn variant="accent" onClick={() => handleEndSession('completed')}>
+                Terminer
+              </HudBtn>
+            )}
+            <HudBtn variant="ghost" onClick={() => navigate(`/lists/${listId}`)}>
+              &#8592; Quitter le mode partie
+            </HudBtn>
           </div>
         </div>
 
-        {/* Session action button */}
-        {isAuthenticated && !hasSession && friends.length > 0 && list.remoteId && (
-          <Button
-            variant="primary"
-            size="sm"
-            className="w-full mb-2"
-            onClick={() => setShowOpponentPicker(true)}
-            disabled={sessionLoading}
-          >
-            Jouer contre...
-          </Button>
+        {/* Tabs (mobile only — desktop uses columns) */}
+        {!isDesktop && (
+          <div style={{ display: 'flex', gap: 4, marginTop: 10 }}>
+            {(['units', ...(hasStratagems ? ['stratagems'] : []), ...(hasSession && opponentList ? ['opponent'] : [])] as const).map((tab) => (
+              <button
+                key={tab}
+                style={{
+                  flex: 1,
+                  padding: '6px 0',
+                  fontSize: 10,
+                  fontFamily: 'var(--font-mono)',
+                  letterSpacing: 0.5,
+                  cursor: 'pointer',
+                  border: '1px solid var(--color-border)',
+                  background: activeTab === tab ? 'var(--color-accent)' : 'transparent',
+                  color: activeTab === tab ? '#000' : 'var(--color-text-muted)',
+                  fontWeight: activeTab === tab ? 600 : 400,
+                }}
+                onClick={() => setActiveTab(tab as typeof activeTab)}
+              >
+                {tab === 'units' ? `UNITES (${list.units.length})` : tab === 'stratagems' ? `STRATAGEMES (${detachment!.stratagems.length})` : 'ADVERSAIRE'}
+              </button>
+            ))}
+          </div>
         )}
-
-        {/* Tabs */}
-        <div className="flex gap-1">
-          <button
-            className="flex-1 text-xs py-1.5 rounded-lg cursor-pointer border-none font-medium"
-            style={{
-              backgroundColor: activeTab === 'units' ? 'var(--color-primary)' : 'var(--color-bg)',
-              color: activeTab === 'units' ? '#fff' : 'var(--color-text-muted)',
-            }}
-            onClick={() => setActiveTab('units')}
-          >
-            Unités ({list.units.length})
-          </button>
-          {hasStratagems && (
-            <button
-              className="flex-1 text-xs py-1.5 rounded-lg cursor-pointer border-none font-medium"
-              style={{
-                backgroundColor: activeTab === 'stratagems' ? 'var(--color-primary)' : 'var(--color-bg)',
-                color: activeTab === 'stratagems' ? '#fff' : 'var(--color-text-muted)',
-              }}
-              onClick={() => setActiveTab('stratagems')}
-            >
-              Stratagèmes ({detachment!.stratagems.length})
-            </button>
-          )}
-          {hasSession && opponentList && (
-            <button
-              className="flex-1 text-xs py-1.5 rounded-lg cursor-pointer border-none font-medium"
-              style={{
-                backgroundColor: activeTab === 'opponent' ? 'var(--color-primary)' : 'var(--color-bg)',
-                color: activeTab === 'opponent' ? '#fff' : 'var(--color-text-muted)',
-              }}
-              onClick={() => setActiveTab('opponent')}
-            >
-              Adversaire
-            </button>
-          )}
-        </div>
       </div>
 
-      <div className="flex-1 p-4">
-        {activeTab === 'units' && (
-          <>
+      {/* ========= BODY ========= */}
+      {isDesktop ? (
+        /* ------- DESKTOP: multi-column layout ------- */
+        <div style={{ flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden' }}>
+          {/* Left column — Units */}
+          <div style={{
+            flex: 1,
+            minWidth: 0,
+            overflowY: 'auto',
+            padding: '16px 20px',
+          }}>
+            <MSection>Unites ({list.units.length})</MSection>
             {list.units.length === 0 ? (
-              <EmptyState
-                title="Liste vide"
-                description="Ajoute des unités à ta liste avant de lancer le mode partie."
-                actionLabel="Modifier la liste"
-                onAction={() => navigate(`/lists/${listId}`)}
-              />
+              <EmptyState title="Liste vide" />
             ) : (
-              <div className="flex flex-col gap-2">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
                 {list.units.map((listUnit, i) => {
-                  const datasheet = faction?.datasheets.find((ds) => ds.id === listUnit.datasheetId)
-                  const totalModels = getModelCount(listUnit, datasheet)
                   const cas = hasSession ? (casualties[listUnit.id] ?? { modelsDestroyed: 0, woundsRemaining: null }) : null
-                  const alive = cas ? totalModels - cas.modelsDestroyed : totalModels
-                  const isDestroyed = cas ? alive <= 0 : false
-                  const playerId = user?.id ?? ''
-                  return (
-                    <div
-                      key={i}
-                      className="rounded-lg p-3"
-                      style={{ backgroundColor: 'var(--color-surface)', opacity: isDestroyed ? 0.4 : 1 }}
-                    >
-                      <div className="flex items-center justify-between min-h-[44px]">
-                        <div
-                          className="flex flex-col flex-1 cursor-pointer"
-                          onClick={() => {
-                            if (!datasheet) return
-                            const idx = unitDatasheets.indexOf(datasheet)
-                            if (idx >= 0) setSwiperStartIndex(idx)
-                          }}
-                        >
-                          <span className="font-medium text-sm" style={{ color: 'var(--color-text)', textDecoration: isDestroyed ? 'line-through' : 'none' }}>
-                            <T text={listUnit.datasheetName} category="unit" />
-                          </span>
-                          {listUnit.enhancement && (
-                            <span className="text-xs" style={{ color: 'var(--color-accent)' }}>
-                              ✦ {listUnit.enhancement.enhancementName} (+{listUnit.enhancement.cost} pts)
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {datasheet && datasheet.weapons.length > 0 && (
-                            <span
-                              className="text-xs px-2 py-1 rounded cursor-pointer font-medium"
-                              style={{ backgroundColor: 'var(--color-accent)', color: '#fff' }}
-                              onClick={() => handleAttack(listUnit, datasheet)}
-                            >
-                              Attaquer
-                            </span>
-                          )}
-                          {datasheet && datasheet.weapons.length > 0 && (
-                            <span
-                              className="text-xs px-2 py-1 rounded cursor-pointer"
-                              style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-accent)' }}
-                              onClick={() => navigate(`/simulate/${list.factionId}/${datasheet.id}`)}
-                            >
-                              Simuler
-                            </span>
-                          )}
-                          <span className="text-xs font-mono" style={{ color: 'var(--color-accent)' }}>
-                            {resolveUnitPoints(listUnit, faction?.datasheets)} pts
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Casualty tracking (only in session) */}
-                      {hasSession && cas && (
-                        <div className="flex items-center gap-3 mt-2 pt-2" style={{ borderTop: '1px solid var(--color-bg)' }}>
-                          {/* Model counter */}
-                          <div className="flex items-center gap-1">
-                            <button
-                              className="w-7 h-7 rounded text-sm border-none cursor-pointer font-bold"
-                              style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-error, #ef4444)' }}
-                              onClick={() => updateCasualty(playerId, listUnit.id, { modelsDestroyed: Math.min(cas.modelsDestroyed + 1, totalModels) })}
-                              disabled={alive <= 0}
-                            >
-                              -
-                            </button>
-                            <span className="text-xs font-mono min-w-[3ch] text-center" style={{ color: 'var(--color-text)' }}>
-                              {alive}/{totalModels}
-                            </span>
-                            <button
-                              className="w-7 h-7 rounded text-sm border-none cursor-pointer font-bold"
-                              style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-success, #22c55e)' }}
-                              onClick={() => updateCasualty(playerId, listUnit.id, { modelsDestroyed: Math.max(cas.modelsDestroyed - 1, 0) })}
-                              disabled={cas.modelsDestroyed <= 0}
-                            >
-                              +
-                            </button>
-                          </div>
-
-                          {/* Wounds tracking for multi-wound single models */}
-                          {datasheet && isMultiWound(datasheet) && totalModels === 1 && (
-                            <div className="flex items-center gap-1">
-                              <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>PV:</span>
-                              <button
-                                className="w-6 h-6 rounded text-xs border-none cursor-pointer font-bold"
-                                style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-error, #ef4444)' }}
-                                onClick={() => {
-                                  const maxW = parseInt(datasheet.profiles[0]?.W ?? '1', 10)
-                                  const current = cas.woundsRemaining ?? maxW
-                                  updateCasualty(playerId, listUnit.id, { woundsRemaining: Math.max(current - 1, 0) })
-                                }}
-                              >
-                                -
-                              </button>
-                              <span className="text-xs font-mono" style={{ color: 'var(--color-text)' }}>
-                                {cas.woundsRemaining ?? parseInt(datasheet.profiles[0]?.W ?? '1', 10)}/{datasheet.profiles[0]?.W}
-                              </span>
-                              <button
-                                className="w-6 h-6 rounded text-xs border-none cursor-pointer font-bold"
-                                style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-success, #22c55e)' }}
-                                onClick={() => {
-                                  const maxW = parseInt(datasheet.profiles[0]?.W ?? '1', 10)
-                                  const current = cas.woundsRemaining ?? maxW
-                                  updateCasualty(playerId, listUnit.id, { woundsRemaining: Math.min(current + 1, maxW) })
-                                }}
-                              >
-                                +
-                              </button>
-                            </div>
-                          )}
-
-                          {/* Reset button */}
-                          {(cas.modelsDestroyed > 0 || cas.woundsRemaining !== null) && (
-                            <button
-                              className="text-[10px] bg-transparent border-none cursor-pointer ml-auto"
-                              style={{ color: 'var(--color-text-muted)' }}
-                              onClick={() => resetCasualtyAction(playerId, listUnit.id)}
-                            >
-                              Reset
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )
+                  return renderUnitRow(listUnit, i, faction, cas, playerId, false)
                 })}
               </div>
             )}
-          </>
-        )}
-
-        {activeTab === 'stratagems' && detachment && (
-          <div className="flex flex-col gap-3">
-            {detachment.rule && (
-              <div
-                className="rounded-lg p-3"
-                style={{ backgroundColor: 'var(--color-surface)', borderLeft: '3px solid var(--color-accent)' }}
-              >
-                <h3 className="font-bold text-sm mb-1" style={{ color: 'var(--color-accent)' }}>
-                  <T text={detachment.rule.name} category="detachment" />
-                </h3>
-                {detachment.rule.legend && (
-                  <p className="text-xs italic mb-2" style={{ color: 'var(--color-text-muted)' }}>
-                    <T text={detachment.rule.legend} category="detachment" />
-                  </p>
-                )}
-                <THtml
-                  html={detachment.rule.description}
-                  category="detachment"
-                  className="text-xs leading-relaxed"
-                  style={{ color: 'var(--color-text)' }}
-                />
-              </div>
-            )}
-
-            {detachment.stratagems.map((strat) => {
-              const isUsed = usedStratagems.has(strat.id)
-              return (
-                <button
-                  key={strat.id}
-                  className="rounded-lg p-3 text-left w-full cursor-pointer border-none"
-                  style={{
-                    backgroundColor: 'var(--color-surface)',
-                    opacity: isUsed ? 0.5 : 1,
-                    borderLeft: `3px solid ${strat.type.includes('Battle Tactic') ? '#b33b3b' : strat.type.includes('Strategic Ploy') ? '#5a8cc4' : strat.type.includes('Epic Deed') ? '#9b6bc4' : 'var(--color-accent)'}`,
-                  }}
-                  onClick={() => toggleStratagem(strat.id)}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-bold text-sm" style={{ color: 'var(--color-text)' }}>
-                      <T text={strat.name} category="stratagem" />
-                    </span>
-                    <span
-                      className="text-xs font-mono px-2 py-0.5 rounded"
-                      style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-accent)' }}
-                    >
-                      {strat.cpCost} CP
-                    </span>
-                  </div>
-                  <div className="text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
-                    {strat.turn && <span>{strat.turn}</span>}
-                    {strat.turn && strat.phase && <span> · </span>}
-                    {strat.phase && <span>{strat.phase}</span>}
-                  </div>
-                  {strat.legend && (
-                    <p className="text-xs italic mb-1" style={{ color: 'var(--color-text-muted)' }}>
-                      <T text={strat.legend} category="stratagem" />
-                    </p>
-                  )}
-                  <THtml
-                    html={strat.description}
-                    category="stratagem"
-                    className="text-xs leading-relaxed"
-                    style={{ color: 'var(--color-text)' }}
-                  />
-                  {isUsed && (
-                    <span className="text-xs mt-1 block" style={{ color: 'var(--color-text-muted)' }}>
-                      (utilisé — appuyer pour réactiver)
-                    </span>
-                  )}
-                </button>
-              )
-            })}
           </div>
-        )}
 
-        {activeTab === 'opponent' && opponentList && (
-          <div className="flex flex-col gap-2">
-            <div className="rounded-lg p-3 mb-2" style={{ backgroundColor: 'var(--color-surface)' }}>
-              <span className="font-bold text-sm" style={{ color: 'var(--color-text)' }}>
-                {opponentList.name}
-              </span>
-              <span className="text-xs ml-2" style={{ color: 'var(--color-text-muted)' }}>
-                {opponentList.detachment} · {calculateTotalPoints(opponentList.units, opponentFaction?.datasheets)}/{opponentList.pointsLimit} pts
-              </span>
-            </div>
-            {opponentList.units.map((unit, i) => {
-              const ds = opponentFaction?.datasheets.find((d) => d.id === unit.datasheetId)
-              const oppTotalModels = getModelCount(unit, ds)
-              const oppCas = opponentCasualties[unit.id] ?? { modelsDestroyed: 0, woundsRemaining: null }
-              const oppAlive = oppTotalModels - oppCas.modelsDestroyed
-              const oppDestroyed = oppAlive <= 0
-              const opponentId = activeSession?.player2_id === user?.id ? activeSession?.player1_id : activeSession?.player2_id
-              return (
-                <div
-                  key={i}
-                  className="rounded-lg p-3"
-                  style={{ backgroundColor: 'var(--color-surface)', opacity: oppDestroyed ? 0.4 : 1 }}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-col">
-                      <span className="font-medium text-sm" style={{ color: 'var(--color-text)', textDecoration: oppDestroyed ? 'line-through' : 'none' }}>
-                        <T text={unit.datasheetName} category="unit" />
-                      </span>
-                      {ds?.profiles[0] && (
-                        <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                          T:{ds.profiles[0].T} Sv:{ds.profiles[0].Sv} W:{ds.profiles[0].W}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {ds && ds.weapons.length > 0 && (
-                        <span
-                          className="text-xs px-2 py-1 rounded cursor-pointer"
-                          style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-accent)' }}
-                          onClick={() => navigate(`/simulate/${opponentList.factionId}/${ds.id}`)}
-                        >
-                          Simuler
-                        </span>
-                      )}
-                      <span className="text-xs font-mono" style={{ color: 'var(--color-accent)' }}>
-                        {resolveUnitPoints(unit, opponentFaction?.datasheets)} pts
-                      </span>
-                    </div>
+          {/* Right column — Stratagems (+ opponent if session) */}
+          {(hasStratagems || (hasSession && opponentList)) && (
+            <div style={{
+              width: 340,
+              flexShrink: 0,
+              borderLeft: '1px solid var(--color-border)',
+              background: 'var(--color-bg-elevated)',
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+            }}>
+              {/* Opponent section (if session) */}
+              {hasSession && opponentList && (
+                <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--color-border)' }}>
+                  <MSection>Adversaire — {opponentList.name}</MSection>
+                  <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', marginTop: 4, marginBottom: 8 }}>
+                    {opponentList.detachment} &middot; {calculateTotalPoints(opponentList.units, opponentFaction?.datasheets)}/{opponentList.pointsLimit} pts
                   </div>
-
-                  {/* Opponent casualty tracking */}
-                  <div className="flex items-center gap-3 mt-2 pt-2" style={{ borderTop: '1px solid var(--color-bg)' }}>
-                    <div className="flex items-center gap-1">
-                      <button
-                        className="w-7 h-7 rounded text-sm border-none cursor-pointer font-bold"
-                        style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-error, #ef4444)' }}
-                        onClick={() => opponentId && updateCasualty(opponentId, unit.id, { modelsDestroyed: Math.min(oppCas.modelsDestroyed + 1, oppTotalModels) })}
-                        disabled={oppAlive <= 0}
-                      >
-                        -
-                      </button>
-                      <span className="text-xs font-mono min-w-[3ch] text-center" style={{ color: 'var(--color-text)' }}>
-                        {oppAlive}/{oppTotalModels}
-                      </span>
-                      <button
-                        className="w-7 h-7 rounded text-sm border-none cursor-pointer font-bold"
-                        style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-success, #22c55e)' }}
-                        onClick={() => opponentId && updateCasualty(opponentId, unit.id, { modelsDestroyed: Math.max(oppCas.modelsDestroyed - 1, 0) })}
-                        disabled={oppCas.modelsDestroyed <= 0}
-                      >
-                        +
-                      </button>
-                    </div>
-                    {(oppCas.modelsDestroyed > 0) && (
-                      <button
-                        className="text-[10px] bg-transparent border-none cursor-pointer ml-auto"
-                        style={{ color: 'var(--color-text-muted)' }}
-                        onClick={() => opponentId && resetCasualtyAction(opponentId, unit.id)}
-                      >
-                        Reset
-                      </button>
-                    )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {opponentList.units.map((unit, i) => {
+                      const oppCas = opponentCasualties[unit.id] ?? { modelsDestroyed: 0, woundsRemaining: null }
+                      const opponentId = activeSession?.player2_id === user?.id ? activeSession?.player1_id : activeSession?.player2_id
+                      return renderUnitRow(unit, i, opponentFaction, oppCas, opponentId ?? '', true)
+                    })}
                   </div>
                 </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
+              )}
 
-      {/* Opponent picker modal */}
-      {showOpponentPicker && (
-        <div
-          data-scroll-lock
-          className="fixed inset-0 z-[60] flex items-end justify-center"
-          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
-          onClick={() => { setShowOpponentPicker(false); setSelectedFriend(null); setFriendLists([]) }}
-        >
-          <div
-            className="w-full max-w-lg rounded-t-xl p-4 max-h-[70vh] overflow-y-auto"
-            style={{ backgroundColor: 'var(--color-surface)' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {!selectedFriend ? (
-              <>
-                <h3 className="font-semibold mb-3" style={{ color: 'var(--color-text)' }}>
-                  Choisir un adversaire
-                </h3>
-                <div className="flex flex-col gap-2">
-                  {friends.map((f) => {
-                    const profile = getFriendProfile(f)
-                    if (!profile) return null
-                    return (
-                      <button
-                        key={f.id}
-                        className="text-left p-3 rounded-lg cursor-pointer border-none min-h-[44px]"
-                        style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)' }}
-                        onClick={() => handleSelectFriend(profile)}
-                      >
-                        {profileDisplayName(profile)}
-                      </button>
-                    )
+              {/* Stratagems */}
+              {hasStratagems && (
+                <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 14px' }}>
+                  <MSection>Stratagemes ({detachment!.stratagems.length})</MSection>
+                  <div style={{ marginTop: 8 }}>{stratagemContent}</div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      ) : (
+        /* ------- MOBILE: tab-based layout ------- */
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px' }}>
+          {activeTab === 'units' && (
+            <>
+              {list.units.length === 0 ? (
+                <EmptyState
+                  title="Liste vide"
+                  description="Ajoute des unites a ta liste avant de lancer le mode partie."
+                  actionLabel="Modifier la liste"
+                  onAction={() => navigate(`/lists/${listId}`)}
+                />
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {list.units.map((listUnit, i) => {
+                    const cas = hasSession ? (casualties[listUnit.id] ?? { modelsDestroyed: 0, woundsRemaining: null }) : null
+                    return renderUnitRow(listUnit, i, faction, cas, playerId, false)
                   })}
                 </div>
-              </>
-            ) : (
-              <>
-                <h3 className="font-semibold mb-1" style={{ color: 'var(--color-text)' }}>
-                  Listes de {profileDisplayName(selectedFriend)}
-                </h3>
-                <button
-                  className="text-xs mb-3 bg-transparent border-none cursor-pointer"
-                  style={{ color: 'var(--color-accent)' }}
-                  onClick={() => { setSelectedFriend(null); setFriendLists([]) }}
-                >
-                  ← Changer d'adversaire
-                </button>
-                {loadingFriendLists ? (
-                  <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Chargement...</p>
-                ) : friendLists.length === 0 ? (
-                  <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Aucune liste publique</p>
-                ) : (
-                  <div className="flex flex-col gap-2">
-                    {friendLists.map((fl) => (
-                      <button
-                        key={fl.remoteId}
-                        className="text-left p-3 rounded-lg cursor-pointer border-none min-h-[44px]"
-                        style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)' }}
-                        onClick={() => handleSelectOpponentList(fl.remoteId)}
-                      >
-                        <span className="font-medium">{fl.name}</span>
-                        <span className="text-xs ml-2" style={{ color: 'var(--color-text-muted)' }}>
-                          {fl.detachment} · {fl.pointsLimit} pts
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-            <Button variant="ghost" className="mt-3" onClick={() => { setShowOpponentPicker(false); setSelectedFriend(null); setFriendLists([]) }}>
-              Annuler
-            </Button>
-          </div>
+              )}
+            </>
+          )}
+
+          {activeTab === 'stratagems' && stratagemContent}
+
+          {activeTab === 'opponent' && opponentList && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{
+                background: 'var(--color-surface)',
+                border: '1px solid var(--color-border)',
+                padding: '10px 12px',
+                marginBottom: 4,
+              }}>
+                <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--color-text)' }}>
+                  {opponentList.name}
+                </span>
+                <span style={{ fontSize: 10, marginLeft: 8, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>
+                  {opponentList.detachment} &middot; {calculateTotalPoints(opponentList.units, opponentFaction?.datasheets)}/{opponentList.pointsLimit} pts
+                </span>
+              </div>
+              {opponentList.units.map((unit, i) => {
+                const oppCas = opponentCasualties[unit.id] ?? { modelsDestroyed: 0, woundsRemaining: null }
+                const opponentId = activeSession?.player2_id === user?.id ? activeSession?.player1_id : activeSession?.player2_id
+                return renderUnitRow(unit, i, opponentFaction, oppCas, opponentId ?? '', true)
+              })}
+            </div>
+          )}
         </div>
       )}
-      {/* Target picker for contextual simulation */}
-      {showTargetPicker && attackingUnit && (
-        <div
-          data-scroll-lock
-          className="fixed inset-0 z-[60] flex items-end justify-center"
-          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
-          onClick={() => { setShowTargetPicker(false); setAttackingUnit(null) }}
-        >
-          <div
-            className="w-full max-w-lg rounded-t-xl p-4 max-h-[70vh] overflow-y-auto"
-            style={{ backgroundColor: 'var(--color-surface)' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="font-semibold mb-3" style={{ color: 'var(--color-text)' }}>
-              {attackingUnit.ds.name} attaque...
-            </h3>
-            {!hasSession && (
-              <p className="text-xs mb-2" style={{ color: 'var(--color-text-muted)' }}>
-                Mode solo — choisis une cible dans ta liste
-              </p>
-            )}
-            <div className="flex flex-col gap-2">
-              {(hasSession && opponentList ? opponentList.units : list.units)
-                .filter((u) => {
-                  if (!hasSession) {
-                    // In solo, don't let a unit attack itself
-                    return u.id !== attackingUnit.unit.id
-                  }
-                  const cas = opponentCasualties[u.id]
-                  const factionData = hasSession ? opponentFaction : faction
-                  const ds = factionData?.datasheets.find((d) => d.id === u.datasheetId)
-                  const total = getModelCount(u, ds)
-                  return !cas || (total - cas.modelsDestroyed) > 0
-                })
-                .map((u) => {
-                  const factionData = hasSession && opponentList ? opponentFaction : faction
-                  const ds = factionData?.datasheets.find((d) => d.id === u.datasheetId)
-                  if (!ds) return null
-                  const total = getModelCount(u, ds)
-                  const casSource = hasSession ? opponentCasualties : casualties
-                  const cas = casSource[u.id]
-                  const alive = total - (cas?.modelsDestroyed ?? 0)
+
+      {/* ========= MODALS ========= */}
+
+      {/* Opponent picker */}
+      {showOpponentPicker && renderModal(
+        () => { setShowOpponentPicker(false); setSelectedFriend(null); setFriendLists([]) },
+        <>
+          {!selectedFriend ? (
+            <>
+              <MSection>Choisir un adversaire</MSection>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
+                {friends.map((f) => {
+                  const profile = getFriendProfile(f)
+                  if (!profile) return null
                   return (
                     <button
-                      key={u.id}
-                      className="text-left p-3 rounded-lg cursor-pointer border-none min-h-[44px]"
-                      style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)' }}
-                      onClick={() => handleSelectTarget(u, ds)}
+                      key={f.id}
+                      style={{
+                        textAlign: 'left',
+                        padding: '10px 12px',
+                        background: 'var(--color-surface)',
+                        border: '1px solid var(--color-border)',
+                        color: 'var(--color-text)',
+                        cursor: 'pointer',
+                        fontSize: 13,
+                        fontWeight: 600,
+                      }}
+                      onClick={() => handleSelectFriend(profile)}
                     >
-                      <span className="font-medium">{u.datasheetName}</span>
-                      <span className="text-xs ml-2" style={{ color: 'var(--color-text-muted)' }}>
-                        {alive}/{total} · T:{ds.profiles[0]?.T} Sv:{ds.profiles[0]?.Sv} W:{ds.profiles[0]?.W}
-                      </span>
+                      {profileDisplayName(profile)}
                     </button>
                   )
                 })}
-            </div>
-            <Button variant="ghost" className="mt-3" onClick={() => { setShowTargetPicker(false); setAttackingUnit(null) }}>
+              </div>
+            </>
+          ) : (
+            <>
+              <MSection>Listes de {profileDisplayName(selectedFriend)}</MSection>
+              <button
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 10,
+                  fontFamily: 'var(--font-mono)',
+                  color: 'var(--color-accent)',
+                  padding: 0,
+                  marginTop: 4,
+                  marginBottom: 10,
+                }}
+                onClick={() => { setSelectedFriend(null); setFriendLists([]) }}
+              >
+                &#8592; Changer d'adversaire
+              </button>
+              {loadingFriendLists ? (
+                <p style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Chargement...</p>
+              ) : friendLists.length === 0 ? (
+                <p style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Aucune liste publique</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {friendLists.map((fl) => (
+                    <button
+                      key={fl.remoteId}
+                      style={{
+                        textAlign: 'left',
+                        padding: '10px 12px',
+                        background: 'var(--color-surface)',
+                        border: '1px solid var(--color-border)',
+                        color: 'var(--color-text)',
+                        cursor: 'pointer',
+                      }}
+                      onClick={() => handleSelectOpponentList(fl.remoteId)}
+                    >
+                      <span style={{ fontWeight: 600, fontSize: 13 }}>{fl.name}</span>
+                      <span style={{ fontSize: 10, marginLeft: 8, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>
+                        {fl.detachment} &middot; {fl.pointsLimit} pts
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+          <div style={{ marginTop: 12 }}>
+            <HudBtn variant="ghost" onClick={() => { setShowOpponentPicker(false); setSelectedFriend(null); setFriendLists([]) }}>
               Annuler
-            </Button>
+            </HudBtn>
+          </div>
+        </>,
+      )}
+
+      {/* Target picker */}
+      {showTargetPicker && attackingUnit && renderModal(
+        () => { setShowTargetPicker(false); setAttackingUnit(null) },
+        <>
+          <MSection>{attackingUnit.ds.name} attaque...</MSection>
+          {!hasSession && (
+            <p style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', marginTop: 4, marginBottom: 10 }}>
+              Mode solo — choisis une cible dans ta liste
+            </p>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: hasSession ? 10 : 0 }}>
+            {(hasSession && opponentList ? opponentList.units : list.units)
+              .filter((u) => {
+                if (!hasSession) return u.id !== attackingUnit.unit.id
+                const cas = opponentCasualties[u.id]
+                const factionData = hasSession ? opponentFaction : faction
+                const ds = factionData?.datasheets.find((d) => d.id === u.datasheetId)
+                const total = getModelCount(u, ds)
+                return !cas || (total - cas.modelsDestroyed) > 0
+              })
+              .map((u) => {
+                const factionData = hasSession && opponentList ? opponentFaction : faction
+                const ds = factionData?.datasheets.find((d) => d.id === u.datasheetId)
+                if (!ds) return null
+                const total = getModelCount(u, ds)
+                const casSource = hasSession ? opponentCasualties : casualties
+                const cas = casSource[u.id]
+                const alive = total - (cas?.modelsDestroyed ?? 0)
+                return (
+                  <button
+                    key={u.id}
+                    style={{
+                      textAlign: 'left',
+                      padding: '10px 12px',
+                      background: 'var(--color-surface)',
+                      border: '1px solid var(--color-border)',
+                      color: 'var(--color-text)',
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => handleSelectTarget(u, ds)}
+                  >
+                    <span style={{ fontWeight: 600, fontSize: 13 }}>{u.datasheetName}</span>
+                    <span style={{ fontSize: 10, marginLeft: 8, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)' }}>
+                      {alive}/{total} &middot; T:{ds.profiles[0]?.T} Sv:{ds.profiles[0]?.Sv} W:{ds.profiles[0]?.W}
+                    </span>
+                  </button>
+                )
+              })}
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <HudBtn variant="ghost" onClick={() => { setShowTargetPicker(false); setAttackingUnit(null) }}>
+              Annuler
+            </HudBtn>
+          </div>
+        </>,
+      )}
+
+      {/* Unit detail modal */}
+      {viewingDatasheet && (
+        <div
+          data-scroll-lock
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 65,
+            background: 'rgba(0,0,0,0.5)',
+            backdropFilter: isDesktop ? 'blur(8px)' : undefined,
+            WebkitBackdropFilter: isDesktop ? 'blur(8px)' : undefined,
+            display: 'flex',
+            alignItems: isDesktop ? 'center' : 'flex-end',
+            justifyContent: 'center',
+          }}
+          onClick={() => setViewingUnit(null)}
+        >
+          <div
+            style={{
+              background: 'var(--color-bg)',
+              border: '1px solid var(--color-border)',
+              width: isDesktop ? '90%' : '100%',
+              maxWidth: isDesktop ? 700 : 'none',
+              maxHeight: isDesktop ? '85vh' : '85vh',
+              borderRadius: isDesktop ? 0 : '16px 16px 0 0',
+              overflowY: 'auto',
+              padding: isDesktop ? '24px' : '16px',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+              <HudBtn variant="ghost" onClick={() => setViewingUnit(null)}>
+                Fermer
+              </HudBtn>
+            </div>
+            <UnitSheet
+              datasheet={viewingDatasheet}
+              selectedWeapons={viewingUnit?.listUnit.selectedWeapons}
+              onSimulate={() => {
+                setViewingUnit(null)
+                navigate(`/simulate/${list.factionId}/${viewingDatasheet.id}`)
+              }}
+            />
           </div>
         </div>
       )}
 
-      {/* Contextual simulation result */}
-      {simTarget && attackingUnit && (
-        <ContextualSimulator
-          attackerUnit={attackingUnit.unit}
-          attackerDatasheet={attackingUnit.ds}
-          attackerCasualty={casualties[attackingUnit.unit.id] ?? null}
-          defenderUnit={simTarget.unit}
-          defenderDatasheet={simTarget.ds}
-          defenderCasualty={(hasSession ? opponentCasualties : casualties)[simTarget.unit.id] ?? null}
-          attackerEnhancement={findEnhancement(attackingUnit.unit, faction)}
-          defenderEnhancement={findEnhancement(simTarget.unit, hasSession ? opponentFaction : faction)}
-          attackerStratagems={detachment?.stratagems ?? []}
-          defenderStratagems={hasSession
-            ? (opponentFaction?.detachments?.find((d) => d.name === opponentList?.detachment)?.stratagems ?? [])
-            : (detachment?.stratagems ?? [])}
-          leaderDatasheet={(() => {
-            const leaderUnit = list.units.find((u) => u.attachedToId === attackingUnit.unit.id)
-            return leaderUnit ? faction?.datasheets.find((ds) => ds.id === leaderUnit.datasheetId) : undefined
-          })()}
-          onChangeTarget={() => { setSimTarget(null); setShowTargetPicker(true) }}
-          onClose={() => { setSimTarget(null); setAttackingUnit(null) }}
-        />
+      {/* Simulator modal */}
+      {simParams && (
+        <div
+          data-scroll-lock
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 70,
+            background: 'rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: isDesktop ? 'center' : 'flex-end',
+            justifyContent: 'center',
+          }}
+          onClick={() => setSimParams(null)}
+        >
+          <div
+            style={{
+              background: 'var(--color-bg)',
+              border: '1px solid var(--color-border)',
+              width: isDesktop ? '92%' : '100%',
+              maxWidth: isDesktop ? 960 : 'none',
+              maxHeight: isDesktop ? '92vh' : '90vh',
+              borderRadius: isDesktop ? 0 : '16px 16px 0 0',
+              overflowY: 'auto',
+              padding: isDesktop ? '16px 20px' : '16px',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <SimulatorPage
+              onClose={() => setSimParams(null)}
+              initialAttackerFaction={simParams.attackerFaction}
+              initialAttackerDs={simParams.attackerDs}
+              initialAttackerWeapons={simParams.attackerWeapons}
+              initialDefenderFaction={simParams.defenderFaction}
+              initialDefenderDs={simParams.defenderDs}
+            />
+          </div>
+        </div>
       )}
+
     </motion.div>
   )
 }

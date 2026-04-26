@@ -36,6 +36,7 @@ interface UnitSheetProps {
   datasheet: Datasheet
   ownedCount?: number
   enhancementGroups?: EnhancementGroup[]
+  selectedWeapons?: string[]
   onAddToCollection?: () => void
   onUpdateQuantity?: (quantity: number) => void
   onAddToList?: () => void
@@ -106,10 +107,13 @@ function MobileAccordion({
   )
 }
 
-export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddToCollection, onUpdateQuantity, onAddToList, onSimulate, onCompare, forceAccordion }: UnitSheetProps) {
+export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, selectedWeapons, onAddToCollection, onUpdateQuantity, onAddToList, onSimulate, onCompare, forceAccordion }: UnitSheetProps) {
   const isMobileScreen = useIsMobile()
   const isMobile = forceAccordion || isMobileScreen
   const isMelee = (w: { type: string; range: string }) => w.type === 'Melee' || w.range === 'Melee'
+  const weaponKey = (w: { type: string; range: string; name: string }) => `${isMelee(w) ? 'melee' : 'ranged'}:${w.name}`
+  const hasWeaponFilter = selectedWeapons && selectedWeapons.length > 0
+  const isWeaponSelected = (w: { type: string; range: string; name: string }) => !hasWeaponFilter || selectedWeapons!.includes(weaponKey(w))
   const meleeWeapons = datasheet.weapons.filter((w) => isMelee(w))
   const rangedWeapons = datasheet.weapons.filter((w) => !isMelee(w))
   const { customImageUrl, save: saveCustomImage, remove: removeCustomImage } = useCustomImage(datasheet.id)
@@ -193,40 +197,47 @@ export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddT
     </>
   )
 
-  const primaryButtons = (
+  const showCollectionBtn = !!(onAddToCollection || onUpdateQuantity)
+  const showListBtn = !!onAddToList
+
+  const primaryButtons = (showCollectionBtn || showListBtn) ? (
     <div className="flex flex-col gap-1.5">
-      {ownedCount === 0 ? (
-        <Button variant="primary" size="sm" onClick={onAddToCollection}>
-          {isMobileScreen ? 'Collection +' : 'Ajouter à ma collection'}
-        </Button>
-      ) : (
-        <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => onUpdateQuantity?.(ownedCount - 1)}
-            aria-label="Diminuer la quantité"
-          >
-            −
+      {showCollectionBtn && (
+        ownedCount === 0 ? (
+          <Button variant="primary" size="sm" onClick={onAddToCollection}>
+            {isMobileScreen ? 'Collection +' : 'Ajouter à ma collection'}
           </Button>
-          <span className="text-sm font-medium min-w-[2ch] text-center" style={{ color: 'var(--color-text)' }}>
-            {ownedCount}
-          </span>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => onUpdateQuantity?.(ownedCount + 1)}
-            aria-label="Augmenter la quantité"
-          >
-            +
-          </Button>
-        </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => onUpdateQuantity?.(ownedCount - 1)}
+              aria-label="Diminuer la quantité"
+            >
+              −
+            </Button>
+            <span className="text-sm font-medium min-w-[2ch] text-center" style={{ color: 'var(--color-text)' }}>
+              {ownedCount}
+            </span>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => onUpdateQuantity?.(ownedCount + 1)}
+              aria-label="Augmenter la quantité"
+            >
+              +
+            </Button>
+          </div>
+        )
       )}
-      <Button variant="secondary" size="sm" disabled={!onAddToList} onClick={onAddToList}>
-        {isMobileScreen ? 'Liste +' : 'Ajouter à une liste'}
-      </Button>
+      {showListBtn && (
+        <Button variant="secondary" size="sm" onClick={onAddToList}>
+          {isMobileScreen ? 'Liste +' : 'Ajouter à une liste'}
+        </Button>
+      )}
     </div>
-  )
+  ) : null
 
   const secondaryButtons = (onSimulate || onCompare) ? (
     <div className="flex items-center gap-3">
@@ -359,7 +370,7 @@ export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddT
               </thead>
               <tbody>
                 {rangedWeapons.map((w, i) => (
-                  <tr key={i} style={{ borderBottom: '1px solid var(--color-surface)' }}>
+                  <tr key={i} style={{ borderBottom: '1px solid var(--color-surface)', opacity: isWeaponSelected(w) ? 1 : 0.3, transition: 'opacity 0.15s' }}>
                     <td className="py-1 pr-2 font-medium"><T text={w.name} category="weapon" /></td>
                     <td className="text-center px-1">{w.range}</td>
                     <td className="text-center px-1">{w.A}</td>
@@ -393,7 +404,7 @@ export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, onAddT
               </thead>
               <tbody>
                 {meleeWeapons.map((w, i) => (
-                  <tr key={i} style={{ borderBottom: '1px solid var(--color-surface)' }}>
+                  <tr key={i} style={{ borderBottom: '1px solid var(--color-surface)', opacity: isWeaponSelected(w) ? 1 : 0.3, transition: 'opacity 0.15s' }}>
                     <td className="py-1 pr-2 font-medium"><T text={w.name} category="weapon" /></td>
                     <td className="text-center px-1">{w.A}</td>
                     <td className="text-center px-1">{w.BS_WS}</td>

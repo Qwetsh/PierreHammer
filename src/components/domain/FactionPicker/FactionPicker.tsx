@@ -9,6 +9,8 @@ interface FactionPickerProps {
   detachments?: Detachment[]
   selectedDetachment?: Detachment | null
   onDetachmentChange?: (det: Detachment | null) => void
+  /** When false, all factions stay visible on select (desktop). Default true (mobile). */
+  collapseOnSelect?: boolean
 }
 
 interface FactionTheme {
@@ -90,13 +92,14 @@ export function FactionPicker({
   detachments = [],
   selectedDetachment,
   onDetachmentChange,
+  collapseOnSelect = true,
 }: FactionPickerProps) {
   const [showDetachments, setShowDetachments] = useState(false)
 
   return (
     <div style={{ padding: '14px 14px 20px' }}>
-      {/* Header mono */}
-      {!selectedSlug && (
+      {/* Header mono — only shown on mobile (collapse mode) when no faction selected */}
+      {collapseOnSelect && !selectedSlug && (
         <div style={{
           fontSize: 10,
           color: 'var(--color-text-muted)',
@@ -110,14 +113,15 @@ export function FactionPicker({
 
       <div className="faction-picker-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
         {factions
-          .filter((faction) => !selectedSlug || selectedSlug === faction.slug)
+          .filter((faction) => !selectedSlug || !collapseOnSelect || selectedSlug === faction.slug)
           .map((faction) => {
             const theme = factionThemes[faction.slug] ?? defaultTheme
             const color = theme.accent
             const isSelected = selectedSlug === faction.slug
+            const isDimmed = !collapseOnSelect && !!selectedSlug && !isSelected
 
             return (
-              <div key={faction.id} className={isSelected ? 'faction-tile-wrapper--expanded' : ''}>
+              <div key={faction.id} className={isSelected && collapseOnSelect ? 'faction-tile-wrapper--expanded' : ''}>
                 <div
                   onClick={() => {
                     if (isSelected) {
@@ -132,12 +136,18 @@ export function FactionPicker({
                   style={{
                     position: 'relative',
                     overflow: 'hidden',
-                    border: '1px solid var(--color-border)',
+                    border: isSelected && !collapseOnSelect
+                      ? `2px solid ${color}`
+                      : '1px solid var(--color-border)',
                     background: 'var(--color-surface)',
                     cursor: 'pointer',
                     display: 'flex',
                     flexDirection: 'column',
-                    transition: 'border-color 0.15s, box-shadow 0.15s, transform 0.15s',
+                    transition: 'border-color 0.15s, box-shadow 0.15s, transform 0.15s, opacity 0.2s',
+                    opacity: isDimmed ? 0.4 : 1,
+                    boxShadow: isSelected && !collapseOnSelect
+                      ? `0 0 16px ${color}40`
+                      : undefined,
                   }}
                 >
                   {/* Visual block */}

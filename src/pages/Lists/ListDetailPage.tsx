@@ -18,6 +18,9 @@ import { THtml } from '@/components/ui/TranslatableText'
 import { useFactionTheme } from '@/hooks/useFactionTheme'
 import { useAuthStore } from '@/stores/authStore'
 import { setListPublic } from '@/services/listsSyncService'
+import { ListsDesktopLayout } from './components/ListsDesktopLayout'
+import { ListDetailCenter } from './components/ListDetailCenter'
+import { ListRightPanel } from './components/ListRightPanel'
 
 export function ListDetailPage() {
   const { listId } = useParams<{ listId: string }>()
@@ -25,7 +28,9 @@ export function ListDetailPage() {
   const { showToast } = useToast()
   const list = useListsStore((s) => listId ? s.lists[listId] : undefined)
 
-  useFactionTheme(list?.factionId ?? null)
+  // On desktop, keep default blue theme (layout handles it); on mobile, apply faction theme
+  const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
+  useFactionTheme(isDesktop ? null : (list?.factionId ?? null))
   const removeUnit = useListsStore((s) => s.removeUnit)
   const updateUnit = useListsStore((s) => s.updateUnit)
   const updateList = useListsStore((s) => s.updateList)
@@ -35,6 +40,7 @@ export function ListDetailPage() {
   const loadedFactions = useGameDataStore((s) => s.loadedFactions)
   const loadFaction = useGameDataStore((s) => s.loadFaction)
   const isOwned = useCollectionStore((s) => s.isOwned)
+  const collectionItems = useCollectionStore((s) => s.items)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
 
   useEffect(() => {
@@ -159,120 +165,182 @@ export function ListDetailPage() {
   function renderUnitRow(unit: ListUnit, index: number, indent: boolean = false) {
     const owned = isOwned(unit.datasheetId)
     const ds = faction?.datasheets.find((d) => d.id === unit.datasheetId)
-    const weaponCount = unit.selectedWeapons?.length ?? 0
     const isChar = isCharacter(ds)
+    const pts = resolveUnitPoints(unit, faction?.datasheets)
+    const optIdx = unit.selectedPointOptionIndex ?? 0
+    const modelsStr = ds?.pointOptions[optIdx]?.models ?? ds?.pointOptions[0]?.models ?? '1'
+    const profile = ds?.profiles[0]
+    const statsLine = profile
+      ? `${modelsStr} · M${profile.M} T${profile.T} SV${profile.Sv} W${profile.W}`
+      : modelsStr
 
     return (
       <div
         key={unit.id || index}
-        className="rounded-lg p-3 min-h-[44px] cursor-pointer"
         style={{
-          backgroundColor: 'var(--color-surface)',
-          opacity: owned ? 1 : 0.5,
-          borderLeft: indent
-            ? '3px solid var(--color-accent)'
-            : owned ? 'none' : '3px solid var(--color-warning, #f59e0b)',
-          marginLeft: indent ? '16px' : 0,
+          background: 'var(--color-surface)',
+          border: '1px solid var(--color-border)',
+          borderLeftWidth: indent ? 3 : 1,
+          borderLeftColor: indent ? 'var(--color-accent)' : owned ? 'var(--color-border)' : 'var(--color-warning, #f59e0b)',
+          padding: '10px 12px',
+          cursor: 'pointer',
+          marginLeft: indent ? 16 : 0,
+          opacity: owned ? 1 : 0.6,
         }}
         onClick={() => setEditingUnitIndex(index)}
       >
-        <div className="flex items-center justify-between">
-          <div className="flex-1 min-w-0">
-            {indent && (
-              <span className="text-xs mr-1" style={{ color: 'var(--color-accent)' }}>
-                ↳
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {/* Unit image */}
+          {ds?.imageUrl ? (
+            <img
+              src={ds.imageUrl}
+              alt={unit.datasheetName}
+              style={{
+                width: 40,
+                height: 40,
+                objectFit: 'cover',
+                borderRadius: 4,
+                background: 'var(--color-bg)',
+                flexShrink: 0,
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 4,
+                background: 'var(--color-bg)',
+                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <span style={{ fontSize: 16, color: 'var(--color-text-muted)', opacity: 0.4 }}>?</span>
+            </div>
+          )}
+
+          {/* Name + stats */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              {indent && (
+                <span style={{ color: 'var(--color-accent)', fontSize: 11 }}>&#8627;</span>
+              )}
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <T text={unit.datasheetName} category="unit" />
               </span>
+            </div>
+            <div
+              style={{
+                fontSize: 9,
+                color: 'var(--color-text-muted)',
+                fontFamily: 'var(--font-mono)',
+                letterSpacing: 0.3,
+                marginTop: 2,
+              }}
+            >
+              {statsLine}
+            </div>
+            {unit.enhancement && (
+              <div style={{ fontSize: 9, color: 'var(--color-accent)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span>&#10022; {unit.enhancement.enhancementName} (+{unit.enhancement.cost} pts)</span>
+                <button
+                  style={{ background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: 9, padding: '0 2px' }}
+                  onClick={(e) => { e.stopPropagation(); setEnhancement(safeListId, index, undefined) }}
+                >
+                  &#10005;
+                </button>
+              </div>
             )}
-            <span className="font-medium text-sm" style={{ color: 'var(--color-text)' }}>
-              <T text={unit.datasheetName} category="unit" />
-            </span>
-            <span className="text-xs ml-2" style={{ color: 'var(--color-accent)' }}>
-              {resolveUnitPoints(unit, faction?.datasheets)} pts
-            </span>
-            {!owned && (
-              <span className="text-xs ml-2" style={{ color: 'var(--color-warning, #f59e0b)' }}>
-                Non possédé
-              </span>
-            )}
-            {ds && ds.pointOptions.length > 1 && (
-              <span className="text-xs ml-2" style={{ color: 'var(--color-text-muted)' }}>
-                ({ds.pointOptions[unit.selectedPointOptionIndex ?? 0]?.models ?? ds.pointOptions[0].models})
-              </span>
+            {unit.notes && (
+              <div style={{ fontSize: 9, color: 'var(--color-text-muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {unit.notes}
+              </div>
             )}
           </div>
-          <div className="flex items-center gap-1">
-            {weaponCount > 0 && (
-              <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                {weaponCount} arme{weaponCount > 1 ? 's' : ''}
-              </span>
-            )}
-            {/* Enhancement for characters */}
+
+          {/* Points */}
+          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+            <div style={{ fontSize: 16, fontWeight: 600, fontFamily: 'var(--font-mono)', color: 'var(--color-accent)' }}>
+              {pts}
+            </div>
+            <div style={{ fontSize: 8, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)', letterSpacing: 0.5 }}>
+              pts
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
             {isChar && ds && availableEnhancements.some((e) => !usedEnhancementIds.has(e.id) && canEquipEnhancement(e, ds)) && !unit.enhancement && (
-              <Button
-                variant="ghost"
-                size="sm"
+              <button
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--color-accent)', fontSize: 12, padding: '2px 4px' }}
                 onClick={(e) => { e.stopPropagation(); setEnhancementUnitIndex(index) }}
                 aria-label="Ajouter une amélioration"
               >
-                ✦
-              </Button>
+                &#10022;
+              </button>
             )}
-            {/* Attach/Detach for characters */}
             {isChar && unit.attachedToId && (
-              <Button
-                variant="ghost"
-                size="sm"
+              <button
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', fontSize: 11, padding: '2px 4px' }}
                 onClick={(e) => { e.stopPropagation(); detachHero(safeListId, index) }}
                 aria-label="Détacher le héros"
               >
-                ⇥
-              </Button>
+                &#8677;
+              </button>
             )}
             {isChar && !unit.attachedToId && availableSquads.length > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
+              <button
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', fontSize: 11, padding: '2px 4px' }}
                 onClick={(e) => { e.stopPropagation(); setAttachingHeroIndex(index) }}
                 aria-label="Attacher à une escouade"
               >
-                ⇤
-              </Button>
+                &#8676;
+              </button>
             )}
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
+              style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', fontSize: 11, padding: '2px 4px' }}
               onClick={(e) => { e.stopPropagation(); removeUnit(safeListId, index) }}
               aria-label={`Retirer ${unit.datasheetName}`}
             >
-              ✕
-            </Button>
-          </div>
-        </div>
-        {unit.enhancement && (
-          <div className="flex items-center justify-between mt-1">
-            <span className="text-xs" style={{ color: 'var(--color-accent)' }}>
-              ✦ {unit.enhancement.enhancementName} (+{unit.enhancement.cost} pts)
-            </span>
-            <button
-              className="text-xs border-none bg-transparent cursor-pointer"
-              style={{ color: 'var(--color-text-muted)' }}
-              onClick={(e) => { e.stopPropagation(); setEnhancement(safeListId, index, undefined) }}
-            >
-              ✕
+              &#10005;
             </button>
           </div>
-        )}
-        {unit.notes && (
-          <p className="text-xs mt-1 truncate" style={{ color: 'var(--color-text-muted)' }}>
-            {unit.notes}
-          </p>
-        )}
+        </div>
       </div>
     )
   }
 
+  // Desktop: 3-column layout
+  const desktopView = list && listId ? (
+    <ListsDesktopLayout
+      center={
+        <ListDetailCenter
+          list={list}
+          listId={listId}
+          faction={faction}
+        />
+      }
+      right={
+        <ListRightPanel
+          list={list}
+          faction={faction}
+          collectionItems={collectionItems}
+        />
+      }
+    />
+  ) : null
+
   return (
     <div>
+      {/* Desktop layout */}
+      <div className="hidden lg:block">
+        {desktopView}
+      </div>
+
+      {/* Mobile layout */}
+      <div className="lg:hidden">
       <ArmyListHeader
         name={list.name}
         factionId={list.factionId}
@@ -411,7 +479,7 @@ export function ListDetailPage() {
             onAction={() => navigate(`/lists/${safeListId}/add-unit`)}
           />
         ) : (
-          <div className="flex flex-col gap-2">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {/* Squads with attached heroes */}
             {squads.map(({ unit, index, heroes }) => {
               const hasHeroes = heroes.length > 0
@@ -425,11 +493,14 @@ export function ListDetailPage() {
                   {heroes.map((h) => renderUnitRow(h.unit, h.index, true))}
                   {hasHeroes && squadTotals && (
                     <div
-                      className="text-xs px-3 py-1 rounded-b-lg -mt-1"
                       style={{
-                        backgroundColor: 'color-mix(in srgb, var(--color-surface) 60%, transparent)',
+                        fontSize: 10,
+                        fontFamily: 'var(--font-mono)',
+                        padding: '4px 12px',
+                        marginLeft: 16,
+                        borderLeft: '3px solid var(--color-accent)',
                         color: 'var(--color-text-muted)',
-                        marginLeft: '16px',
+                        background: 'color-mix(in srgb, var(--color-surface) 60%, transparent)',
                       }}
                     >
                       Total : {squadTotals.squadPoints} + {squadTotals.heroPoints} = <strong style={{ color: 'var(--color-accent)' }}>{squadTotals.total} pts</strong>
@@ -579,6 +650,7 @@ export function ListDetailPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }

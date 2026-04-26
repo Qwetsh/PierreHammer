@@ -26,6 +26,8 @@ const FriendsPage = lazy(() => import('./pages/Friends/FriendsPage').then(m => (
 const FriendListsPage = lazy(() => import('./pages/Friends/FriendListsPage').then(m => ({ default: m.FriendListsPage })))
 const SimulatorPage = lazy(() => import('./pages/Simulator/SimulatorPage').then(m => ({ default: m.SimulatorPage })))
 const GameHistoryPage = lazy(() => import('./pages/Profile/GameHistoryPage').then(m => ({ default: m.GameHistoryPage })))
+const FeedbackPage = lazy(() => import('./pages/Feedback/FeedbackPage').then(m => ({ default: m.FeedbackPage })))
+const FeedbackAdminPage = lazy(() => import('./pages/Feedback/FeedbackAdminPage').then(m => ({ default: m.FeedbackAdminPage })))
 
 function NotFoundPage() {
   const navigate = useNavigate()
@@ -84,6 +86,8 @@ function AnimatedRoutes() {
             <Route path="/friends/:friendId/lists" element={<FriendListsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/profile/history" element={<GameHistoryPage />} />
+            <Route path="/feedback" element={<FeedbackPage />} />
+            <Route path="/feedback/admin" element={<FeedbackAdminPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>

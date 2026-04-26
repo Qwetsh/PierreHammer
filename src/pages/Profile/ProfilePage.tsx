@@ -503,6 +503,7 @@ export function ProfilePage() {
   const { showToast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const userEmail = useAuthStore((s) => s.user?.email)
   const profile = useFriendsStore((s) => s.profile)
   const loadFactionIndex = useGameDataStore((s) => s.loadFactionIndex)
   useEffect(() => { loadFactionIndex() }, [loadFactionIndex])
@@ -568,6 +569,14 @@ export function ProfilePage() {
                   >
                     HISTORIQUE DES PARTIES {'\u25b8'}
                   </button>
+                  {userEmail === 'tomicharles@gmail.com' && (
+                    <button
+                      style={{ background: 'transparent', border: '1px solid var(--color-border)', color: 'var(--color-warning, #f59e0b)', padding: '8px 16px', fontFamily: 'var(--font-mono)', fontSize: 11, cursor: 'pointer', letterSpacing: 0.5 }}
+                      onClick={() => navigate('/feedback/admin')}
+                    >
+                      ADMIN FEEDBACKS {'\u25b8'}
+                    </button>
+                  )}
                 </div>
               </HudPanel>
             )}
@@ -755,6 +764,11 @@ export function ProfilePage() {
           {isAuthenticated && (
             <HudBtn variant="ghost" onClick={() => navigate('/profile/history')} style={{ width: '100%', justifyContent: 'center' }}>
               HISTORIQUE DES PARTIES {'\u25b8'}
+            </HudBtn>
+          )}
+          {userEmail === 'tomicharles@gmail.com' && (
+            <HudBtn variant="ghost" onClick={() => navigate('/feedback/admin')} style={{ width: '100%', justifyContent: 'center', color: 'var(--color-warning, #f59e0b)' }}>
+              ADMIN FEEDBACKS {'\u25b8'}
             </HudBtn>
           )}
 

@@ -141,6 +141,18 @@
   grid-column: 1 / -1;
 }
 
+@media (min-width: 1024px) {
+  .faction-tile-wrapper--expanded {
+    grid-column: auto;
+    max-width: 280px;
+  }
+
+  .faction-tile-wrapper--expanded .faction-tile__visual {
+    aspect-ratio: 2 / 1;
+    max-height: 120px;
+  }
+}
+
 .faction-tile--expanded {
   flex-direction: row;
   flex-wrap: wrap;
@@ -298,7 +310,7 @@
 
 @media (min-width: 1024px) {
   .faction-tile__visual {
-    aspect-ratio: 2 / 1;
+    aspect-ratio: 3 / 1;
   }
 }
 
@@ -315,14 +327,14 @@
 
 @media (min-width: 1024px) {
   .faction-picker-grid {
-    grid-template-columns: repeat(5, 1fr) !important;
-    gap: 8px !important;
+    grid-template-columns: repeat(6, 1fr) !important;
+    gap: 6px !important;
   }
 }
 
 @media (min-width: 1400px) {
   .faction-picker-grid {
-    grid-template-columns: repeat(6, 1fr) !important;
+    grid-template-columns: repeat(7, 1fr) !important;
   }
 }
 
@@ -372,7 +384,7 @@
 
   .faction-tile__name {
     font-family: var(--font-sans);
-    font-size: 14px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0;
   }

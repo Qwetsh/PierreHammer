@@ -101,10 +101,20 @@ const secondaryTabs: Tab[] = [
       </svg>
     ),
   },
+  {
+    to: '/feedback',
+    label: 'Feedback & Dons',
+    hudIcon: '\u2665',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+      </svg>
+    ),
+  },
 ]
 
-// All tabs for desktop sidebar
-const allTabs: Tab[] = [...primaryTabs, ...secondaryTabs]
+// All tabs for desktop sidebar (feedback excluded — has dedicated button in footer)
+const allTabs: Tab[] = [...primaryTabs, ...secondaryTabs.filter((t) => t.to !== '/feedback')]
 
 export function BottomNav() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -363,8 +373,27 @@ export function BottomNav() {
             fontSize: 10,
             fontFamily: 'var(--font-mono)',
             color: 'var(--color-text-muted)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6,
           }}
         >
+          <button
+            onClick={() => navigate('/feedback')}
+            className="w-full border-none cursor-pointer"
+            style={{
+              padding: '5px 8px',
+              border: '1px solid var(--color-border)',
+              background: location.pathname === '/feedback' ? 'color-mix(in srgb, var(--color-accent) 10%, transparent)' : 'transparent',
+              color: location.pathname === '/feedback' ? 'var(--color-accent)' : 'var(--color-text-dim)',
+              textAlign: 'center' as const,
+              letterSpacing: 1,
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+            }}
+          >
+            {'\u2665'} CETTE APP VOUS PLAIT ?
+          </button>
           <button
             onClick={toggleEditMode}
             className="w-full border-none cursor-pointer"
@@ -380,7 +409,7 @@ export function BottomNav() {
             }}
             title={editMode ? 'Desactiver le mode traduction' : 'Activer le mode traduction'}
           >
-            ◇ TRADUCTIONS
+            {'\u25c7'} TRADUCTIONS
             {editMode && (
               <span
                 className="inline-block ml-2 rounded-full"

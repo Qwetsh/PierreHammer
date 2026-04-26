@@ -10,6 +10,7 @@ import { FactionPicker } from '@/components/domain/FactionPicker'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { HudTopBar, HudBtn, HudBar, HudPanel, HudPill, MTopBar } from '@/components/ui/Hud'
+import { ListsDesktopLayout } from './components/ListsDesktopLayout'
 import type { PointsLimit } from '@/types/armyList.types'
 import type { Detachment } from '@/types/gameData.types'
 
@@ -222,15 +223,35 @@ export function ListsPage() {
     </div>
   )
 
-  // Empty state
+  // Desktop layout — empty state center
+  const desktopEmptyCenter = (
+    <div style={{ padding: '60px 28px', maxWidth: 500, margin: '0 auto' }}>
+      <EmptyState
+        title="Selectionne une liste"
+        description="Choisis une liste dans la sidebar ou cree-en une nouvelle."
+        actionLabel="Creer une liste"
+        onAction={() => {}}
+      />
+    </div>
+  )
+
+  // Empty state (mobile only now, desktop uses layout)
   if (allLists.length === 0 && !showForm) {
     return (
       <>
         <div className="hidden lg:block">
-          <HudTopBar title="Mes Listes" sub="Arsenal" actions={<HudBtn variant="primary" onClick={() => setShowForm(true)}>+ Nouvelle Liste</HudBtn>} />
-          <div style={{ padding: '40px 24px', maxWidth: 500, margin: '0 auto' }}>
-            <EmptyState title="Pas encore de liste ?" description="Crée ta première liste d'armée pour préparer tes parties." actionLabel="Créer ma première liste" onAction={() => setShowForm(true)} />
-          </div>
+          <ListsDesktopLayout
+            center={
+              <div style={{ padding: '60px 28px', maxWidth: 500, margin: '0 auto' }}>
+                <EmptyState
+                  title="Pas encore de liste ?"
+                  description="Cree ta premiere liste d'armee pour preparer tes parties."
+                  actionLabel="Creer ma premiere liste"
+                  onAction={() => {}}
+                />
+              </div>
+            }
+          />
         </div>
         <div className="lg:hidden">
           <MTopBar title="Mes Listes" sub="Arsenal" actions={<HudBtn variant="primary" onClick={() => setShowForm(true)} style={{ padding: '4px 10px', fontSize: 9 }}>+ Nouvelle</HudBtn>} />
@@ -244,76 +265,9 @@ export function ListsPage() {
 
   return (
     <>
-      {/* ══════ DESKTOP HUD ══════ */}
+      {/* ══════ DESKTOP — 3 columns layout ══════ */}
       <div className="hidden lg:block">
-        <HudTopBar
-          title="Mes Listes"
-          sub="Arsenal"
-          actions={
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              {isAuthenticated && syncing && (
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--color-accent)', letterSpacing: 1 }}>SYNC...</span>
-              )}
-              {!showForm && <HudBtn variant="primary" onClick={() => setShowForm(true)}>+ Nouvelle Liste</HudBtn>}
-            </div>
-          }
-        />
-        <div style={{ padding: '16px 24px 24px' }}>
-          {showForm && (
-            <HudPanel title="Nouvelle Liste" style={{ marginBottom: 20 }}>
-              <div style={{ padding: 16 }}>{createFormContent}</div>
-            </HudPanel>
-          )}
-
-          {/* Lists grid — 2 columns on desktop */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
-            {allLists.map((list) => {
-              const pts = totalPoints(list.id)
-              const pct = Math.min(100, (pts / list.pointsLimit) * 100)
-              const overBudget = pts > list.pointsLimit
-              return (
-                <div
-                  key={list.id}
-                  onClick={() => navigate(`/lists/${list.id}`)}
-                  style={{
-                    border: '1px solid var(--color-border)',
-                    background: 'var(--color-surface)',
-                    padding: '14px 16px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 8,
-                    transition: 'border-color 0.15s',
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--color-accent)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--color-border)')}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
-                        {list.name}
-                      </span>
-                      {isAuthenticated && list.remoteId && (
-                        <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-success)', letterSpacing: 1 }}>SYNC</span>
-                      )}
-                    </div>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 600, color: overBudget ? 'var(--color-error)' : 'var(--color-accent)', flexShrink: 0 }}>
-                      {pts}<span style={{ color: 'var(--color-text-muted)', fontSize: 11 }}>/{list.pointsLimit}</span>
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 10, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)', letterSpacing: 0.5 }}>
-                      {list.detachment} {'\u00b7'} {countSquads(list.units)} esc.
-                    </span>
-                    <div style={{ flex: 1 }}>
-                      <HudBar value={pct} max={100} color={overBudget ? 'var(--color-error)' : 'var(--color-accent)'} height={3} />
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
+        <ListsDesktopLayout center={desktopEmptyCenter} />
       </div>
 
       {/* ══════ MOBILE HUD ══════ */}
