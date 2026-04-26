@@ -67,7 +67,6 @@ export function GameModePage() {
   const activeSession = useGameSessionStore((s) => s.activeSession)
   const opponentProfile = useGameSessionStore((s) => s.opponentProfile)
   const opponentList = useGameSessionStore((s) => s.opponentList)
-  const sessionLoading = useGameSessionStore((s) => s.loading)
   const startSession = useGameSessionStore((s) => s.startSession)
   const loadSession = useGameSessionStore((s) => s.loadSession)
   const endSessionAction = useGameSessionStore((s) => s.endSession)
@@ -214,7 +213,7 @@ export function GameModePage() {
   const renderUnitRow = (
     listUnit: ListUnit,
     i: number,
-    factionData: typeof faction,
+    factionData: typeof faction | null,
     cas: { modelsDestroyed: number; woundsRemaining: number | null } | null,
     playerId: string,
     isOpponent: boolean,
@@ -712,7 +711,7 @@ export function GameModePage() {
           }}>
             <MSection>Unites ({list.units.length})</MSection>
             {list.units.length === 0 ? (
-              <EmptyState title="Liste vide" />
+              <EmptyState title="Liste vide" description="Aucune unite dans cette liste." />
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
                 {list.units.map((listUnit, i) => {

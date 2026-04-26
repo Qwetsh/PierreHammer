@@ -5,17 +5,15 @@ import { useCollectionStore } from '@/stores/collectionStore'
 import { useToast } from '@/components/ui/Toast'
 import { useAuthStore } from '@/stores/authStore'
 import { setListPublic } from '@/services/listsSyncService'
-import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { EquipmentSelector } from '@/components/domain/EquipmentSelector'
 import { UnitCard } from '@/components/domain/UnitCard'
 import { SearchBar } from '@/components/ui/SearchBar'
-import { HudBtn, HudPointsCounter, MSection } from '@/components/ui/Hud'
+import { HudBtn, HudPointsCounter } from '@/components/ui/Hud'
 import { T } from '@/components/ui/TranslatableText'
 import { THtml } from '@/components/ui/TranslatableText'
 import { useSearch } from '@/hooks/useSearch'
 import { calculateTotalPoints, resolveUnitPoints, countSquads, resolveSquadTotalPoints } from '@/utils/pointsCalculator'
-import { validateArmyList } from '@/features/army-list/utils/validateArmyList'
 import { isCharacter, canEquipEnhancement } from '@/utils/enhancementUtils'
 import type { ArmyList, ListUnit, PointsLimit } from '@/types/armyList.types'
 import type { Faction, Datasheet, Detachment, Enhancement } from '@/types/gameData.types'
@@ -317,13 +315,6 @@ export function ListDetailCenter({
     return count
   }, [list.units, faction])
 
-  const validation = useMemo(() => {
-    if (!faction) return undefined
-    const datasheets = list.units
-      .map((u) => faction.datasheets.find((ds) => ds.id === u.datasheetId))
-      .filter((ds): ds is NonNullable<typeof ds> => ds !== undefined)
-    return validateArmyList(datasheets)
-  }, [list, faction])
 
   const detachment: Detachment | undefined = faction?.detachments?.find(
     (d) => d.id === list.detachmentId || d.name === list.detachment,
@@ -882,6 +873,7 @@ export function ListDetailCenter({
         {list.units.length === 0 ? (
           <EmptyState
             title="Liste vide"
+            description="Ajoute des unites pour commencer."
           />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

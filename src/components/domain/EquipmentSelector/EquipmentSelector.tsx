@@ -38,41 +38,6 @@ function useIsDesktop(breakpoint = 1024) {
   return isDesktop
 }
 
-// --- Mobile stat badges (kept for mobile bottom sheet) ---
-const statBadgeStyle: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: '2px',
-  padding: '1px 5px',
-  borderRadius: '4px',
-  fontSize: '10px',
-  lineHeight: '16px',
-  backgroundColor: 'rgba(255,255,255,0.06)',
-}
-
-function WeaponStatsMobile({ w, showRange }: { w: Weapon; showRange?: boolean }) {
-  return (
-    <span className="flex items-center gap-1 shrink-0">
-      {showRange && (
-        <span style={{ ...statBadgeStyle, color: 'var(--color-accent)' }}>
-          {w.range}
-        </span>
-      )}
-      <span style={statBadgeStyle}>
-        <span style={{ color: 'var(--color-text-muted)' }}>F</span>
-        <span style={{ color: 'var(--color-text)' }}>{w.S}</span>
-      </span>
-      <span style={statBadgeStyle}>
-        <span style={{ color: 'var(--color-text-muted)' }}>PA</span>
-        <span style={{ color: 'var(--color-text)' }}>{w.AP}</span>
-      </span>
-      <span style={statBadgeStyle}>
-        <span style={{ color: 'var(--color-text-muted)' }}>D</span>
-        <span style={{ color: 'var(--color-text)' }}>{w.D}</span>
-      </span>
-    </span>
-  )
-}
 
 export function EquipmentSelector({
   datasheet,

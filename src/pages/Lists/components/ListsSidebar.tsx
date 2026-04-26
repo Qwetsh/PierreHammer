@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router'
 import { useListsStore } from '@/stores/listsStore'
 import { useGameDataStore } from '@/stores/gameDataStore'
 import { useAuthStore } from '@/stores/authStore'
-import { calculateTotalPoints, countSquads } from '@/utils/pointsCalculator'
+import { calculateTotalPoints } from '@/utils/pointsCalculator'
 import { HudBar, HudPill } from '@/components/ui/Hud'
 import { MSection } from '@/components/ui/Hud'
 
@@ -15,10 +15,7 @@ export function ListsSidebar({ onCreateClick, onListSelect }: { onCreateClick?: 
   const deleteList = useListsStore((s) => s.deleteList)
   const loadedFactions = useGameDataStore((s) => s.loadedFactions)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
-  const syncing = useListsStore((s) => s.syncing)
-
   const allLists = getAllLists()
-  const syncedCount = allLists.filter((l) => l.remoteId).length
 
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
