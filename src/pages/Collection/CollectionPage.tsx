@@ -4,6 +4,7 @@ import { useCollectionStore } from '@/stores/collectionStore'
 import { useGameDataStore } from '@/stores/gameDataStore'
 import { useFavoritesStore } from '@/stores/favoritesStore'
 import { useSearch } from '@/hooks/useSearch'
+import { useTranslation } from '@/hooks/useTranslation'
 import { UnitCard } from '@/components/domain/UnitCard'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { HudPanel, HudChip, HudSearch, HudSegmentedBar, HudTopBar, MTopBar } from '@/components/ui/Hud'
@@ -111,8 +112,9 @@ export function CollectionPage() {
     })
   }, [factionFiltered, paintFilter, collectionItems])
 
+  const { t } = useTranslation()
   const extractFields = useCallback(extractSearchFields, [])
-  const searched = useSearch(paintFiltered, query, extractFields)
+  const searched = useSearch(paintFiltered, query, extractFields, t)
 
   const sortedDatasheets = useMemo(() => {
     return [...searched].sort((a, b) => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useCollectionStore } from '@/stores/collectionStore'
 import { useListsStore } from '@/stores/listsStore'
@@ -103,6 +103,21 @@ export function DashboardPage() {
     changes.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
     return { pointsChanges: changes, pointsChangesDate: latestDate }
   }, [diffs, loadedFactions])
+
+  // WarCom news feed
+  const [warcomArticles, setWarcomArticles] = useState<{ id: string; url: string; title: string; summary: string; image: string; date_published: string; tags?: string[] }[]>([])
+  useEffect(() => {
+    const isDev = import.meta.env.DEV
+    const url = isDev
+      ? '/api/warcom/feed.json'
+      : 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://warcomfeed.link/feed.json')
+    fetch(url)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.items) setWarcomArticles(data.items.slice(0, 5))
+      })
+      .catch(() => {})
+  }, [])
 
   const username = isAuthenticated && profile?.username ? profile.username : 'Commandant'
 
@@ -250,6 +265,43 @@ export function DashboardPage() {
             </>
           )}
         </div>
+        {/* WarCom News */}
+        {warcomArticles.length > 0 && (
+          <>
+            <MSection>Actu WarCom</MSection>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {warcomArticles.map((a) => (
+                <a
+                  key={a.id}
+                  href={a.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'flex',
+                    gap: 10,
+                    background: 'var(--color-surface)',
+                    border: '1px solid var(--color-border)',
+                    textDecoration: 'none',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {a.image && (
+                    <div style={{ width: 80, height: 64, flexShrink: 0, overflow: 'hidden' }}>
+                      <img src={a.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
+                    </div>
+                  )}
+                  <div style={{ padding: '8px 10px 8px 0', minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.title}</div>
+                    <div style={{ fontSize: 9, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)', marginTop: 3, display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <span>{new Date(a.date_published).toLocaleDateString('fr-FR')}</span>
+                      {a.tags?.[0] && <span style={{ color: 'var(--color-accent)' }}>{a.tags[0]}</span>}
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
 
@@ -478,6 +530,47 @@ export function DashboardPage() {
               </div>
             )}
           </HudPanel>
+
+          {/* WarCom News */}
+          {warcomArticles.length > 0 && (
+            <HudPanel title="Actu WarCom">
+              <div>
+                {warcomArticles.map((a) => (
+                  <a
+                    key={a.id}
+                    href={a.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '10px 14px',
+                      borderBottom: '1px solid var(--color-border)',
+                      gap: 12,
+                      cursor: 'pointer',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    {a.image && (
+                      <div style={{ width: 72, height: 48, flexShrink: 0, overflow: 'hidden' }}>
+                        <img src={a.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{a.title}</div>
+                      <div style={{ fontSize: 10, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{a.summary}</div>
+                      <div style={{ fontSize: 9, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)', marginTop: 3, display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <span>{new Date(a.date_published).toLocaleDateString('fr-FR')}</span>
+                        {a.tags?.slice(0, 2).map((tag) => (
+                          <span key={tag} style={{ color: 'var(--color-accent)', fontSize: 8, letterSpacing: 0.5 }}>{tag}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </HudPanel>
+          )}
         </div>
       </div>
 

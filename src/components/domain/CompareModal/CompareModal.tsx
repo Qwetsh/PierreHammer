@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useGameDataStore } from '@/stores/gameDataStore'
+import { useTranslation } from '@/hooks/useTranslation'
 import type { Datasheet } from '@/types/gameData.types'
 
 interface CompareUnit {
@@ -40,6 +41,7 @@ function useIsMobile() {
 }
 
 export function CompareModal({ open, onClose, sourceDatasheet, sourceFactionName }: CompareModalProps) {
+  const { t: tr } = useTranslation()
   const factionIndex = useGameDataStore((s) => s.factionIndex)
   const loadedFactions = useGameDataStore((s) => s.loadedFactions)
   const loadFaction = useGameDataStore((s) => s.loadFaction)
@@ -82,10 +84,13 @@ export function CompareModal({ open, onClose, sourceDatasheet, sourceFactionName
   const searchResults = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
     if (!q) return []
+    const words = q.split(/\s+/).filter(Boolean)
     const results: (Datasheet & { factionName: string })[] = []
     for (const faction of Object.values(loadedFactions)) {
       for (const ds of faction.datasheets) {
-        if (!excludedIds.has(ds.id) && ds.name.toLowerCase().includes(q)) {
+        const name = ds.name.toLowerCase()
+        const translated = tr(ds.name).toLowerCase()
+        if (!excludedIds.has(ds.id) && words.every((w) => name.includes(w) || translated.includes(w))) {
           results.push({ ...ds, factionName: faction.name })
         }
       }

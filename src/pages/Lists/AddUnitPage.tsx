@@ -4,6 +4,7 @@ import { useListsStore } from '@/stores/listsStore'
 import { useGameDataStore } from '@/stores/gameDataStore'
 import { useCollectionStore } from '@/stores/collectionStore'
 import { useSearch } from '@/hooks/useSearch'
+import { useTranslation } from '@/hooks/useTranslation'
 import { useFactionTheme } from '@/hooks/useFactionTheme'
 import { useToast } from '@/components/ui/Toast'
 import { UnitCard } from '@/components/domain/UnitCard'
@@ -69,8 +70,9 @@ export function AddUnitPage() {
     return filtered
   }, [datasheets, roleFilter, ownedOnly, collectionItems])
 
+  const { t } = useTranslation()
   const extractFields = useCallback(extractSearchFields, [])
-  const filteredDatasheets = useSearch(roleFiltered, query, extractFields)
+  const filteredDatasheets = useSearch(roleFiltered, query, extractFields, t)
 
   if (!list || !listId) {
     return (

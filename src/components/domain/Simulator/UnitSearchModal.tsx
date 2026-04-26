@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { Datasheet } from '@/types/gameData.types'
 import { T } from '@/components/ui/TranslatableText'
+import { useTranslation } from '@/hooks/useTranslation'
 
 interface UnitSearchModalProps {
   datasheets: Datasheet[]
@@ -10,12 +11,14 @@ interface UnitSearchModalProps {
 
 export function UnitSearchModal({ datasheets, onSelect, onClose }: UnitSearchModalProps) {
   const [search, setSearch] = useState('')
+  const { t } = useTranslation()
 
   const filtered = useMemo(() => {
-    const q = search.toLowerCase()
-    const list = q ? datasheets.filter((d) => d.name.toLowerCase().includes(q)) : datasheets
+    const q = search.trim().toLowerCase()
+    const words = q.split(/\s+/).filter(Boolean)
+    const list = words.length ? datasheets.filter((d) => { const n = d.name.toLowerCase(); const tr = t(d.name).toLowerCase(); return words.every((w) => n.includes(w) || tr.includes(w)) }) : datasheets
     return list.slice(0, 40)
-  }, [datasheets, search])
+  }, [datasheets, search, t])
 
   return (
     <div data-scroll-lock className="fixed inset-0 z-[80] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} onClick={onClose}>

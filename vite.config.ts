@@ -67,6 +67,15 @@ export default defineConfig({
       },
     }),
   ],
+  server: {
+    proxy: {
+      '/api/warcom': {
+        target: 'https://warcomfeed.link',
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/api\/warcom/, ''),
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),

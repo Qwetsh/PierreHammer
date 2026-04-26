@@ -13,6 +13,7 @@ import { HudBtn, HudPointsCounter } from '@/components/ui/Hud'
 import { T } from '@/components/ui/TranslatableText'
 import { THtml } from '@/components/ui/TranslatableText'
 import { useSearch } from '@/hooks/useSearch'
+import { useTranslation } from '@/hooks/useTranslation'
 import { calculateTotalPoints, resolveUnitPoints, countSquads, resolveSquadTotalPoints } from '@/utils/pointsCalculator'
 import { isCharacter, canEquipEnhancement } from '@/utils/enhancementUtils'
 import type { ArmyList, ListUnit, PointsLimit } from '@/types/armyList.types'
@@ -402,8 +403,9 @@ export function ListDetailCenter({
     return filtered
   }, [allDatasheets, addUnitRoleFilter, addUnitOwnedOnly, collectionItems])
 
+  const { t } = useTranslation()
   const extractFields = useCallback(extractSearchFields, [])
-  const addUnitFiltered = useSearch(roleFilteredDs, addUnitQuery, extractFields)
+  const addUnitFiltered = useSearch(roleFilteredDs, addUnitQuery, extractFields, t)
 
   const handleAddUnitConfirm = (pointOptionIndex: number, weapons: string[], notes: string) => {
     if (!addUnitSelectedDs) return

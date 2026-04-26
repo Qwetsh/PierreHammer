@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router'
 import { useGameData } from '@/hooks/useGameData'
 import { useSearch } from '@/hooks/useSearch'
+import { useTranslation } from '@/hooks/useTranslation'
 import { FactionPicker } from '@/components/domain/FactionPicker'
 import { UnitCard } from '@/components/domain/UnitCard'
 import { UnitSheet } from '@/components/domain/UnitSheet'
@@ -168,8 +169,9 @@ export function CatalogPage() {
     )
   }, [roleFiltered, selectedKeywords])
 
+  const { t } = useTranslation()
   const extractFields = useCallback(extractSearchFields, [])
-  const searched = useSearch(keywordFiltered, query, extractFields)
+  const searched = useSearch(keywordFiltered, query, extractFields, t)
   const sorted = useMemo(() => sortDatasheets(searched, sortBy), [searched, sortBy])
 
   // Separate favorites
