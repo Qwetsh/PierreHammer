@@ -87,16 +87,20 @@ export async function respondToRequest(friendshipId: string, accept: boolean): P
 export async function getFriends(userId: string): Promise<Friendship[]> {
   if (!isSupabaseConfigured || !supabase) return []
   try {
-    const { data, error } = await supabase
-      .from('ph_friendships')
-      .select('*, requester:profiles!ph_friendships_requester_id_fkey(id, username, display_name, created_at), addressee:profiles!ph_friendships_addressee_id_fkey(id, username, display_name, created_at)')
-      .eq('status', 'accepted')
-      .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`)
+    const { data, error } = await supabase.rpc('get_friends_list', { p_user_id: userId })
     if (error) {
       console.error('getFriends error:', error.message)
       return []
     }
-    return data as Friendship[]
+    return ((data ?? []) as { friendship_id: string; requester_id: string; addressee_id: string; status: string; created_at: string; friend_id: string; friend_username: string | null; friend_display_name: string | null }[]).map((r) => ({
+      id: r.friendship_id,
+      requester_id: r.requester_id,
+      addressee_id: r.addressee_id,
+      status: r.status as Friendship['status'],
+      created_at: r.created_at,
+      requester: r.requester_id === userId ? undefined : { id: r.friend_id, username: r.friend_username, display_name: r.friend_display_name, created_at: r.created_at },
+      addressee: r.addressee_id === userId ? undefined : { id: r.friend_id, username: r.friend_username, display_name: r.friend_display_name, created_at: r.created_at },
+    }))
   } catch (e) {
     console.error('getFriends exception:', e)
     return []
@@ -106,16 +110,19 @@ export async function getFriends(userId: string): Promise<Friendship[]> {
 export async function getPendingRequests(userId: string): Promise<Friendship[]> {
   if (!isSupabaseConfigured || !supabase) return []
   try {
-    const { data, error } = await supabase
-      .from('ph_friendships')
-      .select('*, requester:profiles!ph_friendships_requester_id_fkey(id, username, display_name, created_at)')
-      .eq('status', 'pending')
-      .eq('addressee_id', userId)
+    const { data, error } = await supabase.rpc('get_pending_requests', { p_user_id: userId })
     if (error) {
       console.error('getPendingRequests error:', error.message)
       return []
     }
-    return data as Friendship[]
+    return ((data ?? []) as { friendship_id: string; requester_id: string; addressee_id: string; status: string; created_at: string; req_id: string; req_username: string | null; req_display_name: string | null }[]).map((r) => ({
+      id: r.friendship_id,
+      requester_id: r.requester_id,
+      addressee_id: r.addressee_id,
+      status: r.status as Friendship['status'],
+      created_at: r.created_at,
+      requester: { id: r.req_id, username: r.req_username, display_name: r.req_display_name, created_at: r.created_at },
+    }))
   } catch (e) {
     console.error('getPendingRequests exception:', e)
     return []
@@ -125,16 +132,19 @@ export async function getPendingRequests(userId: string): Promise<Friendship[]> 
 export async function getSentRequests(userId: string): Promise<Friendship[]> {
   if (!isSupabaseConfigured || !supabase) return []
   try {
-    const { data, error } = await supabase
-      .from('ph_friendships')
-      .select('*, addressee:profiles!ph_friendships_addressee_id_fkey(id, username, display_name, created_at)')
-      .eq('status', 'pending')
-      .eq('requester_id', userId)
+    const { data, error } = await supabase.rpc('get_sent_requests', { p_user_id: userId })
     if (error) {
       console.error('getSentRequests error:', error.message)
       return []
     }
-    return data as Friendship[]
+    return ((data ?? []) as { friendship_id: string; requester_id: string; addressee_id: string; status: string; created_at: string; addr_id: string; addr_username: string | null; addr_display_name: string | null }[]).map((r) => ({
+      id: r.friendship_id,
+      requester_id: r.requester_id,
+      addressee_id: r.addressee_id,
+      status: r.status as Friendship['status'],
+      created_at: r.created_at,
+      addressee: { id: r.addr_id, username: r.addr_username, display_name: r.addr_display_name, created_at: r.created_at },
+    }))
   } catch (e) {
     console.error('getSentRequests exception:', e)
     return []
