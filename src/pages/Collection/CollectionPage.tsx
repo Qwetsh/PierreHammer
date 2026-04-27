@@ -12,6 +12,7 @@ import type { PaintStatus } from '@/components/domain/PaintStatusBadge'
 import type { Datasheet } from '@/types/gameData.types'
 import { T } from '@/components/ui/TranslatableText'
 import { PaintingHelper } from '@/components/domain/PaintingHelper/PaintingHelper'
+import { FriendsOwners } from '@/components/domain/FriendsOwners/FriendsOwners'
 
 interface DatasheetWithFaction extends Datasheet {
   factionSlug: string
@@ -439,6 +440,7 @@ export function CollectionPage() {
                     factionName={editingDatasheet.factionName}
                   />
                 )}
+                {editingId && <FriendsOwners datasheetId={editingId} />}
               </div>
             </div>
           </div>
@@ -646,6 +648,7 @@ export function CollectionPage() {
                     factionName={editingDatasheet.factionName}
                   />
                 )}
+                {editingId && <FriendsOwners datasheetId={editingId} />}
               </div>
             </div>
           </div>

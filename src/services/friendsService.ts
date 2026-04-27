@@ -147,6 +147,29 @@ export async function updateUsername(userId: string, username: string): Promise<
   }
 }
 
+export interface FriendOwner {
+  user_id: string
+  username: string | null
+  display_name: string | null
+}
+
+export async function getFriendsWithDatasheet(datasheetId: string): Promise<FriendOwner[]> {
+  if (!isSupabaseConfigured || !supabase) return []
+  try {
+    const { data, error } = await supabase.rpc('get_friends_with_datasheet', {
+      p_datasheet_id: datasheetId,
+    })
+    if (error) {
+      console.error('getFriendsWithDatasheet error:', error.message)
+      return []
+    }
+    return (data as FriendOwner[]) || []
+  } catch (e) {
+    console.error('getFriendsWithDatasheet exception:', e)
+    return []
+  }
+}
+
 export async function getProfile(userId: string): Promise<Profile | null> {
   if (!isSupabaseConfigured || !supabase) return null
   try {
