@@ -44,14 +44,15 @@ const paintDotColor: Record<PaintStatus, string> = {
   done: 'var(--color-success)',
 }
 
-function PaintDots({ datasheetId, collectionItems }: { datasheetId: string; collectionItems: Record<string, { instances: PaintStatus[] }> }) {
+function PaintDots({ datasheetId, collectionItems }: { datasheetId: string; collectionItems: Record<string, { squads: PaintStatus[][] }> }) {
   const item = collectionItems[datasheetId]
-  if (!item?.instances?.length) {
+  const allModels = item?.squads.flat()
+  if (!allModels?.length) {
     return <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--color-error)', display: 'inline-block' }} />
   }
   return (
     <span style={{ display: 'inline-flex', gap: 3, alignItems: 'center' }}>
-      {item.instances.map((status, i) => (
+      {allModels.map((status, i) => (
         <span
           key={i}
           style={{
@@ -399,7 +400,7 @@ export function ListDetailCenter({
   const roleFilteredDs = useMemo(() => {
     let filtered = allDatasheets
     if (addUnitRoleFilter !== 'all') filtered = filtered.filter((ds) => ds.role === addUnitRoleFilter)
-    if (addUnitOwnedOnly) filtered = filtered.filter((ds) => (collectionItems[ds.id]?.instances?.length ?? 0) > 0)
+    if (addUnitOwnedOnly) filtered = filtered.filter((ds) => (collectionItems[ds.id]?.squads.flat().length ?? 0) > 0)
     return filtered
   }, [allDatasheets, addUnitRoleFilter, addUnitOwnedOnly, collectionItems])
 
@@ -989,7 +990,7 @@ export function ListDetailCenter({
           onConfirm={handleSaveEquipment}
           onCancel={() => setEditingUnitIndex(null)}
           confirmLabel="Enregistrer"
-          ownedCount={collectionItems[editingUnit.datasheetId]?.instances?.length ?? 0}
+          ownedCount={collectionItems[editingUnit.datasheetId]?.squads.flat().length ?? 0}
         />
       )}
 
@@ -1245,8 +1246,8 @@ export function ListDetailCenter({
                     <UnitCard
                       key={ds.id}
                       datasheet={ds}
-                      owned={collectionItems[ds.id]?.instances?.length}
-                      instances={collectionItems[ds.id]?.instances}
+                      owned={collectionItems[ds.id]?.squads.flat().length}
+                      instances={collectionItems[ds.id]?.squads.flat()}
                       onClick={() => setAddUnitSelectedDs(ds)}
                     />
                   ))}
@@ -1264,7 +1265,7 @@ export function ListDetailCenter({
           onConfirm={handleAddUnitConfirm}
           onCancel={() => setAddUnitSelectedDs(null)}
           confirmLabel="Ajouter a la liste"
-          ownedCount={collectionItems[addUnitSelectedDs.id]?.instances?.length ?? 0}
+          ownedCount={collectionItems[addUnitSelectedDs.id]?.squads.flat().length ?? 0}
         />
       )}
 

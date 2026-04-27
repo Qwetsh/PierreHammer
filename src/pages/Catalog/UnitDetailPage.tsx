@@ -47,7 +47,7 @@ export function UnitDetailPage() {
   }
 
   const points = datasheet.pointOptions.length > 0 ? datasheet.pointOptions[0].cost : 0
-  const ownedCount = collectionItem?.instances.length ?? 0
+  const ownedCount = collectionItem?.squads.flat().length ?? 0
 
   const enhancementGroups = useMemo(() => {
     if (!isCharacter(datasheet) || !faction?.detachments) return []

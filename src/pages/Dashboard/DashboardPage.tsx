@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useCollectionStore } from '@/stores/collectionStore'
 import { useListsStore } from '@/stores/listsStore'
@@ -8,6 +8,8 @@ import { usePointsHistoryStore } from '@/stores/pointsHistoryStore'
 import { HudPanel, HudStat, HudSegmentedBar, HudBar, MTopBar, MSection, MQuickCard } from '@/components/ui/Hud'
 import { useFriendsStore } from '@/stores/friendsStore'
 import { useAuthStore } from '@/stores/authStore'
+import { getCustomImageUrl } from '@/stores/customImageStore'
+import { useGwPriceStore } from '@/stores/gwPriceStore'
 
 function useCollectionByFaction() {
   const items = useCollectionStore((s) => s.items)
@@ -18,7 +20,7 @@ function useCollectionByFaction() {
     for (const item of Object.values(items)) {
       const fid = item.factionId
       if (!byFaction[fid]) byFaction[fid] = { total: 0, done: 0, inProgress: 0, assembled: 0, unassembled: 0 }
-      for (const inst of item.instances) {
+      for (const inst of item.squads.flat()) {
         byFaction[fid].total++
         if (inst === 'done') byFaction[fid].done++
         else if (inst === 'in-progress') byFaction[fid].inProgress++
@@ -53,8 +55,12 @@ export function DashboardPage() {
   const factionIndex = useGameDataStore((s) => s.factionIndex)
   const factionRows = useCollectionByFaction()
   const diffs = usePointsHistoryStore((s) => s.diffs)
+  const loadPrices = useGwPriceStore((s) => s.loadPrices)
+  const getCollectionValue = useGwPriceStore((s) => s.getCollectionValue)
+  const pricesLoaded = useGwPriceStore((s) => s.loaded)
 
   useEffect(() => { loadFactionIndex() }, [loadFactionIndex])
+  useEffect(() => { loadPrices() }, [loadPrices])
 
   // Load factions that have owned units or point diffs (for name resolution)
   useEffect(() => {
@@ -69,13 +75,13 @@ export function DashboardPage() {
   const workshopUnits = useMemo(() => {
     const statusPriority = { 'in-progress': 0, 'assembled': 1, 'unassembled': 2 } as const
     return Object.entries(collectionItems)
-      .filter(([, item]) => item.instances.some((s) => s !== 'done'))
+      .filter(([, item]) => item.squads.flat().some((s) => s !== 'done'))
       .map(([id, item]) => {
-        const pending = item.instances.filter((s) => s !== 'done')
+        const all = item.squads.flat()
+        const pending = all.filter((s) => s !== 'done')
         const bestStatus = pending.sort(
           (a, b) => (statusPriority[a as keyof typeof statusPriority] ?? 9) - (statusPriority[b as keyof typeof statusPriority] ?? 9)
         )[0]
-        // Resolve name + image from loaded faction datasheets
         const faction = loadedFactions[item.factionId]
         const ds = faction?.datasheets?.find((d) => d.id === id)
         const name = ds?.name ?? id.substring(0, 14)
@@ -85,6 +91,39 @@ export function DashboardPage() {
       .sort((a, b) => (statusPriority[a.status as keyof typeof statusPriority] ?? 9) - (statusPriority[b.status as keyof typeof statusPriority] ?? 9))
       .slice(0, 12)
   }, [collectionItems, loadedFactions])
+
+  // Load custom images for workshop units (prefer user photo over default)
+  const [customImages, setCustomImages] = useState<Record<string, string>>({})
+  const workshopIdsKey = workshopUnits.map((u) => u.id).join(',')
+  const prevIdsKey = useRef('')
+  useEffect(() => {
+    if (workshopIdsKey === prevIdsKey.current) return
+    prevIdsKey.current = workshopIdsKey
+    const ids = workshopUnits.map((u) => u.id)
+    if (ids.length === 0) return
+    let cancelled = false
+    const urls: string[] = []
+    Promise.all(
+      ids.map(async (id) => {
+        const url = await getCustomImageUrl(id)
+        return { id, url }
+      })
+    ).then((results) => {
+      if (cancelled) return
+      const map: Record<string, string> = {}
+      for (const { id, url } of results) {
+        if (url) {
+          map[id] = url
+          urls.push(url)
+        }
+      }
+      setCustomImages(map)
+    })
+    return () => {
+      cancelled = true
+      urls.forEach(URL.revokeObjectURL)
+    }
+  }, [workshopIdsKey, workshopUnits])
 
   // Points changes from last update (no expiration — always show last known diffs)
   const { pointsChanges, pointsChangesDate } = useMemo(() => {
@@ -124,6 +163,19 @@ export function DashboardPage() {
   const recentLists = lists.slice(0, 4)
   const factionCount = factionIndex?.factions.length || 0
 
+  const collectionValue = useMemo(() => {
+    if (!pricesLoaded) return 0
+    return getCollectionValue(collectionItems, (dsId) => {
+      for (const item of Object.values(collectionItems)) {
+        if (item.datasheetId === dsId) {
+          const faction = loadedFactions[item.factionId]
+          return faction?.datasheets?.find((d) => d.id === dsId)?.name
+        }
+      }
+      return undefined
+    })
+  }, [pricesLoaded, collectionItems, loadedFactions, getCollectionValue])
+
   return (
     <>
     {/* ── MOBILE: HUD landing ── */}
@@ -136,6 +188,9 @@ export function DashboardPage() {
           <KpiCard label="En cours" value={stats.inProgress} color="var(--color-accent)" />
           <KpiCard label="Terminées" value={stats.completed} color="var(--color-success)" sub={stats.total > 0 ? `${stats.percentComplete}%` : undefined} />
         </div>
+        {collectionValue > 0 && (
+          <ValueCard label="Valeur collection" value={collectionValue} />
+        )}
 
         {/* Segmented bar + legend */}
         {stats.total > 0 && (
@@ -195,9 +250,9 @@ export function DashboardPage() {
                       overflow: 'hidden',
                     }}
                   >
-                    {u.imageUrl && (
+                    {(customImages[u.id] || u.imageUrl) && (
                       <div style={{ width: 64, height: 64, flexShrink: 0, overflow: 'hidden' }}>
-                        <img src={u.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
+                        <img src={customImages[u.id] || u.imageUrl!} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
                       </div>
                     )}
                     <div style={{ padding: '8px 10px', minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -321,11 +376,14 @@ export function DashboardPage() {
       </div>
 
       {/* ── KPI ROW ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: collectionValue > 0 ? 'repeat(5, 1fr)' : 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
         <KpiCard label="Figurines" value={stats.total} color="var(--color-accent)" />
         <KpiCard label="Peintes" value={stats.completed} color="var(--color-success)" sub={stats.total > 0 ? `${stats.percentComplete}%` : undefined} />
         <KpiCard label="Listes" value={lists.length} color="var(--color-gold)" />
         <KpiCard label="Favoris" value={favCount} color="var(--color-magenta)" />
+        {collectionValue > 0 && (
+          <ValueCard label="Valeur GW" value={collectionValue} />
+        )}
       </div>
 
       {/* ── MAIN GRID: 2 columns ── */}
@@ -384,6 +442,54 @@ export function DashboardPage() {
               </div>
             )}
           </HudPanel>
+
+          {/* En atelier */}
+          {workshopUnits.length > 0 && (
+            <HudPanel title="En Atelier">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1, background: 'var(--color-border)' }}>
+                {workshopUnits.slice(0, 6).map((u) => {
+                  const statusColor =
+                    u.status === 'in-progress' ? 'var(--color-accent)'
+                      : u.status === 'assembled' ? 'var(--color-warning)'
+                        : '#536577'
+                  const statusLabel =
+                    u.status === 'in-progress' ? 'EN COURS'
+                      : u.status === 'assembled' ? 'ASSEMBLÉ'
+                        : 'NON MONTÉ'
+                  const imgSrc = customImages[u.id] || u.imageUrl
+                  return (
+                    <div
+                      key={u.id}
+                      onClick={() => navigate('/collection')}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        padding: '8px 10px',
+                        background: 'var(--color-surface)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {imgSrc && (
+                        <div style={{ width: 40, height: 40, flexShrink: 0, overflow: 'hidden' }}>
+                          <img src={imgSrc} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
+                        </div>
+                      )}
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{u.name}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                          <span style={{ fontSize: 9, color: statusColor, fontFamily: 'var(--font-mono)', letterSpacing: 0.3 }}>{statusLabel}</span>
+                          {u.pendingCount > 1 && (
+                            <span style={{ fontSize: 8, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>x{u.pendingCount}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </HudPanel>
+          )}
 
           {/* Quick Access */}
           <HudPanel title="Accès Rapide">
@@ -618,6 +724,33 @@ function PaintLegend({ color, label, count }: { color: string; label: string; co
       <span style={{ fontSize: 10, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>
         {count}
       </span>
+    </div>
+  )
+}
+
+function ValueCard({ label, value }: { label: string; value: number }) {
+  return (
+    <div
+      style={{
+        border: '1px solid var(--color-border)',
+        background: 'var(--color-surface)',
+        padding: '16px 18px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 4,
+      }}
+    >
+      <div style={{ fontSize: 9, letterSpacing: 1.8, textTransform: 'uppercase' as const, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>
+        {label}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+        <span style={{ fontSize: 28, fontWeight: 600, color: 'var(--color-gold)', lineHeight: 1, fontFamily: 'var(--font-sans)' }}>
+          {Math.round(value)}
+        </span>
+        <span style={{ fontSize: 13, color: 'var(--color-text-dim)', fontFamily: 'var(--font-mono)' }}>
+          €
+        </span>
+      </div>
     </div>
   )
 }

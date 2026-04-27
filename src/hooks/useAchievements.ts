@@ -27,7 +27,7 @@ export function useAchievements(): Achievement[] {
   const profile = useFriendsStore((s) => s.profile)
 
   return useMemo(() => {
-    const allInstances = Object.values(items).flatMap((i) => i.instances)
+    const allInstances = Object.values(items).flatMap((i) => i.squads.flat())
     const totalUnits = Object.keys(items).length
     const paintedCount = allInstances.filter((s) => s === 'done').length
     const factionIds = new Set(Object.values(items).map((i) => i.factionId))

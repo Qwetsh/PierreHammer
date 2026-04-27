@@ -7,28 +7,39 @@ interface RemoteCollectionItem {
   user_id: string
   datasheet_id: string
   faction_id: string
-  instances: PaintStatus[]
+  instances: PaintStatus[] | PaintStatus[][]
   created_at: string
   updated_at: string
 }
 
 function toLocal(remote: RemoteCollectionItem): CollectionItem {
+  const raw = remote.instances
+  // Detect format: new = [[...], [...]], old = ["status", ...]
+  let squads: PaintStatus[][]
+  if (Array.isArray(raw) && raw.length > 0 && Array.isArray(raw[0])) {
+    squads = raw as PaintStatus[][]
+  } else if (Array.isArray(raw)) {
+    // Old format: each element is a status string → each becomes a squad of 1
+    squads = (raw as PaintStatus[]).map((s) => [s])
+  } else {
+    squads = [['unassembled']]
+  }
   return {
     datasheetId: remote.datasheet_id,
     factionId: remote.faction_id,
-    instances: remote.instances ?? ['unassembled'],
+    squads,
   }
 }
 
 function toRemote(
   item: CollectionItem,
   userId: string,
-): { user_id: string; datasheet_id: string; faction_id: string; instances: PaintStatus[] } {
+): { user_id: string; datasheet_id: string; faction_id: string; instances: PaintStatus[][] } {
   return {
     user_id: userId,
     datasheet_id: item.datasheetId,
     faction_id: item.factionId,
-    instances: item.instances,
+    instances: item.squads,
   }
 }
 
@@ -86,7 +97,6 @@ export async function deleteCollectionItem(userId: string, datasheetId: string):
       console.error('[collection-sync] delete error:', error.message)
       return false
     }
-    console.log('[collection-sync] delete OK:', datasheetId)
     return true
   } catch (e) {
     console.error('[collection-sync] delete exception:', e)
@@ -118,7 +128,7 @@ export function subscribeToCollection(
         filter: `user_id=eq.${userId}`,
       },
       ((payload: { eventType: string; new: RemoteCollectionItem; old: Record<string, string> }) => {
-        console.log('[collection-sync] realtime event:', payload.eventType, payload)
+        console.log('[collection-sync] realtime event:', payload.eventType)
         if (payload.eventType === 'DELETE') {
           const dsId = payload.old?.datasheet_id
           if (dsId) callback('delete', null, dsId)

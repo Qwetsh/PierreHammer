@@ -62,9 +62,10 @@ export function CollectionPage() {
   const loadFactionIndex = useGameDataStore((s) => s.loadFactionIndex)
   const favorites = useFavoritesStore((s) => s.favorites)
 
-  const updateInstanceStatus = useCollectionStore((s) => s.updateInstanceStatus)
-  const addInstance = useCollectionStore((s) => s.addInstance)
-  const removeInstance = useCollectionStore((s) => s.removeInstance)
+  const updateModelStatus = useCollectionStore((s) => s.updateModelStatus)
+  const setSquadStatus = useCollectionStore((s) => s.setSquadStatus)
+  const addSquad = useCollectionStore((s) => s.addSquad)
+  const removeSquad = useCollectionStore((s) => s.removeSquad)
 
   const [query, setQuery] = useState('')
   const [factionFilter, setFactionFilter] = useState<string | 'all'>('all')
@@ -108,7 +109,7 @@ export function CollectionPage() {
     if (paintFilter === 'all') return factionFiltered
     return factionFiltered.filter((ds) => {
       const item = collectionItems[ds.id]
-      return item?.instances.some((s) => s === paintFilter)
+      return item?.squads.flat().some((s) => s === paintFilter)
     })
   }, [factionFiltered, paintFilter, collectionItems])
 
@@ -129,8 +130,8 @@ export function CollectionPage() {
         case 'role':
           return (a.role || '').localeCompare(b.role || '', 'fr')
         case 'paintStatus': {
-          const ia = collectionItems[a.id]?.instances ?? []
-          const ib = collectionItems[b.id]?.instances ?? []
+          const ia = collectionItems[a.id]?.squads.flat() ?? []
+          const ib = collectionItems[b.id]?.squads.flat() ?? []
           const sa = ia.length > 0 ? Math.min(...ia.map((s) => paintOrder[s])) : 0
           const sb = ib.length > 0 ? Math.min(...ib.map((s) => paintOrder[s])) : 0
           return sa - sb
@@ -184,8 +185,8 @@ export function CollectionPage() {
         <UnitCard
           key={ds.id}
           datasheet={ds}
-          owned={collectionItems[ds.id]?.instances.length}
-          instances={collectionItems[ds.id]?.instances}
+          owned={collectionItems[ds.id]?.squads.flat().length}
+          instances={collectionItems[ds.id]?.squads.flat()}
           onClick={() => {
             if (collectionItems[ds.id]) {
               setEditingId(ds.id)
@@ -335,15 +336,18 @@ export function CollectionPage() {
                     <T text={editingDatasheet.name} category="unit" />
                   </div>
                   <div style={{ fontSize: 10, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)', marginTop: 2 }}>
-                    {editingItem.instances.length} exemplaire{editingItem.instances.length > 1 ? 's' : ''}
+                    {editingItem.squads.length} escouade{editingItem.squads.length > 1 ? 's' : ''} · {editingItem.squads.flat().length} figurines
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button
                     style={{ padding: '5px 12px', fontSize: 11, fontFamily: 'var(--font-mono)', background: 'color-mix(in srgb, var(--color-accent) 10%, transparent)', color: 'var(--color-accent)', border: '1px solid var(--color-accent)', cursor: 'pointer' }}
-                    onClick={() => addInstance(editingId)}
+                    onClick={() => {
+                      const mc = parseInt(editingDatasheet.pointOptions[0]?.models) || 1
+                      addSquad(editingId, mc)
+                    }}
                   >
-                    + Ajouter
+                    + Escouade
                   </button>
                   <button
                     style={{ padding: '5px 10px', fontSize: 11, background: 'transparent', color: 'var(--color-text-muted)', border: '1px solid var(--color-border)', cursor: 'pointer' }}
@@ -354,45 +358,77 @@ export function CollectionPage() {
                 </div>
               </div>
               <div style={{ flex: 1, overflow: 'auto', padding: '12px 20px' }}>
-                {editingItem.instances.map((status, i) => (
-                  <div
-                    key={i}
-                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid var(--color-border)' }}
-                  >
-                    <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', width: 20 }}>
-                      #{i + 1}
-                    </span>
-                    <div style={{ display: 'flex', gap: 4, flex: 1 }}>
-                      {paintCycle.map((s) => (
+                {editingItem.squads.map((squad, si) => (
+                  <div key={si} style={{ marginBottom: 16 }}>
+                    {/* Squad header */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--color-accent)', letterSpacing: 1 }}>
+                          ESC. {si + 1}
+                        </span>
+                        <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)' }}>
+                          {squad.length} fig. · {squad.filter((s) => s === 'done').length}/{squad.length} peintes
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        {paintCycle.map((s) => (
+                          <button
+                            key={s}
+                            title={`Tout marquer ${paintLabels[s]}`}
+                            style={{
+                              width: 16, height: 16, padding: 0, fontSize: 7,
+                              background: 'transparent', color: paintDotColors[s],
+                              border: `1px solid ${paintDotColors[s]}`, cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}
+                            onClick={() => setSquadStatus(editingId, si, s)}
+                          >
+                            {'\u25cf'}
+                          </button>
+                        ))}
                         <button
-                          key={s}
-                          style={{
-                            flex: 1,
-                            padding: '4px 0',
-                            fontSize: 9,
-                            fontFamily: 'var(--font-mono)',
-                            letterSpacing: 0.5,
-                            textTransform: 'uppercase' as const,
-                            background: status === s ? `color-mix(in srgb, ${paintDotColors[s]} 20%, transparent)` : 'transparent',
-                            color: status === s ? paintDotColors[s] : 'var(--color-text-muted)',
-                            border: `1px solid ${status === s ? paintDotColors[s] : 'var(--color-border)'}`,
-                            cursor: 'pointer',
+                          style={{ background: 'transparent', border: 'none', color: 'var(--color-error)', cursor: 'pointer', fontSize: 10, padding: '0 4px' }}
+                          onClick={() => {
+                            removeSquad(editingId, si)
+                            if (editingItem.squads.length <= 1) setEditingId(null)
                           }}
-                          onClick={() => updateInstanceStatus(editingId, i, s)}
                         >
-                          {paintLabels[s]}
+                          {'\u2715'}
                         </button>
+                      </div>
+                    </div>
+                    {/* Individual models */}
+                    <div style={{ borderLeft: '2px solid var(--color-border)', paddingLeft: 10 }}>
+                      {squad.map((status, mi) => (
+                        <div
+                          key={mi}
+                          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid var(--color-border)' }}
+                        >
+                          <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', width: 16 }}>
+                            {mi + 1}
+                          </span>
+                          <div style={{ display: 'flex', gap: 3, flex: 1 }}>
+                            {paintCycle.map((s) => (
+                              <button
+                                key={s}
+                                style={{
+                                  flex: 1, padding: '3px 0', fontSize: 8,
+                                  fontFamily: 'var(--font-mono)', letterSpacing: 0.5,
+                                  textTransform: 'uppercase' as const,
+                                  background: status === s ? `color-mix(in srgb, ${paintDotColors[s]} 20%, transparent)` : 'transparent',
+                                  color: status === s ? paintDotColors[s] : 'var(--color-text-muted)',
+                                  border: `1px solid ${status === s ? paintDotColors[s] : 'var(--color-border)'}`,
+                                  cursor: 'pointer',
+                                }}
+                                onClick={() => updateModelStatus(editingId, si, mi, s)}
+                              >
+                                {paintLabels[s]}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       ))}
                     </div>
-                    <button
-                      style={{ background: 'transparent', border: 'none', color: 'var(--color-error)', cursor: 'pointer', fontSize: 11, padding: '4px 6px' }}
-                      onClick={() => {
-                        removeInstance(editingId, i)
-                        if (editingItem.instances.length <= 1) setEditingId(null)
-                      }}
-                    >
-                      {'\u2715'}
-                    </button>
                   </div>
                 ))}
               </div>
@@ -503,15 +539,18 @@ export function CollectionPage() {
                     <T text={editingDatasheet.name} category="unit" />
                   </div>
                   <div style={{ fontSize: 10, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)', marginTop: 2 }}>
-                    {editingItem.instances.length} exemplaire{editingItem.instances.length > 1 ? 's' : ''}
+                    {editingItem.squads.length} esc. · {editingItem.squads.flat().length} figurines
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
                   <button
                     style={{ padding: '5px 10px', fontSize: 10, fontFamily: 'var(--font-mono)', background: 'color-mix(in srgb, var(--color-accent) 10%, transparent)', color: 'var(--color-accent)', border: '1px solid var(--color-accent)', cursor: 'pointer' }}
-                    onClick={() => addInstance(editingId)}
+                    onClick={() => {
+                      const mc = parseInt(editingDatasheet.pointOptions[0]?.models) || 1
+                      addSquad(editingId, mc)
+                    }}
                   >
-                    + AJOUTER
+                    + ESC.
                   </button>
                   <button
                     style={{ padding: '5px 8px', fontSize: 10, background: 'transparent', color: 'var(--color-text-muted)', border: '1px solid var(--color-border)', cursor: 'pointer' }}
@@ -522,46 +561,74 @@ export function CollectionPage() {
                 </div>
               </div>
               <div style={{ flex: '1 1 auto', minHeight: 0, overflow: 'auto', padding: '8px 16px' }}>
-                {editingItem.instances.map((status, i) => (
-                  <div
-                    key={i}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 0', borderBottom: '1px solid var(--color-border)' }}
-                  >
-                    <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', width: 20 }}>
-                      #{i + 1}
-                    </span>
-                    <div style={{ display: 'flex', gap: 4, flex: 1 }}>
-                      {paintCycle.map((s) => (
+                {editingItem.squads.map((squad, si) => (
+                  <div key={si} style={{ marginBottom: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--color-accent)', letterSpacing: 1 }}>
+                          ESC. {si + 1}
+                        </span>
+                        <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)' }}>
+                          {squad.filter((s) => s === 'done').length}/{squad.length}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        {paintCycle.map((s) => (
+                          <button
+                            key={s}
+                            style={{
+                              width: 16, height: 16, padding: 0, fontSize: 7,
+                              background: 'transparent', color: paintDotColors[s],
+                              border: `1px solid ${paintDotColors[s]}`, cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}
+                            onClick={() => setSquadStatus(editingId, si, s)}
+                          >
+                            {'\u25cf'}
+                          </button>
+                        ))}
                         <button
-                          key={s}
-                          style={{
-                            flex: 1,
-                            padding: '4px 0',
-                            fontSize: 9,
-                            fontFamily: 'var(--font-mono)',
-                            letterSpacing: 0.5,
-                            textTransform: 'uppercase',
-                            background: status === s ? `color-mix(in srgb, ${paintDotColors[s]} 20%, transparent)` : 'transparent',
-                            color: status === s ? paintDotColors[s] : 'var(--color-text-muted)',
-                            border: `1px solid ${status === s ? paintDotColors[s] : 'var(--color-border)'}`,
-                            cursor: 'pointer',
+                          style={{ background: 'transparent', border: 'none', color: 'var(--color-error)', cursor: 'pointer', fontSize: 10, padding: '0 4px' }}
+                          onClick={() => {
+                            removeSquad(editingId, si)
+                            if (editingItem.squads.length <= 1) setEditingId(null)
                           }}
-                          onClick={() => updateInstanceStatus(editingId, i, s)}
                         >
-                          {paintLabels[s]}
+                          {'\u2715'}
                         </button>
+                      </div>
+                    </div>
+                    <div style={{ borderLeft: '2px solid var(--color-border)', paddingLeft: 8 }}>
+                      {squad.map((status, mi) => (
+                        <div
+                          key={mi}
+                          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 0', borderBottom: '1px solid var(--color-border)' }}
+                        >
+                          <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', width: 16 }}>
+                            {mi + 1}
+                          </span>
+                          <div style={{ display: 'flex', gap: 3, flex: 1 }}>
+                            {paintCycle.map((s) => (
+                              <button
+                                key={s}
+                                style={{
+                                  flex: 1, padding: '3px 0', fontSize: 8,
+                                  fontFamily: 'var(--font-mono)', letterSpacing: 0.5,
+                                  textTransform: 'uppercase',
+                                  background: status === s ? `color-mix(in srgb, ${paintDotColors[s]} 20%, transparent)` : 'transparent',
+                                  color: status === s ? paintDotColors[s] : 'var(--color-text-muted)',
+                                  border: `1px solid ${status === s ? paintDotColors[s] : 'var(--color-border)'}`,
+                                  cursor: 'pointer',
+                                }}
+                                onClick={() => updateModelStatus(editingId, si, mi, s)}
+                              >
+                                {paintLabels[s]}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       ))}
                     </div>
-                    <button
-                      style={{ background: 'transparent', border: 'none', color: 'var(--color-error)', cursor: 'pointer', fontSize: 10, padding: '4px 6px' }}
-                      onClick={() => {
-                        removeInstance(editingId, i)
-                        if (editingItem.instances.length <= 1) setEditingId(null)
-                      }}
-                      aria-label={`Retirer exemplaire ${i + 1}`}
-                    >
-                      {'\u2715'}
-                    </button>
                   </div>
                 ))}
               </div>

@@ -4,6 +4,7 @@ import type { PaintStatus } from '@/components/domain/PaintStatusBadge'
 import { usePointsHistoryStore } from '@/stores/pointsHistoryStore'
 import { useFavoritesStore } from '@/stores/favoritesStore'
 import { useCustomImage } from '@/hooks/useCustomImage'
+import { useGwPriceStore } from '@/stores/gwPriceStore'
 import { T } from '@/components/ui/TranslatableText'
 
 type UnitVariant = 'standard' | 'battleline' | 'epic-hero'
@@ -16,6 +17,7 @@ interface UnitCardProps {
   selectable?: boolean
   selected?: boolean
   onToggleSelect?: () => void
+  showPrice?: boolean
 }
 
 function getVariant(datasheet: Datasheet): UnitVariant {
@@ -80,7 +82,7 @@ const paintBarColors: Record<PaintStatus, string> = {
 
 const statLabels = ['M', 'T', 'Sv', 'W', 'Ld', 'OC'] as const
 
-export function UnitCard({ datasheet, owned, instances, onClick, selectable, selected, onToggleSelect }: UnitCardProps) {
+export function UnitCard({ datasheet, owned, instances, onClick, selectable, selected, onToggleSelect, showPrice }: UnitCardProps) {
   const variant = getVariant(datasheet)
   const style = variantStyles[variant]
   const points = getPoints(datasheet)
@@ -89,6 +91,9 @@ export function UnitCard({ datasheet, owned, instances, onClick, selectable, sel
   const isFavorite = useFavoritesStore((s) => s.favorites.includes(datasheet.id))
   const toggleFavorite = useFavoritesStore((s) => s.toggleFavorite)
   const profile = datasheet.profiles[0]
+  const gwGetPrice = useGwPriceStore((s) => s.getPrice)
+  const gwLoaded = useGwPriceStore((s) => s.loaded)
+  const gwPrice = showPrice && gwLoaded ? gwGetPrice(datasheet.name) : null
   const { customImageUrl } = useCustomImage(datasheet.id)
   const [imgError, setImgError] = useState(false)
   const imageUrl = customImageUrl || datasheet.imageUrl
@@ -269,6 +274,18 @@ export function UnitCard({ datasheet, owned, instances, onClick, selectable, sel
             </button>
           </div>
         </div>
+
+        {/* GW retail price */}
+        {showPrice && gwPrice !== null && (
+          <div className="px-3 pb-0.5" style={{ position: 'relative', zIndex: 2 }}>
+            <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--color-gold)', fontWeight: 600 }}>
+              {gwPrice} €
+            </span>
+            <span style={{ fontSize: 8, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', marginLeft: 4, letterSpacing: 0.5 }}>
+              GW
+            </span>
+          </div>
+        )}
 
         {/* Stat line */}
         {profile && (

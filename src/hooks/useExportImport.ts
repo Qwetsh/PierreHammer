@@ -53,18 +53,24 @@ export function useExportImport() {
       }
 
       if (data.collection) {
-        // Migrate old format (quantity + paintStatus) to new (instances)
+        // Migrate old formats to new squads format
         const migrated: Record<string, CollectionItem> = {}
         for (const [key, raw] of Object.entries(data.collection as Record<string, Record<string, unknown>>)) {
-          if (Array.isArray(raw.instances)) {
+          if (Array.isArray(raw.squads)) {
             migrated[key] = raw as unknown as CollectionItem
+          } else if (Array.isArray(raw.instances)) {
+            migrated[key] = {
+              datasheetId: String(raw.datasheetId),
+              factionId: String(raw.factionId),
+              squads: (raw.instances as string[]).map((s) => [s as import('@/components/domain/PaintStatusBadge').PaintStatus]),
+            }
           } else {
             const qty = (typeof raw.quantity === 'number' ? raw.quantity : 1)
             const status = (typeof raw.paintStatus === 'string' ? raw.paintStatus : 'unassembled')
             migrated[key] = {
               datasheetId: String(raw.datasheetId),
               factionId: String(raw.factionId),
-              instances: Array(qty).fill(status),
+              squads: Array.from({ length: qty }, () => [status as import('@/components/domain/PaintStatusBadge').PaintStatus]),
             }
           }
         }

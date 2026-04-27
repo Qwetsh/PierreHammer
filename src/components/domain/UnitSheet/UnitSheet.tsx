@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import type { Datasheet, Enhancement } from '@/types/gameData.types'
 import { Button } from '@/components/ui/Button'
 import { useCustomImage } from '@/hooks/useCustomImage'
+import { useGwPriceStore } from '@/stores/gwPriceStore'
 import { T } from '@/components/ui/TranslatableText'
 import { THtml } from '@/components/ui/TranslatableText'
 
@@ -122,6 +123,9 @@ export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, select
   const [showPhotoMenu, setShowPhotoMenu] = useState(false)
   const imageUrl = customImageUrl || datasheet.imageUrl
   const hasImage = imageUrl && !imgError
+  const gwGetPrice = useGwPriceStore((s) => s.getPrice)
+  const gwLoaded = useGwPriceStore((s) => s.loaded)
+  const gwPrice = gwLoaded ? gwGetPrice(datasheet.name) : null
   const longPressHandlers = useLongPress(() => setShowPhotoMenu(true))
 
   const photoMenu = showPhotoMenu && (
@@ -186,6 +190,12 @@ export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, select
       {datasheet.pointOptions.length > 0 && (
         <p className={isMobileScreen ? 'text-xs' : 'text-sm'} style={{ color: 'var(--color-accent)' }}>
           {datasheet.pointOptions.map((p) => `${p.cost} pts (${p.models})`).join(' / ')}
+        </p>
+      )}
+      {gwPrice !== null && (
+        <p className="text-xs" style={{ color: 'var(--color-gold, #c4a535)' }}>
+          <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{gwPrice} €</span>
+          <span style={{ color: 'var(--color-text-muted)', marginLeft: 4, fontSize: '0.65rem', letterSpacing: 0.5 }}>GW</span>
         </p>
       )}
       <p

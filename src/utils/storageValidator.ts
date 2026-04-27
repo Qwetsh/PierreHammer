@@ -29,12 +29,22 @@ export function validateExportData(data: unknown): ValidationResult {
         }
         const ci = item as Record<string, unknown>
         if (typeof ci.datasheetId !== 'string') errors.push(`Collection item "${key}": datasheetId manquant.`)
-        // Support both old format (quantity + paintStatus) and new format (instances)
-        if (!Array.isArray(ci.instances) && typeof ci.quantity !== 'number') {
-          errors.push(`Collection item "${key}": instances ou quantity manquant.`)
+        // Support old (instances/quantity) and new (squads) formats
+        if (!Array.isArray(ci.squads) && !Array.isArray(ci.instances) && typeof ci.quantity !== 'number') {
+          errors.push(`Collection item "${key}": squads, instances ou quantity manquant.`)
         }
-        if (Array.isArray(ci.instances)) {
-          const validStatuses = ['unassembled', 'assembled', 'in-progress', 'done']
+        const validStatuses = ['unassembled', 'assembled', 'in-progress', 'done']
+        if (Array.isArray(ci.squads)) {
+          for (const squad of ci.squads as unknown[]) {
+            if (!Array.isArray(squad)) { errors.push(`Collection item "${key}": squad invalide.`); break }
+            for (const s of squad as unknown[]) {
+              if (typeof s !== 'string' || !validStatuses.includes(s)) {
+                errors.push(`Collection item "${key}": status invalide "${s}".`)
+                break
+              }
+            }
+          }
+        } else if (Array.isArray(ci.instances)) {
           for (const s of ci.instances as unknown[]) {
             if (typeof s !== 'string' || !validStatuses.includes(s)) {
               errors.push(`Collection item "${key}": instance status invalide "${s}".`)

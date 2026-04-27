@@ -119,8 +119,8 @@ function computeAnalysis(
 
     // Paint status from collection
     const item = collectionItems[unit.datasheetId]
-    if (item?.instances) {
-      for (const status of item.instances) {
+    if (item?.squads) {
+      for (const status of item.squads.flat()) {
         totalInstances++
         if (status === 'done') paintedCount++
       }

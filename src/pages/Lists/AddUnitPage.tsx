@@ -66,7 +66,7 @@ export function AddUnitPage() {
   const roleFiltered = useMemo(() => {
     let filtered = datasheets
     if (roleFilter !== 'all') filtered = filtered.filter((ds) => ds.role === roleFilter)
-    if (ownedOnly) filtered = filtered.filter((ds) => (collectionItems[ds.id]?.instances?.length ?? 0) > 0)
+    if (ownedOnly) filtered = filtered.filter((ds) => (collectionItems[ds.id]?.squads.flat().length ?? 0) > 0)
     return filtered
   }, [datasheets, roleFilter, ownedOnly, collectionItems])
 
@@ -220,8 +220,8 @@ export function AddUnitPage() {
             <UnitCard
               key={ds.id}
               datasheet={ds}
-              owned={collectionItems[ds.id]?.instances?.length}
-              instances={collectionItems[ds.id]?.instances}
+              owned={collectionItems[ds.id]?.squads.flat().length}
+              instances={collectionItems[ds.id]?.squads.flat()}
               onClick={() => setSelectedDatasheet(ds)}
             />
           ))}

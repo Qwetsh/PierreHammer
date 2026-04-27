@@ -92,13 +92,15 @@ export function getKeywordDescription(keyword: string): string[] {
   // Try exact match first
   if (descriptions[keyword]) return descriptions[keyword]
 
-  // Try matching the base keyword (e.g. "Rapid Fire 2" -> "Rapid Fire")
+  const kw = keyword.toLowerCase()
+
+  // Try case-insensitive matching (base keyword e.g. "rapid fire 2" -> "Rapid Fire")
   for (const key of Object.keys(descriptions)) {
-    if (keyword.startsWith(key)) return descriptions[key]
+    if (kw.startsWith(key.toLowerCase())) return descriptions[key]
   }
 
   // Anti-X special case
-  if (keyword.startsWith('Anti-')) return descriptions['Anti']
+  if (kw.startsWith('anti-')) return descriptions['Anti']
 
   return []
 }
