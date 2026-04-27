@@ -18,7 +18,7 @@ function DisabledTooltip({ hint, children }: { hint: string | null; children: Re
     <div className="disabled-tooltip-wrap" style={{ position: 'relative', display: 'inline-block' }}>
       <div style={{ pointerEvents: 'none' }}>{children}</div>
       <div className="disabled-tooltip-text" style={{
-        position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
+        position: 'absolute', bottom: '100%', left: 0,
         marginBottom: 6, padding: '4px 10px', borderRadius: 6, whiteSpace: 'nowrap',
         fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 500,
         background: 'var(--color-surface-alt, var(--color-surface))',
