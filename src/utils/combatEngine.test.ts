@@ -352,13 +352,200 @@ describe('resolveCombat', () => {
     expect(result.steps.avgDamagePerWound).toBe(1)
   })
 
-  it('anti-X lowers critical wound threshold', () => {
+  it('anti-X lowers critical wound threshold when defender has keyword', () => {
+    // Anti-X changes crit wound threshold — visible via devastating wounds
+    const withAnti = resolveCombat(makeInput({
+      weaponKeywords: { anti: [{ keyword: 'infantry', threshold: 4 }], devastatingWounds: true },
+      weapon: makeWeapon({ D: '3' }),
+      defenderKeywords: ['INFANTRY'],
+    }))
+    const without = resolveCombat(makeInput({
+      weaponKeywords: { devastatingWounds: true },
+      weapon: makeWeapon({ D: '3' }),
+      defenderKeywords: ['INFANTRY'],
+    }))
+    // Anti-infantry 4+ with devastating wounds → more mortal wounds
+    expect(withAnti.mortalWounds).toBeGreaterThan(without.mortalWounds)
+  })
+
+  it('anti-X does NOT apply when defender lacks keyword', () => {
     const withAnti = resolveCombat(makeInput({
       weaponKeywords: { anti: [{ keyword: 'infantry', threshold: 4 }] },
+      defenderKeywords: ['VEHICLE'],
     }))
-    const without = resolveCombat(makeInput())
-    // Anti-infantry 4+ means more crit wounds → more wounds expected
-    expect(withAnti.woundsExpected).toBeGreaterThanOrEqual(without.woundsExpected)
+    const without = resolveCombat(makeInput({
+      defenderKeywords: ['VEHICLE'],
+    }))
+    // Anti-infantry should have no effect on a VEHICLE
+    expect(withAnti.woundsExpected).toBeCloseTo(without.woundsExpected, 2)
+  })
+
+  it('anti-X makes wound threshold effective (crits are always successful)', () => {
+    // Grav-cannon S6 vs Land Raider T12: normal wound = 6+ (17%)
+    // But Anti-Vehicle 2+ → crit wounds on 2+ → auto-succeed → effective 2+ (83%)
+    const result = resolveCombat(makeInput({
+      weapon: makeWeapon({ A: '3', S: '6', AP: '-1', D: '3' }),
+      weaponKeywords: { anti: [{ keyword: 'vehicle', threshold: 2 }] },
+      attackerCount: 3,
+      defenderProfile: makeProfile({ T: '12', Sv: '2+', W: '16', invSv: '-' }),
+      defenderCount: 1,
+      defenderKeywords: ['VEHICLE'],
+    }))
+    // 9 attacks, hit on 3+ → ~6 hits, wound on effective 2+ (83%) → ~5 wounds
+    expect(result.steps.woundThreshold).toBe(2)
+    expect(result.woundsExpected).toBeGreaterThan(4)
+  })
+
+  it('anti-X without matching keyword keeps normal wound threshold', () => {
+    // Same weapon but defender is INFANTRY, not VEHICLE
+    const result = resolveCombat(makeInput({
+      weapon: makeWeapon({ A: '3', S: '6', AP: '-1', D: '3' }),
+      weaponKeywords: { anti: [{ keyword: 'vehicle', threshold: 2 }] },
+      attackerCount: 3,
+      defenderProfile: makeProfile({ T: '12', Sv: '2+', W: '16', invSv: '-' }),
+      defenderCount: 1,
+      defenderKeywords: ['INFANTRY'],
+    }))
+    // No anti match → normal wound threshold 6+
+    expect(result.steps.woundThreshold).toBe(6)
+    expect(result.woundsExpected).toBeCloseTo(1, 0)
+  })
+
+  it('anti-X is case insensitive for keyword matching', () => {
+    const result = resolveCombat(makeInput({
+      weaponKeywords: { anti: [{ keyword: 'Infantry', threshold: 4 }], devastatingWounds: true },
+      weapon: makeWeapon({ D: '3' }),
+      defenderKeywords: ['INFANTRY'],
+    }))
+    // Should apply anti — mortal wounds from devastating wounds confirm crits happen at 4+
+    expect(result.mortalWounds).toBeGreaterThan(0)
+  })
+
+  it('devastating wounds: mortalWoundCount tracks crit count separately', () => {
+    const result = resolveCombat(makeInput({
+      weaponKeywords: { devastatingWounds: true },
+      weapon: makeWeapon({ D: '3' }),
+    }))
+    // mortalWoundCount = number of crit wounds, mortalWounds = count * avgDamage
+    expect(result.mortalWoundCount).toBeGreaterThan(0)
+    expect(result.mortalWounds).toBeCloseTo(result.mortalWoundCount * 3, 1)
+  })
+
+  it('vs_keyword conditional modifier applies when defender has keyword', () => {
+    const result = resolveCombat(makeInput({
+      attackerEffects: {
+        modifiers: [{ phase: 'wound', value: 1, condition: 'vs_keyword:VEHICLE' }],
+      },
+      defenderKeywords: ['VEHICLE', 'FLY'],
+    }))
+    // +1 to wound should lower threshold from 4+ to 3+
+    expect(result.steps.woundThreshold).toBe(3)
+  })
+
+  it('vs_keyword conditional modifier does NOT apply when defender lacks keyword', () => {
+    const result = resolveCombat(makeInput({
+      attackerEffects: {
+        modifiers: [{ phase: 'wound', value: 1, condition: 'vs_keyword:VEHICLE' }],
+      },
+      defenderKeywords: ['INFANTRY'],
+    }))
+    // No bonus, threshold stays at 4+
+    expect(result.steps.woundThreshold).toBe(4)
+  })
+
+  it('vs_keyword is case insensitive', () => {
+    const result = resolveCombat(makeInput({
+      attackerEffects: {
+        modifiers: [{ phase: 'hit', value: 1, condition: 'vs_keyword:monster' }],
+      },
+      defenderKeywords: ['MONSTER'],
+    }))
+    // +1 to hit should lower threshold from 3+ to 2+
+    expect(result.steps.hitThreshold).toBe(2)
+  })
+
+  it('sustained hits + lethal hits: sustained hits are normal hits, not crits', () => {
+    // With both sustained hits and lethal hits:
+    // - Crits generate lethal wounds (auto-wound, skip wound roll)
+    // - Crits ALSO generate sustained extra hits, but these are NORMAL hits
+    // - The sustained hits should go through wound roll normally
+    const combined = resolveCombat(makeInput({
+      weaponKeywords: { sustainedHits: 1, lethalHits: true },
+    }))
+    const lethalOnly = resolveCombat(makeInput({
+      weaponKeywords: { lethalHits: true },
+    }))
+    // Combined should have more wounds because sustained hits add normal hits
+    // that go through wound roll, on top of the lethal wounds
+    expect(combined.woundsExpected).toBeGreaterThan(lethalOnly.woundsExpected)
+  })
+
+  it('hit modifier cap: total hit mod capped at +1', () => {
+    const result = resolveCombat(makeInput({
+      attackerEffects: {
+        modifiers: [
+          { phase: 'hit', value: 1 },
+          { phase: 'hit', value: 1 },
+        ],
+      },
+    }))
+    // BS 3+ with +2 total → should still be capped at +1 → 2+
+    expect(result.steps.hitThreshold).toBe(2)
+  })
+
+  it('hit modifier cap: total hit mod capped at -1 (stealth + modifier)', () => {
+    const result = resolveCombat(makeInput({
+      defenderEffects: {
+        stealth: true, // -1 to hit (ranged)
+        modifiers: [{ phase: 'hit', value: -1 }], // another -1
+      },
+    }))
+    // BS 3+ with stealth (-1) + modifier (-1) = -2 total, capped at -1 → 4+
+    expect(result.steps.hitThreshold).toBe(4)
+  })
+
+  it('hit modifier cap: heavy + modifier capped at +1', () => {
+    const result = resolveCombat(makeInput({
+      weaponKeywords: { heavy: true },
+      stationary: true,
+      attackerEffects: {
+        modifiers: [{ phase: 'hit', value: 1 }],
+      },
+    }))
+    // BS 3+ with heavy (+1) + modifier (+1) = +2, capped at +1 → 2+
+    expect(result.steps.hitThreshold).toBe(2)
+  })
+
+  it('wound modifier cap: total wound mod capped at +1/-1', () => {
+    const result = resolveCombat(makeInput({
+      attackerEffects: {
+        modifiers: [
+          { phase: 'wound', value: 1 },
+          { phase: 'wound', value: 1 },
+        ],
+      },
+    }))
+    // S4 vs T4 = 4+, +2 wound mod capped at +1 → 3+
+    expect(result.steps.woundThreshold).toBe(3)
+  })
+
+  it('devastating wounds + melta: mortal wounds include melta bonus', () => {
+    const atHalf = resolveCombat(makeInput({
+      weapon: makeWeapon({ D: '3' }),
+      weaponKeywords: { devastatingWounds: true, melta: 2 },
+      halfRange: true,
+    }))
+    const notHalf = resolveCombat(makeInput({
+      weapon: makeWeapon({ D: '3' }),
+      weaponKeywords: { devastatingWounds: true, melta: 2 },
+      halfRange: false,
+    }))
+    // At half range, mortal wounds should use D3+2=5 per crit wound
+    // Not at half range, mortal wounds should use D3 per crit wound
+    expect(atHalf.mortalWounds).toBeGreaterThan(notHalf.mortalWounds)
+    // Verify the ratio matches the damage ratio (5/3)
+    expect(atHalf.mortalWounds / atHalf.mortalWoundCount).toBeCloseTo(5, 1)
+    expect(notHalf.mortalWounds / notHalf.mortalWoundCount).toBeCloseTo(3, 1)
   })
 
   it('estimated kills cannot exceed defender count', () => {

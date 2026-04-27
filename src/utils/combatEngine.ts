@@ -73,11 +73,26 @@ const P_CRIT = 1 / 6
 
 /**
  * Collect modifiers for a given phase from ability effects, optionally filtered by condition.
+ * Supports conditions: 'ranged_only', 'melee_only', 'vs_keyword:VEHICLE', etc.
  */
-function sumModifiers(effects: AbilityEffect, phase: string, condition?: string): number {
+function sumModifiers(effects: AbilityEffect, phase: string, condition?: string, defenderKeywords?: string[]): number {
   if (!effects.modifiers) return 0
   return effects.modifiers
-    .filter((m) => m.phase === phase && (!condition || !m.condition || m.condition === condition))
+    .filter((m) => {
+      if (m.phase !== phase) return false
+      if (!m.condition) return true
+      // ranged_only / melee_only
+      if (m.condition === 'ranged_only' || m.condition === 'melee_only') {
+        return !condition || m.condition === condition
+      }
+      // vs_keyword:X — check if defender has that keyword
+      if (m.condition.startsWith('vs_keyword:') && defenderKeywords) {
+        const requiredKw = m.condition.slice('vs_keyword:'.length).toLowerCase()
+        return defenderKeywords.some((k) => k.toLowerCase() === requiredKw)
+      }
+      // Unknown condition — apply by default if no filter or matches
+      return !condition || m.condition === condition
+    })
     .reduce((sum, m) => sum + m.value, 0)
 }
 
@@ -95,6 +110,7 @@ export function resolveCombat(input: CombatInput): CombatResult {
     defenderProfile,
     defenderEffects,
     defenderCount,
+    defenderKeywords = [],
     halfRange = false,
     charged = false,
     stationary = true,
@@ -131,24 +147,23 @@ export function resolveCombat(input: CombatInput): CombatResult {
   const isTorrent = !!kw.torrent
 
   if (!isTorrent && hitThreshold > 0) {
-    // Heavy: +1 to hit if stationary (lower threshold)
-    if (kw.heavy && stationary) {
-      hitThreshold -= 1
-    }
+    // W40K 10e: total hit modifier capped at +1/-1 (all sources combined)
+    let rawHitMod = 0
+
+    // Heavy: +1 to hit if stationary
+    if (kw.heavy && stationary) rawHitMod += 1
 
     // Stealth from defender: -1 to hit (ranged only)
-    if (isRanged && defenderEffects.stealth) {
-      hitThreshold += 1
-    }
+    if (isRanged && defenderEffects.stealth) rawHitMod -= 1
 
-    // Apply hit modifiers from attacker effects
-    const attackerHitMod = sumModifiers(attackerEffects, 'hit', isRanged ? 'ranged_only' : 'melee_only')
-      + sumModifiers(attackerEffects, 'hit') // unconditional
-    hitThreshold -= attackerHitMod
+    // Ability modifiers
+    rawHitMod += sumModifiers(attackerEffects, 'hit', isRanged ? 'ranged_only' : 'melee_only', defenderKeywords)
+    rawHitMod += sumModifiers(attackerEffects, 'hit', undefined, defenderKeywords)
+    rawHitMod += sumModifiers(defenderEffects, 'hit', isRanged ? 'ranged_only' : undefined, defenderKeywords)
 
-    // Apply hit modifiers from defender effects (negative = harder for attacker)
-    const defenderHitMod = sumModifiers(defenderEffects, 'hit', isRanged ? 'ranged_only' : undefined)
-    hitThreshold -= defenderHitMod
+    // Cap at +1/-1 per W40K 10e core rules
+    const cappedHitMod = Math.max(-1, Math.min(1, rawHitMod))
+    hitThreshold -= cappedHitMod
 
     hitThreshold = clampThreshold(hitThreshold)
   }
@@ -169,17 +184,19 @@ export function resolveCombat(input: CombatInput): CombatResult {
     // Critical hits on natural 6
     critHits = attacks * P_CRIT
 
-    // Sustained hits: each crit generates N extra hits
-    if (kw.sustainedHits !== undefined) {
-      const sustainedN = parseDiceNotation(kw.sustainedHits)
-      hitsExpected += critHits * sustainedN
-    }
-
     // Lethal hits: crits auto-wound (skip wound roll)
+    // Must be resolved BEFORE sustained hits are added, because sustained hits
+    // are normal hits (not crits) per W40K 10e rules
     if (kw.lethalHits) {
       lethalHitWounds = critHits
       // Remove lethal hits from the pool going to wound roll
       hitsExpected -= critHits
+    }
+
+    // Sustained hits: each crit generates N extra NORMAL hits (not crits)
+    if (kw.sustainedHits !== undefined) {
+      const sustainedN = parseDiceNotation(kw.sustainedHits)
+      hitsExpected += critHits * sustainedN
     }
   }
 
@@ -193,23 +210,30 @@ export function resolveCombat(input: CombatInput): CombatResult {
     woundThreshold -= 1
   }
 
-  // Apply wound modifiers
-  const attackerWoundMod = sumModifiers(attackerEffects, 'wound')
-  woundThreshold -= attackerWoundMod
+  // Apply wound modifiers — W40K 10e: total wound modifier capped at +1/-1
+  const attackerWoundMod = sumModifiers(attackerEffects, 'wound', undefined, defenderKeywords)
+  const defenderWoundMod = sumModifiers(defenderEffects, 'wound', undefined, defenderKeywords)
+  const totalWoundMod = Math.max(-1, Math.min(1, attackerWoundMod + defenderWoundMod))
+  woundThreshold -= totalWoundMod
   woundThreshold = clampThreshold(woundThreshold)
 
   // Anti-X: critical wounds trigger on anti threshold instead of 6
-  // In W40K 10e, anti-X modifies the critical wound threshold
+  // W40K 10e: anti-X only applies if the defender has the matching keyword
   let critWoundThreshold = 6
-  if (kw.anti && kw.anti.length > 0) {
-    // Use the best (lowest) anti threshold
-    // In a real game you'd check keywords, but here we assume the anti applies
-    const bestAnti = Math.min(...kw.anti.map((a) => a.threshold))
-    critWoundThreshold = Math.min(critWoundThreshold, bestAnti)
+  if (kw.anti && kw.anti.length > 0 && defenderKeywords.length > 0) {
+    const defKwsLower = defenderKeywords.map((k) => k.toLowerCase())
+    const matchingAnti = kw.anti.filter((a) => defKwsLower.includes(a.keyword.toLowerCase()))
+    if (matchingAnti.length > 0) {
+      const bestAnti = Math.min(...matchingAnti.map((a) => a.threshold))
+      critWoundThreshold = Math.min(critWoundThreshold, bestAnti)
+    }
   }
 
   const pCritWound = (7 - clampThreshold(critWoundThreshold)) / 6
-  const pNormalWound = pSuccess(woundThreshold)
+  // W40K 10e: critical wounds are always successful wound rolls
+  // So effective wound threshold = min(normal threshold, crit threshold)
+  const effectiveWoundThreshold = Math.min(woundThreshold, critWoundThreshold)
+  const pNormalWound = pSuccess(effectiveWoundThreshold)
 
   // Twin-linked: reroll failed wound rolls
   let effectiveWoundP = pNormalWound
@@ -220,13 +244,11 @@ export function resolveCombat(input: CombatInput): CombatResult {
 
   let woundsExpected = hitsExpected * effectiveWoundP + lethalHitWounds
 
-  // Devastating wounds: critical wounds become mortal wounds (bypass save)
-  let mortalWounds = 0
+  // Devastating wounds: track crit wounds for mortal wound calculation
   let critWounds = 0
   if (kw.devastatingWounds) {
     // Critical wounds from hits that went to wound roll
     critWounds = hitsExpected * pCritWound
-    mortalWounds += critWounds * parseDiceNotation(weapon.D)
     // Remove crit wounds from normal wound pool (they bypass save)
     woundsExpected -= critWounds
   }
@@ -271,7 +293,11 @@ export function resolveCombat(input: CombatInput): CombatResult {
     avgDamage += kw.melta
   }
 
-  // Damage reduction from defender
+  // Devastating wounds: mortal wounds use damage characteristic (includes Melta)
+  // but NOT damage reduction (mortal wounds ignore damage reduction per W40K 10e)
+  const mortalWounds = critWounds * avgDamage
+
+  // Damage reduction from defender (only applies to normal wounds, not mortal)
   if (defenderEffects.damageReduction) {
     avgDamage = Math.max(1, avgDamage - defenderEffects.damageReduction)
   }
@@ -298,16 +324,17 @@ export function resolveCombat(input: CombatInput): CombatResult {
 
   return {
     attacksTotal: round2(attacks),
-    hitsExpected: round2(hitsExpected + lethalHitWounds + (kw.sustainedHits !== undefined ? critHits * parseDiceNotation(kw.sustainedHits) : 0)),
-    woundsExpected: round2(woundsExpected + critWounds + lethalHitWounds),
-    unsavedWounds: round2(unsavedWounds + (mortalWounds > 0 ? mortalWounds / avgDamage : 0)),
+    hitsExpected: round2(hitsExpected + lethalHitWounds),
+    woundsExpected: round2(woundsExpected + critWounds),
+    unsavedWounds: round2(unsavedWounds + critWounds),
     damageTotal: round2(damageTotal),
     damageAfterFnp: round2(damageAfterFnp),
     estimatedKills: round2(estimatedKills),
     mortalWounds: round2(mortalWounds),
+    mortalWoundCount: round2(critWounds),
     steps: {
       hitThreshold: isTorrent ? 0 : hitThreshold,
-      woundThreshold,
+      woundThreshold: effectiveWoundThreshold,
       saveThreshold,
       usedInvuln,
       avgDamagePerWound: round2(avgDamage),

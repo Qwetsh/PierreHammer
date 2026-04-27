@@ -259,7 +259,7 @@ export function buildExplanations(opts: {
   }
 
   if (result.mortalWounds > 0) {
-    damageLines.push(`Mortal Wounds: ${round(result.mortalWounds)} (ignorent la svg)`)
+    damageLines.push(`Mortal Wounds: ${round(result.mortalWoundCount)} blessure(s) mortelle(s) = ${round(result.mortalWounds)} degats (ignorent la svg)`)
   }
 
   const defW = parseThreshold(defenderProfile.W)

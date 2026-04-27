@@ -2,31 +2,13 @@ import { useMemo, useState } from 'react'
 import type { Datasheet, Weapon, Stratagem } from '@/types/gameData.types'
 import type { ListUnit } from '@/types/armyList.types'
 import type { CasualtyState } from '@/stores/gameSessionStore'
-import type { CombatResult, AbilityEffect } from '@/types/combat.types'
-import { resolveCombat } from '@/utils/combatEngine'
-import { parseWeaponKeywords } from '@/utils/weaponKeywordParser'
-import { extractCombatEffects, extractEnhancementEffects } from '@/utils/combatEffectsExtractor'
+import { parseStratagemEffect } from '@/utils/stratagemEffectParser'
 import { findBestWeapon } from '@/utils/findBestWeapon'
-import { parseStratagemEffect, isStratagemRelevant } from '@/utils/stratagemEffectParser'
+import { extractCombatEffects } from '@/utils/combatEffectsExtractor'
 import { resolveActiveProfile, getCombinedWeapons } from '@/utils/profileResolver'
 import { Button } from '@/components/ui/Button'
 import { T } from '@/components/ui/TranslatableText'
-
-function mergeEffects(a: AbilityEffect, b: AbilityEffect): AbilityEffect {
-  return {
-    feelNoPain: a.feelNoPain && b.feelNoPain ? Math.min(a.feelNoPain, b.feelNoPain) : a.feelNoPain ?? b.feelNoPain,
-    stealth: a.stealth || b.stealth,
-    ignoresCover: a.ignoresCover || b.ignoresCover,
-    damageReduction: (a.damageReduction ?? 0) + (b.damageReduction ?? 0) || undefined,
-    extraAttacks: (a.extraAttacks ?? 0) + (b.extraAttacks ?? 0) || undefined,
-    invulnerable: a.invulnerable && b.invulnerable
-      ? { value: Math.min(a.invulnerable.value, b.invulnerable.value) }
-      : a.invulnerable ?? b.invulnerable,
-    modifiers: [...(a.modifiers ?? []), ...(b.modifiers ?? [])].length > 0
-      ? [...(a.modifiers ?? []), ...(b.modifiers ?? [])]
-      : undefined,
-  }
-}
+import { useSimulation } from '@/hooks/useSimulation'
 
 interface ContextualSimulatorProps {
   attackerUnit: ListUnit
@@ -83,49 +65,14 @@ export function ContextualSimulator({
   const [activeAttackerStrats, setActiveAttackerStrats] = useState<Set<string>>(new Set())
   const [activeDefenderStrats, setActiveDefenderStrats] = useState<Set<string>>(new Set())
 
-  const weaponType = (weapon: Weapon | null): 'ranged' | 'melee' =>
-    weapon?.type === 'Melee' || weapon?.range === 'Melee' ? 'melee' : 'ranged'
-
-  const attackerEffects = useMemo(() => {
-    let effects = extractCombatEffects(attackerDatasheet)
-    if (attackerEnhancement) {
-      effects = mergeEffects(effects, extractEnhancementEffects(attackerEnhancement as never))
-    }
-    // Apply damaged profile effects
-    if (attackerResolved.damagedEffects) {
-      effects = mergeEffects(effects, attackerResolved.damagedEffects)
-    }
-    // Apply active attacker stratagems
-    for (const strat of attackerStratagems) {
-      if (activeAttackerStrats.has(strat.id)) {
-        const eff = parseStratagemEffect(strat)
-        if (eff) effects = mergeEffects(effects, eff)
-      }
-    }
-    return effects
-  }, [attackerDatasheet, attackerEnhancement, attackerResolved.damagedEffects, attackerStratagems, activeAttackerStrats])
-
-  const defenderEffects = useMemo(() => {
-    let effects = extractCombatEffects(defenderDatasheet)
-    if (defenderEnhancement) {
-      effects = mergeEffects(effects, extractEnhancementEffects(defenderEnhancement as never))
-    }
-    // Apply damaged profile effects
-    if (defenderResolved.damagedEffects) {
-      effects = mergeEffects(effects, defenderResolved.damagedEffects)
-    }
-    // Apply active defender stratagems
-    for (const strat of defenderStratagems) {
-      if (activeDefenderStrats.has(strat.id)) {
-        const eff = parseStratagemEffect(strat)
-        if (eff) effects = mergeEffects(effects, eff)
-      }
-    }
-    return effects
-  }, [defenderDatasheet, defenderEnhancement, defenderResolved.damagedEffects, defenderStratagems, activeDefenderStrats])
+  // weaponType now computed inside useSimulation
 
   // All weapons (attacker + leader)
   const allWeapons = useMemo(() => combinedWeapons.map((cw) => cw.weapon), [combinedWeapons])
+
+  // Base effects (without strats) for best weapon selection
+  const baseAttackerEffects = useMemo(() => extractCombatEffects(attackerDatasheet), [attackerDatasheet])
+  const baseDefenderEffects = useMemo(() => extractCombatEffects(defenderDatasheet), [defenderDatasheet])
 
   // Auto-select best weapon
   const bestWeapon = useMemo(() => {
@@ -134,12 +81,12 @@ export function ContextualSimulator({
       allWeapons,
       attackerProfile,
       attackerCount,
-      attackerEffects,
+      baseAttackerEffects,
       defenderProfile,
       defenderCount,
-      defenderEffects,
+      baseDefenderEffects,
     )
-  }, [allWeapons, attackerProfile, defenderProfile, attackerCount, defenderCount, attackerEffects, defenderEffects])
+  }, [allWeapons, attackerProfile, defenderProfile, attackerCount, defenderCount, baseAttackerEffects, baseDefenderEffects])
 
   const [selectedWeapon, setSelectedWeapon] = useState<Weapon | null>(bestWeapon)
 
@@ -147,47 +94,24 @@ export function ContextualSimulator({
   const weapon = selectedWeapon ?? bestWeapon
   const isBestWeapon = weapon === bestWeapon
 
-  const result: CombatResult | null = useMemo(() => {
-    if (!weapon || !attackerProfile || !defenderProfile) return null
-    return resolveCombat({
-      weapon,
-      weaponKeywords: parseWeaponKeywords(weapon.abilities),
-      attackerProfile,
-      attackerCount: Math.max(attackerCount, 0),
-      attackerEffects,
-      defenderProfile,
-      defenderCount: Math.max(defenderCount, 0),
-      defenderEffects,
-    })
-  }, [weapon, attackerProfile, defenderProfile, attackerCount, defenderCount, attackerEffects, defenderEffects])
-
-  // Baseline result (without stratagems) for delta display
-  const baselineResult: CombatResult | null = useMemo(() => {
-    if (!weapon || !attackerProfile || !defenderProfile) return null
-    if (activeAttackerStrats.size === 0 && activeDefenderStrats.size === 0) return null
-    let atkEff = extractCombatEffects(attackerDatasheet)
-    if (attackerEnhancement) atkEff = mergeEffects(atkEff, extractEnhancementEffects(attackerEnhancement as never))
-    if (attackerResolved.damagedEffects) atkEff = mergeEffects(atkEff, attackerResolved.damagedEffects)
-    let defEff = extractCombatEffects(defenderDatasheet)
-    if (defenderEnhancement) defEff = mergeEffects(defEff, extractEnhancementEffects(defenderEnhancement as never))
-    if (defenderResolved.damagedEffects) defEff = mergeEffects(defEff, defenderResolved.damagedEffects)
-    return resolveCombat({
-      weapon,
-      weaponKeywords: parseWeaponKeywords(weapon.abilities),
-      attackerProfile,
-      attackerCount: Math.max(attackerCount, 0),
-      attackerEffects: atkEff,
-      defenderProfile,
-      defenderCount: Math.max(defenderCount, 0),
-      defenderEffects: defEff,
-    })
-  }, [weapon, attackerProfile, defenderProfile, attackerCount, defenderCount, attackerDatasheet, defenderDatasheet, attackerEnhancement, defenderEnhancement, activeAttackerStrats.size, activeDefenderStrats.size])
-
-  const damageDelta = result && baselineResult ? result.damageAfterFnp - baselineResult.damageAfterFnp : null
-
-  // Filter stratagems by weapon type
-  const filteredAttackerStrats = attackerStratagems.filter((s) => isStratagemRelevant(s, weaponType(weapon)))
-  const filteredDefenderStrats = defenderStratagems.filter((s) => isStratagemRelevant(s, weaponType(weapon)))
+  const {
+    result, damageDelta, targetedDefenderKeywords,
+    filteredAttackerStrats, filteredDefenderStrats,
+  } = useSimulation({
+    weapon,
+    attackerDatasheet,
+    attackerCount: Math.max(attackerCount, 0),
+    attackerEnhancement: attackerEnhancement as never,
+    defenderDatasheet,
+    defenderCount: Math.max(defenderCount, 0),
+    defenderEnhancement: defenderEnhancement as never,
+    attackerStratagems,
+    defenderStratagems,
+    activeAttackerStrats,
+    activeDefenderStrats,
+    attackerExtraEffects: attackerResolved.damagedEffects,
+    defenderExtraEffects: defenderResolved.damagedEffects,
+  })
 
   if (!attackerProfile || !defenderProfile) return null
 
@@ -237,6 +161,26 @@ export function ContextualSimulator({
             )}
           </span>
         </div>
+
+        {/* Targeted keywords */}
+        {targetedDefenderKeywords.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-2">
+            {targetedDefenderKeywords.map(({ keyword, reason }) => (
+              <span
+                key={keyword}
+                title={reason}
+                className="text-[9px] px-1.5 py-0.5"
+                style={{
+                  fontFamily: 'var(--font-mono)', letterSpacing: 0.5,
+                  background: 'rgba(239,68,68,0.15)',
+                  border: '1px solid rgba(239,68,68,0.4)', color: 'var(--color-error, #ef4444)',
+                }}
+              >
+                {keyword} <span style={{ opacity: 0.7 }}>({reason})</span>
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* Enhancements */}
         {(attackerEnhancement || defenderEnhancement) && (
@@ -371,7 +315,7 @@ export function ContextualSimulator({
             />
             {result.mortalWounds > 0 && (
               <p className="text-xs mt-1" style={{ color: 'var(--color-warning, #f59e0b)' }}>
-                dont {round(result.mortalWounds)} mortal wounds
+                dont {round(result.mortalWoundCount)} MW = {round(result.mortalWounds)} degats
               </p>
             )}
             <div className="mt-3 text-center">

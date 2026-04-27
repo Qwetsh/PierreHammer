@@ -2,10 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router'
 import { useGameDataStore } from '@/stores/gameDataStore'
 import { useGameData } from '@/hooks/useGameData'
-import { resolveCombat } from '@/utils/combatEngine'
-import { parseWeaponKeywords } from '@/utils/weaponKeywordParser'
-import { extractCombatEffects, extractEnhancementEffects } from '@/utils/combatEffectsExtractor'
-import { parseStratagemEffect, isStratagemRelevant } from '@/utils/stratagemEffectParser'
+import { parseStratagemEffect } from '@/utils/stratagemEffectParser'
 import { isCharacter, canEquipEnhancement } from '@/utils/enhancementUtils'
 import { FactionPickerModal } from '@/components/domain/Simulator/FactionPickerModal'
 import { UnitSearchModal } from '@/components/domain/Simulator/UnitSearchModal'
@@ -14,26 +11,9 @@ import { EnhancementPickerModal } from '@/components/domain/Simulator/Enhancemen
 import { HudTopBar, MTopBar, HudPill } from '@/components/ui/Hud'
 import { T } from '@/components/ui/TranslatableText'
 import type { Weapon, Datasheet, Detachment, Enhancement } from '@/types/gameData.types'
-import type { CombatResult, AbilityEffect } from '@/types/combat.types'
-import { buildExplanations, type NamedEffect } from '@/utils/combatExplainer'
 import { getKeywordDescription } from '@/utils/keywordDescriptions'
 import { StepExplainer } from '@/components/domain/Simulator/StepExplainer'
-
-function mergeEffects(a: AbilityEffect, b: AbilityEffect): AbilityEffect {
-  return {
-    feelNoPain: a.feelNoPain && b.feelNoPain ? Math.min(a.feelNoPain, b.feelNoPain) : a.feelNoPain ?? b.feelNoPain,
-    stealth: a.stealth || b.stealth,
-    ignoresCover: a.ignoresCover || b.ignoresCover,
-    damageReduction: (a.damageReduction ?? 0) + (b.damageReduction ?? 0) || undefined,
-    extraAttacks: (a.extraAttacks ?? 0) + (b.extraAttacks ?? 0) || undefined,
-    invulnerable: a.invulnerable && b.invulnerable
-      ? { value: Math.min(a.invulnerable.value, b.invulnerable.value) }
-      : a.invulnerable ?? b.invulnerable,
-    modifiers: [...(a.modifiers ?? []), ...(b.modifiers ?? [])].length > 0
-      ? [...(a.modifiers ?? []), ...(b.modifiers ?? [])]
-      : undefined,
-  }
-}
+import { useSimulation } from '@/hooks/useSimulation'
 
 function round(n: number): string {
   return (Math.round(n * 10) / 10).toString()
@@ -198,139 +178,26 @@ export function SimulatorPage({
     return (defender.detachment.enhancements ?? []).filter((e) => canEquipEnhancement(e, defender.datasheet!))
   }, [defender.detachment, defender.datasheet])
 
-  // Combat effects with enhancements
-  const attackerEffects = useMemo(() => {
-    if (!attacker.datasheet) return {}
-    let effects = extractCombatEffects(attacker.datasheet)
-    if (attacker.enhancement) {
-      effects = mergeEffects(effects, extractEnhancementEffects(attacker.enhancement))
-    }
-    for (const strat of attackerStratagems) {
-      if (activeAttackerStrats.has(strat.id)) {
-        const eff = parseStratagemEffect(strat)
-        if (eff) effects = mergeEffects(effects, eff)
-      }
-    }
-    return effects
-  }, [attacker.datasheet, attacker.enhancement, attackerStratagems, activeAttackerStrats])
-
-  const defenderEffects = useMemo(() => {
-    if (!defender.datasheet) return {}
-    let effects = extractCombatEffects(defender.datasheet)
-    if (defender.enhancement) {
-      effects = mergeEffects(effects, extractEnhancementEffects(defender.enhancement))
-    }
-    for (const strat of defenderStratagems) {
-      if (activeDefenderStrats.has(strat.id)) {
-        const eff = parseStratagemEffect(strat)
-        if (eff) effects = mergeEffects(effects, eff)
-      }
-    }
-    return effects
-  }, [defender.datasheet, defender.enhancement, defenderStratagems, activeDefenderStrats])
-
-  // Combat result
-  const result: CombatResult | null = useMemo(() => {
-    if (!attacker.weapon || !attacker.datasheet || !defender.datasheet) return null
-    const attackerProfile = attacker.datasheet.profiles[0]
-    const defenderProfile = defender.datasheet.profiles[0]
-    if (!attackerProfile || !defenderProfile) return null
-    return resolveCombat({
-      weapon: attacker.weapon,
-      weaponKeywords: parseWeaponKeywords(attacker.weapon.abilities),
-      attackerProfile,
-      attackerCount: attacker.modelCount,
-      attackerEffects,
-      defenderProfile,
-      defenderEffects,
-      defenderCount: defender.modelCount,
-      halfRange, charged, stationary, inCover,
-    })
-  }, [attacker, defender, attackerEffects, defenderEffects, halfRange, charged, stationary, inCover])
-
-  // Baseline (without strats) for delta
-  const baselineResult: CombatResult | null = useMemo(() => {
-    if (!attacker.weapon || !attacker.datasheet || !defender.datasheet) return null
-    if (activeAttackerStrats.size === 0 && activeDefenderStrats.size === 0) return null
-    const attackerProfile = attacker.datasheet.profiles[0]
-    const defenderProfile = defender.datasheet.profiles[0]
-    if (!attackerProfile || !defenderProfile) return null
-    let atkEff = extractCombatEffects(attacker.datasheet)
-    if (attacker.enhancement) atkEff = mergeEffects(atkEff, extractEnhancementEffects(attacker.enhancement))
-    let defEff = extractCombatEffects(defender.datasheet)
-    if (defender.enhancement) defEff = mergeEffects(defEff, extractEnhancementEffects(defender.enhancement))
-    return resolveCombat({
-      weapon: attacker.weapon,
-      weaponKeywords: parseWeaponKeywords(attacker.weapon.abilities),
-      attackerProfile,
-      attackerCount: attacker.modelCount,
-      attackerEffects: atkEff,
-      defenderProfile,
-      defenderEffects: defEff,
-      defenderCount: defender.modelCount,
-      halfRange, charged, stationary, inCover,
-    })
-  }, [attacker, defender, activeAttackerStrats.size, activeDefenderStrats.size, halfRange, charged, stationary, inCover])
-
-  const damageDelta = result && baselineResult ? result.damageAfterFnp - baselineResult.damageAfterFnp : null
-
-  const weaponKeywords = attacker.weapon ? parseWeaponKeywords(attacker.weapon.abilities) : null
-
-  const explanations = useMemo(() => {
-    if (!result || !attacker.weapon || !attacker.datasheet || !defender.datasheet) return null
-    const attackerProfile = attacker.datasheet.profiles[0]
-    const defenderProfile = defender.datasheet.profiles[0]
-    if (!attackerProfile || !defenderProfile || !weaponKeywords) return null
-
-    const atkSources: NamedEffect[] = [{ source: 'Capacites', effects: extractCombatEffects(attacker.datasheet) }]
-    if (attacker.enhancement) atkSources.push({ source: attacker.enhancement.name, effects: extractEnhancementEffects(attacker.enhancement) })
-    for (const strat of attackerStratagems) {
-      if (activeAttackerStrats.has(strat.id)) {
-        const eff = parseStratagemEffect(strat)
-        if (eff) atkSources.push({ source: strat.name, effects: eff })
-      }
-    }
-
-    const defSources: NamedEffect[] = [{ source: 'Capacites', effects: extractCombatEffects(defender.datasheet) }]
-    if (defender.enhancement) defSources.push({ source: defender.enhancement.name, effects: extractEnhancementEffects(defender.enhancement) })
-    for (const strat of defenderStratagems) {
-      if (activeDefenderStrats.has(strat.id)) {
-        const eff = parseStratagemEffect(strat)
-        if (eff) defSources.push({ source: strat.name, effects: eff })
-      }
-    }
-
-    return buildExplanations({
-      weapon: attacker.weapon, weaponKeywords, attackerCount: attacker.modelCount,
-      defenderCount: defender.modelCount, attackerProfile, defenderProfile,
-      attackerEffects, defenderEffects, result, halfRange, charged, stationary, inCover,
-      attackerSources: atkSources, defenderSources: defSources,
-    })
-  }, [result, attacker.weapon, attacker.datasheet, attacker.modelCount, attacker.enhancement, defender.datasheet, defender.modelCount, defender.enhancement, weaponKeywords, attackerEffects, defenderEffects, halfRange, charged, stationary, inCover, attackerStratagems, activeAttackerStrats, defenderStratagems, activeDefenderStrats])
-  const weaponType: 'ranged' | 'melee' = attacker.weapon?.type === 'Melee' || attacker.weapon?.range === 'Melee' ? 'melee' : 'ranged'
-
-  const filteredAttackerStrats = attackerStratagems.filter((s) => isStratagemRelevant(s, weaponType))
-  const filteredDefenderStrats = defenderStratagems.filter((s) => isStratagemRelevant(s, weaponType))
-
-  // Active keywords for display
-  const activeKeywords: string[] = []
-  if (weaponKeywords) {
-    if (weaponKeywords.sustainedHits) activeKeywords.push(`Sustained Hits ${weaponKeywords.sustainedHits}`)
-    if (weaponKeywords.lethalHits) activeKeywords.push('Lethal Hits')
-    if (weaponKeywords.devastatingWounds) activeKeywords.push('Devastating Wounds')
-    if (weaponKeywords.anti) weaponKeywords.anti.forEach((a) => activeKeywords.push(`Anti-${a.keyword} ${a.threshold}+`))
-    if (weaponKeywords.twinLinked) activeKeywords.push('Twin-linked')
-    if (weaponKeywords.torrent) activeKeywords.push('Torrent')
-    if (weaponKeywords.blast) activeKeywords.push('Blast')
-    if (weaponKeywords.rapidFire) activeKeywords.push(`Rapid Fire ${weaponKeywords.rapidFire}`)
-    if (weaponKeywords.melta) activeKeywords.push(`Melta ${weaponKeywords.melta}`)
-    if (weaponKeywords.lance) activeKeywords.push('Lance')
-    if (weaponKeywords.heavy) activeKeywords.push('Heavy')
-    if (weaponKeywords.ignoresCover) activeKeywords.push('Ignores Cover')
-    if (weaponKeywords.hazardous) activeKeywords.push('Hazardous')
-    if (weaponKeywords.pistol) activeKeywords.push('Pistol')
-    if (weaponKeywords.precision) activeKeywords.push('Precision')
-  }
+  // --- Simulation hook (single source of truth for all combat logic) ---
+  const {
+    result, damageDelta,
+    weaponKeywords, activeKeywords,
+    targetedDefenderKeywords, explanations,
+    filteredAttackerStrats, filteredDefenderStrats,
+  } = useSimulation({
+    weapon: attacker.weapon,
+    attackerDatasheet: attacker.datasheet,
+    attackerCount: attacker.modelCount,
+    attackerEnhancement: attacker.enhancement,
+    defenderDatasheet: defender.datasheet,
+    defenderCount: defender.modelCount,
+    defenderEnhancement: defender.enhancement,
+    attackerStratagems,
+    defenderStratagems,
+    activeAttackerStrats,
+    activeDefenderStrats,
+    halfRange, charged, stationary, inCover,
+  })
 
   const attackerProfile = attacker.datasheet?.profiles[0]
   const defenderProfile = defender.datasheet?.profiles[0]
@@ -711,6 +578,23 @@ export function SimulatorPage({
                           })}
                         </div>
                       )}
+                      {targetedDefenderKeywords.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
+                          {targetedDefenderKeywords.map(({ keyword, reason }) => (
+                            <span
+                              key={keyword}
+                              title={reason}
+                              style={{
+                                fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: 0.5,
+                                padding: '2px 6px', background: 'rgba(239,68,68,0.15)',
+                                border: '1px solid rgba(239,68,68,0.4)', color: 'var(--color-error, #ef4444)',
+                              }}
+                            >
+                              {keyword} <span style={{ opacity: 0.7 }}>({reason})</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
@@ -891,7 +775,7 @@ export function SimulatorPage({
                   </div>
                   {result.mortalWounds > 0 && (
                     <div style={{ fontSize: 10, color: 'var(--color-warning, #f59e0b)', marginTop: 6, fontFamily: 'var(--font-mono)' }}>
-                      dont {round(result.mortalWounds)} mortal wounds
+                      dont {round(result.mortalWoundCount)} MW = {round(result.mortalWounds)} degats
                     </div>
                   )}
                 </div>
@@ -989,7 +873,7 @@ export function SimulatorPage({
                   </div>
                   {result.mortalWounds > 0 && (
                     <div style={{ fontSize: 10, color: 'var(--color-warning, #f59e0b)', marginTop: 6, fontFamily: 'var(--font-mono)' }}>
-                      dont {round(result.mortalWounds)} mortal wounds
+                      dont {round(result.mortalWoundCount)} MW = {round(result.mortalWounds)} degats
                     </div>
                   )}
                 </div>

@@ -60,6 +60,8 @@ export interface CombatInput {
   defenderProfile: import('@/types/gameData.types').Profile
   defenderEffects: AbilityEffect
   defenderCount: number
+  /** Defender's unit keywords (e.g. ['VEHICLE', 'INFANTRY']) for conditional modifiers */
+  defenderKeywords?: string[]
   /** Whether attacker is at half range (for rapid fire, melta) */
   halfRange?: boolean
   /** Whether attacker charged this turn (for lance) */
@@ -87,6 +89,9 @@ export interface CombatResult {
   damageTotal: number
   damageAfterFnp: number
   estimatedKills: number
+  /** Total damage dealt by mortal wounds (count × avg damage per wound) */
   mortalWounds: number
+  /** Number of mortal wound instances (critical wounds that bypassed saves) */
+  mortalWoundCount: number
   steps: CombatSteps
 }
