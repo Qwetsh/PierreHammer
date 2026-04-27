@@ -17,13 +17,13 @@ interface CompareModalProps {
 }
 
 const MAX_COMPARE = 3
-const statLabels = ['M', 'T', 'Sv', 'W', 'Ld', 'OC'] as const
+const statLabels = ['M', 'T', 'Sv', 'invSv', 'W', 'Ld', 'OC'] as const
 type StatKey = (typeof statLabels)[number]
 
 function getBestStat(stat: StatKey, datasheets: Datasheet[]): string {
   const values = datasheets.map((ds) => ds.profiles[0]?.[stat] ?? '')
   const nums = values.map((v) => parseInt(v.replace(/[^0-9]/g, ''), 10) || 0)
-  const lowerIsBetter = stat === 'Sv' || stat === 'Ld'
+  const lowerIsBetter = stat === 'Sv' || stat === 'Ld' || stat === 'invSv'
   const best = lowerIsBetter ? Math.min(...nums.filter((n) => n > 0)) : Math.max(...nums)
   const bestIdx = nums.indexOf(best)
   return values[bestIdx] ?? ''
@@ -236,7 +236,7 @@ export function CompareModal({ open, onClose, sourceDatasheet, sourceFactionName
                           const bestVal = getBestStat(stat, allUnits.map((u) => u.datasheet))
                           return (
                             <tr key={stat} style={{ borderBottom: '1px solid var(--color-surface)' }}>
-                              <td className="py-1 pr-2 font-medium" style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{stat}</td>
+                              <td className="py-1 pr-2 font-medium" style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{stat === 'invSv' ? 'INV' : stat}</td>
                               {allUnits.map((u) => {
                                 const val = u.datasheet.profiles[0]?.[stat] ?? '-'
                                 return (

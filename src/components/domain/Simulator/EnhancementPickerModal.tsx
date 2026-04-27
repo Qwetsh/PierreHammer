@@ -16,7 +16,7 @@ export function EnhancementPickerModal({ enhancements, selectedEnhancement, onSe
         style={{ backgroundColor: 'var(--color-bg)' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="font-bold text-base mb-3" style={{ color: 'var(--color-text)' }}>Amélioration</h3>
+        <h3 className="font-bold text-base mb-3" style={{ color: 'var(--color-text)' }}>Optimisation</h3>
 
         <button
           className="w-full text-left rounded-lg p-3 mb-2 border-none cursor-pointer"

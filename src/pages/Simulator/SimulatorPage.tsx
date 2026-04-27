@@ -14,6 +14,9 @@ import type { Weapon, Datasheet, Detachment, Enhancement } from '@/types/gameDat
 import { getKeywordDescription } from '@/utils/keywordDescriptions'
 import { StepExplainer } from '@/components/domain/Simulator/StepExplainer'
 import { useSimulation } from '@/hooks/useSimulation'
+import { resolveCombat } from '@/utils/combatEngine'
+import { parseWeaponKeywords } from '@/utils/weaponKeywordParser'
+import type { CombatResult } from '@/types/combat.types'
 
 function round(n: number): string {
   return (Math.round(n * 10) / 10).toString()
@@ -23,12 +26,12 @@ interface SideState {
   factionSlug: string | null
   detachment: Detachment | null
   datasheet: Datasheet | null
-  weapon: Weapon | null
+  weapons: Weapon[]
   enhancement: Enhancement | null
   modelCount: number
 }
 
-const emptySide: SideState = { factionSlug: null, detachment: null, datasheet: null, weapon: null, enhancement: null, modelCount: 5 }
+const emptySide: SideState = { factionSlug: null, detachment: null, datasheet: null, weapons: [], enhancement: null, modelCount: 5 }
 
 interface SimulatorPageProps {
   /** When provided, the component is in "embedded" mode (e.g. inside a modal) */
@@ -76,6 +79,10 @@ export function SimulatorPage({
   const [charged, setCharged] = useState(false)
   const [stationary, setStationary] = useState(true)
   const [inCover, setInCover] = useState(false)
+  const [rerollOnesHit, setRerollOnesHit] = useState(false)
+  const [rerollOnesWound, setRerollOnesWound] = useState(false)
+  const [plusOneToHit, setPlusOneToHit] = useState(false)
+  const [plusOneToWound, setPlusOneToWound] = useState(false)
 
   // Stratagems
   const [activeAttackerStrats, setActiveAttackerStrats] = useState<Set<string>>(new Set())
@@ -122,7 +129,7 @@ export function SimulatorPage({
           factionSlug: factionId,
           detachment: det,
           datasheet: ds,
-          weapon: filteredWeapons[0] ?? ds.weapons[0] ?? null,
+          weapons: filteredWeapons.length ? [filteredWeapons[0]] : ds.weapons[0] ? [ds.weapons[0]] : [],
           enhancement: null,
           modelCount: parseInt(String(ds.pointOptions[0]?.models), 10) || 5,
         })
@@ -146,7 +153,7 @@ export function SimulatorPage({
       factionSlug: defFactionSlug,
       detachment: det,
       datasheet: ds,
-      weapon: null,
+      weapons: [],
       enhancement: null,
       modelCount: parseInt(String(ds.pointOptions[0]?.models), 10) || 5,
     })
@@ -178,16 +185,20 @@ export function SimulatorPage({
     return (defender.detachment.enhancements ?? []).filter((e) => canEquipEnhancement(e, defender.datasheet!))
   }, [defender.detachment, defender.datasheet])
 
+  // Primary weapon for the main simulation (first selected weapon)
+  const primaryWeapon = attacker.weapons[0] ?? null
+
   // --- Simulation hook (single source of truth for all combat logic) ---
   const {
-    result, damageDelta,
+    result: primaryResult, damageDelta,
+    attackerEffects, defenderEffects,
     weaponKeywords, activeKeywords,
     targetedDefenderKeywords, explanations,
     filteredAttackerStrats, filteredDefenderStrats,
   } = useSimulation({
-    weapon: attacker.weapon,
+    weapon: primaryWeapon,
     attackerDatasheet: attacker.datasheet,
-    attackerCount: attacker.modelCount,
+    attackerCount: attacker.weapons.length > 1 ? Math.ceil(attacker.modelCount / attacker.weapons.length) : attacker.modelCount,
     attackerEnhancement: attacker.enhancement,
     defenderDatasheet: defender.datasheet,
     defenderCount: defender.modelCount,
@@ -197,7 +208,52 @@ export function SimulatorPage({
     activeAttackerStrats,
     activeDefenderStrats,
     halfRange, charged, stationary, inCover,
+    rerollOnesHit, rerollOnesWound, plusOneToHit, plusOneToWound,
   })
+
+  // Multi-weapon aggregation: compute combined results
+  const result: CombatResult | null = useMemo(() => {
+    if (!primaryResult) return null
+    if (attacker.weapons.length <= 1) return primaryResult
+    // Compute results for additional weapons and sum
+    const defProfile = defender.datasheet?.profiles[0]
+    const atkProfile = attacker.datasheet?.profiles[0]
+    if (!defProfile || !atkProfile) return primaryResult
+    const defKws = defender.datasheet?.keywords.filter((k) => !k.isFactionKeyword).map((k) => k.keyword) ?? []
+    const perWeaponCount = Math.ceil(attacker.modelCount / attacker.weapons.length)
+
+    let combined: CombatResult = { ...primaryResult }
+    for (let i = 1; i < attacker.weapons.length; i++) {
+      const w = attacker.weapons[i]
+      const wkw = parseWeaponKeywords(w.abilities)
+      if (!wkw) continue
+      const r = resolveCombat({
+        weapon: w,
+        weaponKeywords: wkw,
+        attackerProfile: atkProfile,
+        attackerCount: perWeaponCount,
+        attackerEffects,
+        defenderProfile: defProfile,
+        defenderEffects,
+        defenderCount: defender.modelCount,
+        defenderKeywords: defKws,
+        halfRange, charged, stationary, inCover,
+      })
+      combined = {
+        attacksTotal: combined.attacksTotal + r.attacksTotal,
+        hitsExpected: combined.hitsExpected + r.hitsExpected,
+        woundsExpected: combined.woundsExpected + r.woundsExpected,
+        unsavedWounds: combined.unsavedWounds + r.unsavedWounds,
+        damageTotal: combined.damageTotal + r.damageTotal,
+        damageAfterFnp: combined.damageAfterFnp + r.damageAfterFnp,
+        mortalWounds: combined.mortalWounds + r.mortalWounds,
+        mortalWoundCount: combined.mortalWoundCount + r.mortalWoundCount,
+        estimatedKills: Math.min(defender.modelCount, combined.estimatedKills + r.estimatedKills),
+        steps: combined.steps, // keep primary weapon steps for display
+      }
+    }
+    return combined
+  }, [primaryResult, attacker.weapons, attacker.datasheet, attacker.modelCount, defender.datasheet, defender.modelCount, attackerEffects, defenderEffects, halfRange, charged, stationary, inCover])
 
   const attackerProfile = attacker.datasheet?.profiles[0]
   const defenderProfile = defender.datasheet?.profiles[0]
@@ -383,22 +439,39 @@ export function SimulatorPage({
                 </div>
               )}
 
-              {/* Attacker weapon */}
+              {/* Attacker weapon(s) */}
               {attacker.datasheet && (
                 <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', padding: '6px 10px' }}>
-                  <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', letterSpacing: 1, marginBottom: 6 }}>ARME</div>
+                  <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', letterSpacing: 1, marginBottom: 6 }}>
+                    ARME{attacker.weapons.length > 1 ? 'S' : ''} ({attacker.weapons.length})
+                  </div>
                   <button
                     onClick={() => setShowAtkWeaponPicker(true)}
                     style={{
                       width: '100%', textAlign: 'left', padding: '8px 10px', background: 'rgba(255,255,255,0.05)',
-                      border: `1px solid ${attacker.weapon ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                      border: `1px solid ${attacker.weapons.length > 0 ? 'var(--color-accent)' : 'var(--color-border)'}`,
                       color: 'var(--color-text)', cursor: 'pointer', fontSize: 12,
                     }}
                   >
-                    <div style={{ fontWeight: 600 }}>{attacker.weapon ? <T text={attacker.weapon.name} category="weapon" /> : 'Choisir une arme'}</div>
-                    {attacker.weapon && (
-                      <div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: 2, fontFamily: 'var(--font-mono)' }}>
-                        {attacker.weapon.range !== 'Melee' && `${attacker.weapon.range} `}A:{attacker.weapon.A} {attacker.weapon.type === 'Melee' || attacker.weapon.range === 'Melee' ? 'CC' : 'CT'}:{attacker.weapon.BS_WS} S:{attacker.weapon.S} AP:{attacker.weapon.AP} D:{attacker.weapon.D}
+                    {attacker.weapons.length === 0 ? (
+                      <div style={{ fontWeight: 600 }}>Choisir une arme</div>
+                    ) : attacker.weapons.length === 1 ? (
+                      <>
+                        <div style={{ fontWeight: 600 }}><T text={attacker.weapons[0].name} category="weapon" /></div>
+                        <div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: 2, fontFamily: 'var(--font-mono)' }}>
+                          {attacker.weapons[0].range !== 'Melee' && `${attacker.weapons[0].range} `}A:{attacker.weapons[0].A} {attacker.weapons[0].type === 'Melee' || attacker.weapons[0].range === 'Melee' ? 'CC' : 'CT'}:{attacker.weapons[0].BS_WS} S:{attacker.weapons[0].S} AP:{attacker.weapons[0].AP} D:{attacker.weapons[0].D}
+                        </div>
+                      </>
+                    ) : (
+                      <div>
+                        {attacker.weapons.map((w, i) => (
+                          <div key={i} style={{ marginBottom: i < attacker.weapons.length - 1 ? 4 : 0 }}>
+                            <span style={{ fontWeight: 600, fontSize: 11 }}><T text={w.name} category="weapon" /></span>
+                            <span style={{ fontSize: 9, color: 'var(--color-text-muted)', marginLeft: 6, fontFamily: 'var(--font-mono)' }}>
+                              A:{w.A} S:{w.S} AP:{w.AP} D:{w.D}
+                            </span>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </button>
@@ -421,7 +494,7 @@ export function SimulatorPage({
               {/* Attacker enhancement */}
               {attackerEnhancements.length > 0 && (
                 <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', padding: '6px 10px' }}>
-                  <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', letterSpacing: 1, marginBottom: 6 }}>AMÉLIORATION</div>
+                  <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', letterSpacing: 1, marginBottom: 6 }}>OPTIMISATION</div>
                   <button
                     onClick={() => setShowAtkEnhancementPicker(true)}
                     style={{
@@ -608,14 +681,14 @@ export function SimulatorPage({
                     onClick={() => setShowDefWeaponPicker(true)}
                     style={{
                       width: '100%', textAlign: 'left', padding: '8px 10px', background: 'rgba(255,255,255,0.05)',
-                      border: `1px solid ${defender.weapon ? 'var(--color-error, #ef4444)' : 'var(--color-border)'}`,
+                      border: `1px solid ${defender.weapons.length > 0 ? 'var(--color-error, #ef4444)' : 'var(--color-border)'}`,
                       color: 'var(--color-text)', cursor: 'pointer', fontSize: 12,
                     }}
                   >
-                    <div style={{ fontWeight: 600 }}>{defender.weapon ? <T text={defender.weapon.name} category="weapon" /> : 'Choisir'}</div>
-                    {defender.weapon && (
+                    <div style={{ fontWeight: 600 }}>{defender.weapons[0] ? <T text={defender.weapons[0].name} category="weapon" /> : 'Choisir'}</div>
+                    {defender.weapons[0] && (
                       <div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: 2, fontFamily: 'var(--font-mono)' }}>
-                        {defender.weapon.range !== 'Melee' && `${defender.weapon.range} `}A:{defender.weapon.A} {defender.weapon.type === 'Melee' || defender.weapon.range === 'Melee' ? 'CC' : 'CT'}:{defender.weapon.BS_WS} S:{defender.weapon.S} AP:{defender.weapon.AP} D:{defender.weapon.D}
+                        {defender.weapons[0].range !== 'Melee' && `${defender.weapons[0].range} `}A:{defender.weapons[0].A} {defender.weapons[0].type === 'Melee' || defender.weapons[0].range === 'Melee' ? 'CC' : 'CT'}:{defender.weapons[0].BS_WS} S:{defender.weapons[0].S} AP:{defender.weapons[0].AP} D:{defender.weapons[0].D}
                       </div>
                     )}
                   </button>
@@ -625,7 +698,7 @@ export function SimulatorPage({
               {/* Defender enhancement */}
               {defender.datasheet && defenderEnhancements.length > 0 && (
                 <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', padding: '6px 10px' }}>
-                  <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', letterSpacing: 1, marginBottom: 6 }}>AMÉLIORATION</div>
+                  <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', letterSpacing: 1, marginBottom: 6 }}>OPTIMISATION</div>
                   <button
                     onClick={() => setShowDefEnhancementPicker(true)}
                     style={{
@@ -661,7 +734,7 @@ export function SimulatorPage({
           </div>
 
           {/* Toggles */}
-          {attacker.weapon && defender.datasheet && (
+          {attacker.weapons.length > 0 && defender.datasheet && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {(weaponKeywords?.rapidFire || weaponKeywords?.melta) && (
                 <ToggleChip label="Demi-portée" active={halfRange} onToggle={() => setHalfRange(!halfRange)} />
@@ -673,11 +746,16 @@ export function SimulatorPage({
                 <ToggleChip label="Stationnaire" active={stationary} onToggle={() => setStationary(!stationary)} />
               )}
               <ToggleChip label="Couvert" active={inCover} onToggle={() => setInCover(!inCover)} />
+              <span style={{ width: 1, height: 20, background: 'var(--color-border)', margin: '0 2px' }} />
+              <ToggleChip label="RR 1s touche" active={rerollOnesHit} onToggle={() => setRerollOnesHit(!rerollOnesHit)} />
+              <ToggleChip label="RR 1s bless." active={rerollOnesWound} onToggle={() => setRerollOnesWound(!rerollOnesWound)} />
+              <ToggleChip label="+1 touche" active={plusOneToHit} onToggle={() => setPlusOneToHit(!plusOneToHit)} />
+              <ToggleChip label="+1 bless." active={plusOneToWound} onToggle={() => setPlusOneToWound(!plusOneToWound)} />
             </div>
           )}
 
           {/* Stratagems */}
-          {(filteredAttackerStrats.length > 0 || filteredDefenderStrats.length > 0) && attacker.weapon && defender.datasheet && (
+          {(filteredAttackerStrats.length > 0 || filteredDefenderStrats.length > 0) && attacker.weapons.length > 0 && defender.datasheet && (
             <div>
               <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', letterSpacing: 1, marginBottom: 6 }}>STRATAGÈMES</div>
               <div className="flex flex-col gap-1.5 lg:grid lg:grid-cols-2 lg:gap-1.5">
@@ -888,12 +966,12 @@ export function SimulatorPage({
           })()}
 
           {/* Hints */}
-          {attacker.datasheet && !attacker.weapon && (
+          {attacker.datasheet && attacker.weapons.length === 0 && (
             <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--color-text-muted)', padding: embedded ? 6 : 12 }}>
               Sélectionne une arme pour lancer la simulation
             </div>
           )}
-          {attacker.weapon && !defender.datasheet && (
+          {attacker.weapons.length > 0 && !defender.datasheet && (
             <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--color-text-muted)', padding: embedded ? 6 : 12 }}>
               Sélectionne une cible pour voir les résultats
             </div>
@@ -931,7 +1009,7 @@ export function SimulatorPage({
             setAttacker((prev) => ({
               ...prev,
               datasheet: ds,
-              weapon: ds.weapons[0] ?? null,
+              weapons: ds.weapons[0] ? [ds.weapons[0]] : [],
               enhancement: null,
               modelCount: parseInt(String(ds.pointOptions[0]?.models), 10) || 5,
             }))
@@ -946,8 +1024,10 @@ export function SimulatorPage({
             ? attacker.datasheet.weapons.filter((w) => initialAttackerWeapons.includes(toWeaponKey(w)))
             : attacker.datasheet.weapons
           }
-          selectedWeapon={attacker.weapon}
-          onSelect={(w) => setAttacker((prev) => ({ ...prev, weapon: w }))}
+          multiSelect
+          selectedWeapons={attacker.weapons}
+          onSelect={(w) => setAttacker((prev) => ({ ...prev, weapons: [w] }))}
+          onMultiSelect={(ws) => setAttacker((prev) => ({ ...prev, weapons: ws }))}
           onClose={() => setShowAtkWeaponPicker(false)}
         />
       )}
@@ -985,7 +1065,7 @@ export function SimulatorPage({
             setDefender((prev) => ({
               ...prev,
               datasheet: ds,
-              weapon: ds.weapons[0] ?? null,
+              weapons: ds.weapons[0] ? [ds.weapons[0]] : [],
               enhancement: null,
               modelCount: parseInt(String(ds.pointOptions[0]?.models), 10) || 5,
             }))
@@ -997,8 +1077,8 @@ export function SimulatorPage({
       {showDefWeaponPicker && defender.datasheet && (
         <WeaponPickerModal
           weapons={defender.datasheet.weapons}
-          selectedWeapon={defender.weapon}
-          onSelect={(w) => setDefender((prev) => ({ ...prev, weapon: w }))}
+          selectedWeapon={defender.weapons[0] ?? null}
+          onSelect={(w) => setDefender((prev) => ({ ...prev, weapons: [w] }))}
           onClose={() => setShowDefWeaponPicker(false)}
         />
       )}

@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import type { ArmyList } from '@/types/armyList.types'
-import type { Faction, Detachment, Stratagem } from '@/types/gameData.types'
+import type { Faction, Detachment, Enhancement, Stratagem } from '@/types/gameData.types'
 import type { CollectionItem } from '@/types/collection.types'
 import { MSection } from '@/components/ui/Hud'
 import { T } from '@/components/ui/TranslatableText'
@@ -59,6 +59,50 @@ export function StratagemCard({ stratagem }: { stratagem: Stratagem }) {
           {stratagem.legend && (
             <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 4, lineHeight: 1.4 }}>
               <T text={stratagem.legend} category="stratagem" />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function EnhancementCard({ enhancement }: { enhancement: Enhancement }) {
+  return (
+    <div
+      style={{
+        background: 'var(--color-surface)',
+        border: '1px solid var(--color-border)',
+        padding: '10px 12px',
+        marginBottom: 6,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minWidth: 36,
+            height: 22,
+            fontSize: 10,
+            fontWeight: 700,
+            fontFamily: 'var(--font-mono)',
+            color: '#fff',
+            background: 'var(--color-purple)',
+            flexShrink: 0,
+            padding: '0 4px',
+          }}
+        >
+          {enhancement.cost} pts
+        </span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)' }}>
+            <T text={enhancement.name} category="enhancement" />
+          </div>
+          {enhancement.legend && (
+            <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 4, lineHeight: 1.4 }}>
+              <T text={enhancement.legend} category="enhancement" />
             </div>
           )}
         </div>
@@ -172,6 +216,7 @@ export function ListRightPanel({
   )
 
   const stratagems = detachment?.stratagems ?? []
+  const enhancements = detachment?.enhancements ?? []
 
   const analysis = useMemo(
     () => computeAnalysis(list, faction, collectionItems),
@@ -198,6 +243,18 @@ export function ListRightPanel({
           <div style={{ marginTop: 8 }}>
             {stratagems.map((s) => (
               <StratagemCard key={s.id} stratagem={s} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Enhancements — scrollable */}
+      {enhancements.length > 0 && (
+        <div style={{ flexShrink: 0, padding: '12px 16px 12px 14px', borderTop: '1px solid var(--color-border)' }}>
+          <MSection>Optimisations ({enhancements.length})</MSection>
+          <div style={{ marginTop: 8 }}>
+            {enhancements.map((e) => (
+              <EnhancementCard key={e.id} enhancement={e} />
             ))}
           </div>
         </div>

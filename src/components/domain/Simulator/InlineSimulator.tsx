@@ -78,6 +78,10 @@ export function InlineSimulator({ attackerDatasheet, attackerFaction, attackerFa
   const [charged, setCharged] = useState(false)
   const [stationary, setStationary] = useState(true)
   const [inCover, setInCover] = useState(false)
+  const [rerollOnesHit, setRerollOnesHit] = useState(false)
+  const [rerollOnesWound, setRerollOnesWound] = useState(false)
+  const [plusOneToHit, setPlusOneToHit] = useState(false)
+  const [plusOneToWound, setPlusOneToWound] = useState(false)
 
   const [activeAttackerStrats, setActiveAttackerStrats] = useState<Set<string>>(new Set())
   const [activeDefenderStrats, setActiveDefenderStrats] = useState<Set<string>>(new Set())
@@ -111,6 +115,7 @@ export function InlineSimulator({ attackerDatasheet, attackerFaction, attackerFa
     activeAttackerStrats,
     activeDefenderStrats,
     halfRange, charged, stationary, inCover,
+    rerollOnesHit, rerollOnesWound, plusOneToHit, plusOneToWound,
   })
 
   const profile = attackerDatasheet.profiles[0]
@@ -406,7 +411,7 @@ export function InlineSimulator({ attackerDatasheet, attackerFaction, attackerFa
           {/* Attacker enhancement */}
           {attackerEnhancements.length > 0 ? (
             <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', padding: 10 }}>
-              <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', letterSpacing: 1, marginBottom: 6 }}>AMÉLIORATION</div>
+              <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', letterSpacing: 1, marginBottom: 6 }}>OPTIMISATION</div>
               <button
                 onClick={() => setShowEnhancementPicker(true)}
                 style={{
@@ -430,7 +435,7 @@ export function InlineSimulator({ attackerDatasheet, attackerFaction, attackerFa
           {/* Defender enhancement */}
           {defender.datasheet && defenderEnhancements.length > 0 ? (
             <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', padding: 10 }}>
-              <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', letterSpacing: 1, marginBottom: 6 }}>AMÉLIORATION</div>
+              <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', letterSpacing: 1, marginBottom: 6 }}>OPTIMISATION</div>
               <button
                 onClick={() => setShowDefEnhancementPicker(true)}
                 style={{
@@ -488,6 +493,11 @@ export function InlineSimulator({ attackerDatasheet, attackerFaction, attackerFa
             <ToggleChip label="Stationnaire" active={stationary} onToggle={() => setStationary(!stationary)} />
           )}
           <ToggleChip label="Couvert" active={inCover} onToggle={() => setInCover(!inCover)} />
+          <span style={{ width: 1, height: 20, background: 'var(--color-border)', margin: '0 2px' }} />
+          <ToggleChip label="RR 1s touche" active={rerollOnesHit} onToggle={() => setRerollOnesHit(!rerollOnesHit)} />
+          <ToggleChip label="RR 1s bless." active={rerollOnesWound} onToggle={() => setRerollOnesWound(!rerollOnesWound)} />
+          <ToggleChip label="+1 touche" active={plusOneToHit} onToggle={() => setPlusOneToHit(!plusOneToHit)} />
+          <ToggleChip label="+1 bless." active={plusOneToWound} onToggle={() => setPlusOneToWound(!plusOneToWound)} />
         </div>
       )}
 

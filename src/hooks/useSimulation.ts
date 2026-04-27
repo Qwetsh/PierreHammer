@@ -25,6 +25,8 @@ export function mergeEffects(a: AbilityEffect, b: AbilityEffect): AbilityEffect 
     modifiers: [...(a.modifiers ?? []), ...(b.modifiers ?? [])].length > 0
       ? [...(a.modifiers ?? []), ...(b.modifiers ?? [])]
       : undefined,
+    rerollOnesHit: a.rerollOnesHit || b.rerollOnesHit,
+    rerollOnesWound: a.rerollOnesWound || b.rerollOnesWound,
   }
 }
 
@@ -48,6 +50,11 @@ export interface UseSimulationInput {
   charged?: boolean
   stationary?: boolean
   inCover?: boolean
+  /** Common ability toggles */
+  rerollOnesHit?: boolean
+  rerollOnesWound?: boolean
+  plusOneToHit?: boolean
+  plusOneToWound?: boolean
   /** Extra effects to merge into attacker (e.g. damaged profile effects) */
   attackerExtraEffects?: AbilityEffect | null
   /** Extra effects to merge into defender (e.g. damaged profile effects) */
@@ -100,6 +107,10 @@ export function useSimulation(input: UseSimulationInput): UseSimulationResult {
     charged = false,
     stationary = true,
     inCover = false,
+    rerollOnesHit = false,
+    rerollOnesWound = false,
+    plusOneToHit = false,
+    plusOneToWound = false,
     attackerExtraEffects = null,
     defenderExtraEffects = null,
   } = input
@@ -110,6 +121,11 @@ export function useSimulation(input: UseSimulationInput): UseSimulationResult {
     let effects = extractCombatEffects(attackerDatasheet)
     if (attackerEnhancement) effects = mergeEffects(effects, extractEnhancementEffects(attackerEnhancement as never))
     if (attackerExtraEffects) effects = mergeEffects(effects, attackerExtraEffects)
+    // Common ability toggles
+    if (rerollOnesHit) effects = mergeEffects(effects, { rerollOnesHit: true })
+    if (rerollOnesWound) effects = mergeEffects(effects, { rerollOnesWound: true })
+    if (plusOneToHit) effects = mergeEffects(effects, { modifiers: [{ phase: 'hit', value: 1 }] })
+    if (plusOneToWound) effects = mergeEffects(effects, { modifiers: [{ phase: 'wound', value: 1 }] })
     for (const strat of attackerStratagems) {
       if (activeAttackerStrats.has(strat.id)) {
         const eff = parseStratagemEffect(strat)
@@ -117,7 +133,7 @@ export function useSimulation(input: UseSimulationInput): UseSimulationResult {
       }
     }
     return effects
-  }, [attackerDatasheet, attackerEnhancement, attackerExtraEffects, attackerStratagems, activeAttackerStrats])
+  }, [attackerDatasheet, attackerEnhancement, attackerExtraEffects, attackerStratagems, activeAttackerStrats, rerollOnesHit, rerollOnesWound, plusOneToHit, plusOneToWound])
 
   const defenderEffects = useMemo(() => {
     if (!defenderDatasheet) return {}

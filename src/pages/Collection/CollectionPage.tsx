@@ -341,11 +341,31 @@ export function CollectionPage() {
                     {editingItem.squads.length} escouade{editingItem.squads.length > 1 ? 's' : ''} · {editingItem.squads.flat().length} figurines
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  {editingDatasheet.pointOptions.length > 1 && (
+                    <select
+                      id="squad-size-select"
+                      style={{
+                        padding: '4px 6px',
+                        fontSize: 10,
+                        fontFamily: 'var(--font-mono)',
+                        background: 'var(--color-surface)',
+                        color: 'var(--color-text)',
+                        border: '1px solid var(--color-border)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {editingDatasheet.pointOptions.map((opt, i) => (
+                        <option key={i} value={i}>{opt.models}</option>
+                      ))}
+                    </select>
+                  )}
                   <button
                     style={{ padding: '5px 12px', fontSize: 11, fontFamily: 'var(--font-mono)', background: 'color-mix(in srgb, var(--color-accent) 10%, transparent)', color: 'var(--color-accent)', border: '1px solid var(--color-accent)', cursor: 'pointer' }}
                     onClick={() => {
-                      const mc = parseInt(editingDatasheet.pointOptions[0]?.models) || 1
+                      const selectEl = document.getElementById('squad-size-select') as HTMLSelectElement | null
+                      const idx = selectEl ? Number(selectEl.value) : 0
+                      const mc = parseInt(editingDatasheet.pointOptions[idx]?.models ?? editingDatasheet.pointOptions[0]?.models) || 1
                       addSquad(editingId, mc)
                     }}
                   >

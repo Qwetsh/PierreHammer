@@ -66,7 +66,7 @@ export function validateArmyList(datasheets: Datasheet[]): ValidationResult {
   if (enhancementCount > MAX_ENHANCEMENTS) {
     violations.push({
       type: 'max-enhancements',
-      message: `Trop d'Enhancements : ${enhancementCount}/${MAX_ENHANCEMENTS} max.`,
+      message: `Trop d'optimisations : ${enhancementCount}/${MAX_ENHANCEMENTS} max.`,
       severity: 'error',
     })
   }

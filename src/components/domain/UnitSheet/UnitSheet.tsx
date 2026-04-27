@@ -338,6 +338,7 @@ export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, select
                   <th className="text-center px-2">M</th>
                   <th className="text-center px-2">T</th>
                   <th className="text-center px-2">SV</th>
+                  <th className="text-center px-2">INV</th>
                   <th className="text-center px-2">W</th>
                   <th className="text-center px-2">LD</th>
                   <th className="text-center px-2">OC</th>
@@ -350,6 +351,7 @@ export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, select
                     <td className="text-center px-2">{p.M}</td>
                     <td className="text-center px-2">{p.T}</td>
                     <td className="text-center px-2">{p.Sv}</td>
+                    <td className="text-center px-2" style={{ color: p.invSv !== '-' ? 'var(--color-accent)' : undefined }}>{p.invSv !== '-' ? `${p.invSv}+` : '-'}</td>
                     <td className="text-center px-2">{p.W}</td>
                     <td className="text-center px-2">{p.Ld}</td>
                     <td className="text-center px-2">{p.OC}</td>
@@ -470,10 +472,10 @@ export function UnitSheet({ datasheet, ownedCount = 0, enhancementGroups, select
         </>
       )}
 
-      {/* Section 6b — Améliorations disponibles */}
+      {/* Section 6b — Optimisations disponibles */}
       {enhancementGroups && enhancementGroups.length > 0 && (
         <>
-          <SectionTitle>Améliorations disponibles</SectionTitle>
+          <SectionTitle>Optimisations disponibles</SectionTitle>
           <div className="flex flex-col gap-4">
             {enhancementGroups.map((group) => (
               <div key={group.detachmentName}>

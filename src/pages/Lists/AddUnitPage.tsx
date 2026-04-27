@@ -273,7 +273,7 @@ export function AddUnitPage() {
                 className="font-semibold"
                 style={{ color: 'var(--color-text)', fontSize: 'var(--text-lg)' }}
               >
-                Amélioration pour {enhancementPicker.datasheet.name}
+                Optimisation pour {enhancementPicker.datasheet.name}
               </h3>
               <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                 Optionnel — touche en dehors pour passer

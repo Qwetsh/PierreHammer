@@ -191,7 +191,7 @@ export function SimulatorCard({
                   style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: 'var(--color-text)' }}
                   onClick={() => setShowEnhancementPicker(true)}
                 >
-                  <span style={{ color: 'var(--color-text-muted)' }}>Amélioration: </span>
+                  <span style={{ color: 'var(--color-text-muted)' }}>Optimisation: </span>
                   <span className="font-medium" style={{ color: enhancement ? theme!.accent : 'var(--color-text-muted)' }}>
                     {enhancement ? <T text={enhancement.name} category="enhancement" /> : 'Aucune'}
                   </span>

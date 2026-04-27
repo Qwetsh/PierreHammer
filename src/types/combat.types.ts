@@ -47,6 +47,8 @@ export interface AbilityEffect {
   extraAttacks?: number
   stealth?: boolean             // shorthand for -1 to hit (ranged)
   ignoresCover?: boolean
+  rerollOnesHit?: boolean       // reroll 1s to hit
+  rerollOnesWound?: boolean     // reroll 1s to wound
 }
 
 // === Combat Engine I/O (Story 11.3) ===

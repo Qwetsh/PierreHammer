@@ -6,7 +6,7 @@ import { useGameDataStore } from '@/stores/gameDataStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useFriendsStore } from '@/stores/friendsStore'
 import { useGameSessionStore } from '@/stores/gameSessionStore'
-import { fetchFriendLists } from '@/services/listsSyncService'
+import { fetchFriendLists, fetchRemoteLists } from '@/services/listsSyncService'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { HudBtn, HudPointsCounter, MSection } from '@/components/ui/Hud'
 import { UnitSheet } from '@/components/domain/UnitSheet/UnitSheet'
@@ -156,8 +156,11 @@ export function GameModePage() {
   const handleSelectFriend = async (friend: Profile) => {
     setSelectedFriend(friend)
     setLoadingFriendLists(true)
-    const lists = await fetchFriendLists(friend.id)
-    setFriendLists(lists)
+    const isSelf = friend.id === user?.id
+    const lists = isSelf ? await fetchRemoteLists(friend.id) : await fetchFriendLists(friend.id)
+    // Exclude current list when playing against yourself
+    const filtered = isSelf ? lists.filter((l) => l.remoteId !== list.remoteId) : lists
+    setFriendLists(filtered)
     setLoadingFriendLists(false)
   }
 
@@ -662,7 +665,7 @@ export function GameModePage() {
                 {totalPoints}/{list.pointsLimit}
               </span>
             )}
-            {isAuthenticated && !hasSession && !isPending && friends.length > 0 && list.remoteId && (
+            {isAuthenticated && !hasSession && !isPending && list.remoteId && (
               <HudBtn variant="primary" onClick={() => setShowOpponentPicker(true)}>
                 Jouer contre...
               </HudBtn>
@@ -883,6 +886,23 @@ export function GameModePage() {
             <>
               <MSection>Choisir un adversaire</MSection>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
+                {user && (
+                  <button
+                    style={{
+                      textAlign: 'left',
+                      padding: '10px 12px',
+                      background: 'color-mix(in srgb, var(--color-accent) 10%, var(--color-surface))',
+                      border: '1px solid var(--color-accent)',
+                      color: 'var(--color-text)',
+                      cursor: 'pointer',
+                      fontSize: 13,
+                      fontWeight: 600,
+                    }}
+                    onClick={() => handleSelectFriend({ id: user.id, username: 'Moi-meme', display_name: null, created_at: '' })}
+                  >
+                    Moi-meme (mes listes)
+                  </button>
+                )}
                 {friends.map((f) => {
                   const profile = getFriendProfile(f)
                   if (!profile) return null

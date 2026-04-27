@@ -66,6 +66,7 @@ export function CatalogPage() {
   const [sortBy, setSortBy] = useState<SortKey>('name')
   const [showLegends, setShowLegends] = useState(false)
   const [showPrices, setShowPrices] = useState(false)
+  const [hideGenerics, setHideGenerics] = useState(false)
   const [pointsRange, setPointsRange] = useState<[number, number] | null>(null)
   const [priceRange, setPriceRange] = useState<[number, number] | null>(null)
   const [selectedKeywords, setSelectedKeywords] = useState<Set<string>>(new Set())
@@ -140,12 +141,12 @@ export function CatalogPage() {
     if (!hasChapters || chapterFilter === 'all') return legendsFiltered
     return legendsFiltered.filter((ds) => {
       const dsChapters = ds.keywords.filter((k) => k.isFactionKeyword && chapterNames.has(k.keyword))
-      // Generic unit (no chapter keyword) → show in all chapters
-      if (dsChapters.length === 0) return true
+      // Generic unit (no chapter keyword) → show unless hidden
+      if (dsChapters.length === 0) return !hideGenerics
       // Chapter-specific → show only if matches filter
       return dsChapters.some((k) => k.keyword === chapterFilter)
     })
-  }, [legendsFiltered, chapterFilter, hasChapters, chapterNames])
+  }, [legendsFiltered, chapterFilter, hasChapters, chapterNames, hideGenerics])
 
   const roles = useMemo(() => {
     const r = new Set(chapterFiltered.map((ds) => ds.role).filter(Boolean))
@@ -382,11 +383,19 @@ export function CatalogPage() {
               {hasChapters && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: 1, color: 'var(--color-text-muted)', textTransform: 'uppercase', flexShrink: 0 }}>Chapitre</span>
-                  <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6, alignItems: 'center' }}>
                     <HudChip active={chapterFilter === 'all'} onClick={() => setChapterFilter('all')}>Tous</HudChip>
                     {chapters.map((ch) => (
                       <HudChip key={ch.name} active={chapterFilter === ch.name} onClick={() => setChapterFilter(ch.name)}>{ch.name} ({ch.count})</HudChip>
                     ))}
+                    {chapterFilter !== 'all' && (
+                      <>
+                        <span style={{ width: 1, height: 20, background: 'var(--color-border)', margin: '0 4px' }} />
+                        <HudChip active={hideGenerics} onClick={() => setHideGenerics(!hideGenerics)}>
+                          {hideGenerics ? 'Génériques masqués' : 'Masquer génériques'}
+                        </HudChip>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
@@ -519,6 +528,11 @@ export function CatalogPage() {
                   {chapters.map((ch) => (
                     <HudChip key={ch.name} active={chapterFilter === ch.name} onClick={() => setChapterFilter(ch.name)}>{ch.name}</HudChip>
                   ))}
+                  {chapterFilter !== 'all' && (
+                    <HudChip active={hideGenerics} onClick={() => setHideGenerics(!hideGenerics)}>
+                      {hideGenerics ? 'Génériques masqués' : 'Masquer génériques'}
+                    </HudChip>
+                  )}
                 </div>
               </div>
             )}
@@ -753,12 +767,13 @@ function UnitDetailModal({
   const [simMode, setSimMode] = useState(false)
   const [compareOpen, setCompareOpen] = useState(false)
   const [selectedAbility, setSelectedAbility] = useState<{ name: string; description: string } | null>(null)
+  const [selectedModelOptionIdx, setSelectedModelOptionIdx] = useState(0)
 
   const item = collectionItems[datasheet.id]
   const ownedCount = item?.squads.flat().length ?? 0
   const squadCount = item?.squads.length ?? 0
   const points = datasheet.pointOptions.length > 0 ? datasheet.pointOptions[0].cost : 0
-  const modelCount = parseInt(datasheet.pointOptions[0]?.models) || 1
+  const modelCount = parseInt(datasheet.pointOptions[selectedModelOptionIdx]?.models ?? datasheet.pointOptions[0]?.models) || 1
 
   const enhancementGroups = useMemo(() => {
     if (!isCharacter(datasheet) || !faction?.detachments) return []
@@ -1023,13 +1038,14 @@ function UnitDetailModal({
                             { label: 'M', value: p.M },
                             { label: 'T', value: p.T },
                             { label: 'SV', value: p.Sv },
+                            { label: 'INV', value: p.invSv !== '-' ? `${p.invSv}+` : '-' },
                             { label: 'W', value: p.W },
                             { label: 'LD', value: p.Ld },
                             { label: 'OC', value: p.OC },
                           ] as const).map(({ label, value }) => (
                             <div key={label} style={{ flex: 1, border: '1px solid var(--color-border)', padding: '8px 0', textAlign: 'center', background: 'var(--color-surface)' }}>
                               <div style={{ fontSize: 9, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)', letterSpacing: 1, textTransform: 'uppercase' }}>{label}</div>
-                              <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--color-accent)', marginTop: 2 }}>{value}</div>
+                              <div style={{ fontSize: 22, fontWeight: 600, color: label === 'INV' && value !== '-' ? 'var(--color-gold)' : 'var(--color-accent)', marginTop: 2 }}>{value}</div>
                             </div>
                           ))}
                         </div>
@@ -1192,7 +1208,26 @@ function UnitDetailModal({
             </div>
 
             {/* ── Action Bar ── */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '12px 16px', borderTop: '1px solid var(--color-border)', background: 'var(--color-bg-elevated)' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '12px 16px', borderTop: '1px solid var(--color-border)', background: 'var(--color-bg-elevated)', alignItems: 'center' }}>
+              {datasheet.pointOptions.length > 1 && (
+                <select
+                  value={selectedModelOptionIdx}
+                  onChange={(e) => setSelectedModelOptionIdx(Number(e.target.value))}
+                  style={{
+                    padding: '5px 8px',
+                    fontSize: 11,
+                    fontFamily: 'var(--font-mono)',
+                    background: 'var(--color-surface)',
+                    color: 'var(--color-text)',
+                    border: '1px solid var(--color-border)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {datasheet.pointOptions.map((opt, i) => (
+                    <option key={i} value={i}>{opt.models}</option>
+                  ))}
+                </select>
+              )}
               <HudBtn variant="accent" onClick={() => {
                 if (ownedCount === 0) addItem(datasheet.id, factionId, modelCount)
                 else addSquad(datasheet.id, modelCount)

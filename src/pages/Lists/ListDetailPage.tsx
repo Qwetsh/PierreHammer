@@ -276,7 +276,7 @@ export function ListDetailPage() {
               <button
                 style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--color-accent)', fontSize: 12, padding: '2px 4px' }}
                 onClick={(e) => { e.stopPropagation(); setEnhancementUnitIndex(index) }}
-                aria-label="Ajouter une amélioration"
+                aria-label="Ajouter une optimisation"
               >
                 &#10022;
               </button>
@@ -552,7 +552,7 @@ export function ListDetailPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="font-semibold mb-3" style={{ color: 'var(--color-text)' }}>
-              Choisir une amélioration
+              Choisir une optimisation
             </h3>
             <div className="flex flex-col gap-2">
               {availableEnhancements
@@ -598,7 +598,7 @@ export function ListDetailPage() {
                 ))}
               {availableEnhancements.filter((enh) => !usedEnhancementIds.has(enh.id)).length === 0 && (
                 <p className="text-sm text-center py-4" style={{ color: 'var(--color-text-muted)' }}>
-                  Toutes les améliorations sont déjà assignées.
+                  Toutes les optimisations sont déjà assignées.
                 </p>
               )}
             </div>

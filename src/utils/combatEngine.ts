@@ -178,7 +178,11 @@ export function resolveCombat(input: CombatInput): CombatResult {
   } else if (hitThreshold <= 0) {
     hitsExpected = 0
   } else {
-    const normalHitP = pSuccess(hitThreshold)
+    let normalHitP = pSuccess(hitThreshold)
+    // Reroll 1s to hit: 1/6 chance of rolling a 1, rerolled with normalHitP chance
+    if (attackerEffects.rerollOnesHit) {
+      normalHitP = normalHitP + (1 / 6) * normalHitP
+    }
     hitsExpected = attacks * normalHitP
 
     // Critical hits on natural 6
@@ -240,6 +244,9 @@ export function resolveCombat(input: CombatInput): CombatResult {
   if (kw.twinLinked) {
     const pFail = 1 - pNormalWound
     effectiveWoundP = pNormalWound + pFail * pNormalWound
+  } else if (attackerEffects.rerollOnesWound) {
+    // Reroll 1s to wound: 1/6 chance of rolling a 1, rerolled with pNormalWound chance
+    effectiveWoundP = pNormalWound + (1 / 6) * pNormalWound
   }
 
   let woundsExpected = hitsExpected * effectiveWoundP + lethalHitWounds
