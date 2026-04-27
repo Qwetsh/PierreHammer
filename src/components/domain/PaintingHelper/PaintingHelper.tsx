@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { factionPaintSchemes } from '@/data/factionPaintSchemes'
 import type { PaintColor } from '@/data/factionPaintSchemes'
 
@@ -7,6 +7,15 @@ interface PaintingHelperProps {
   unitName: string
   factionName: string
 }
+
+interface YtVideo {
+  id: string
+  title: string
+  thumbnail: string
+  channel: string
+}
+
+const YT_API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY as string | undefined
 
 const typeLabels: Record<PaintColor['type'], string> = {
   base: 'Base',
@@ -35,10 +44,39 @@ function lighten(hex: string, amount: number): string {
 
 export function PaintingHelper({ factionId, unitName, factionName }: PaintingHelperProps) {
   const [hoveredColor, setHoveredColor] = useState<PaintColor | null>(null)
+  const [videos, setVideos] = useState<YtVideo[]>([])
+  const [loading, setLoading] = useState(false)
+  const [searched, setSearched] = useState(false)
+  const [playingId, setPlayingId] = useState<string | null>(null)
 
   const scheme = factionPaintSchemes[factionId]
-  const searchQuery = encodeURIComponent(`how to paint ${unitName} ${factionName} warhammer 40k`)
-  const youtubeSearchUrl = `https://www.youtube.com/results?search_query=${searchQuery}`
+  const searchQuery = `how to paint ${unitName} ${factionName} warhammer 40k`
+  const youtubeSearchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(searchQuery)}`
+
+  const searchVideos = useCallback(async () => {
+    if (!YT_API_KEY) return
+    setLoading(true)
+    try {
+      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(searchQuery)}&type=video&maxResults=4&key=${YT_API_KEY}`
+      const res = await fetch(url)
+      if (!res.ok) throw new Error('YouTube API error')
+      const data = await res.json()
+      const results: YtVideo[] = (data.items || []).map((item: { id: { videoId: string }; snippet: { title: string; thumbnails: { medium: { url: string } }; channelTitle: string } }) => ({
+        id: item.id.videoId,
+        title: item.snippet.title,
+        thumbnail: item.snippet.thumbnails.medium.url,
+        channel: item.snippet.channelTitle,
+      }))
+      setVideos(results)
+    } catch {
+      setVideos([])
+    } finally {
+      setLoading(false)
+      setSearched(true)
+    }
+  }, [searchQuery])
+
+  const hasApi = !!YT_API_KEY
 
   return (
     <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12, marginTop: 8 }}>
@@ -133,25 +171,132 @@ export function PaintingHelper({ factionId, unitName, factionName }: PaintingHel
         </div>
       )}
 
-      {/* YouTube search button */}
-      <a
-        href={youtubeSearchUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-          width: '100%', padding: '8px 12px',
-          fontSize: 11, fontFamily: 'var(--font-mono)',
-          background: 'color-mix(in srgb, #FF0000 10%, transparent)',
-          color: '#FF4444',
-          border: '1px solid rgba(255,0,0,0.3)',
-          cursor: 'pointer', letterSpacing: 0.5,
-          textDecoration: 'none', boxSizing: 'border-box',
-        }}
-      >
-        <span style={{ fontSize: 14 }}>{'\u25B6'}</span>
-        Tutos peinture YouTube
-      </a>
+      {/* Video player */}
+      {playingId && (
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+            <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', letterSpacing: 0.5 }}>
+              Tuto YouTube
+            </span>
+            <button
+              onClick={() => setPlayingId(null)}
+              style={{ background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: 10 }}
+            >
+              {'\u2715'}
+            </button>
+          </div>
+          <div style={{
+            position: 'relative', width: '100%', paddingBottom: '56.25%',
+            borderRadius: 6, overflow: 'hidden', background: '#000',
+          }}>
+            <iframe
+              src={`https://www.youtube.com/embed/${playingId}?autoplay=1`}
+              title="Painting tutorial"
+              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Video results */}
+      {videos.length > 0 && !playingId && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
+          {videos.map((v) => (
+            <button
+              key={v.id}
+              onClick={() => setPlayingId(v.id)}
+              style={{
+                display: 'flex', gap: 8, alignItems: 'center',
+                background: 'var(--color-surface)', border: '1px solid var(--color-border)',
+                borderRadius: 6, padding: 6, cursor: 'pointer',
+                textAlign: 'left', width: '100%',
+              }}
+            >
+              <div style={{
+                width: 80, height: 45, borderRadius: 4, overflow: 'hidden',
+                flexShrink: 0, position: 'relative', background: '#000',
+              }}>
+                <img
+                  src={v.thumbnail}
+                  alt=""
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'rgba(0,0,0,0.3)',
+                }}>
+                  <span style={{ color: '#fff', fontSize: 16 }}>{'\u25B6'}</span>
+                </div>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                  fontSize: 10, color: 'var(--color-text)', fontWeight: 500,
+                  overflow: 'hidden', textOverflow: 'ellipsis',
+                  display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                  lineHeight: '13px',
+                }}>
+                  {decodeHtml(v.title)}
+                </div>
+                <div style={{ fontSize: 8, color: 'var(--color-text-muted)', marginTop: 2, fontFamily: 'var(--font-mono)' }}>
+                  {v.channel}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Search / fallback button */}
+      {!playingId && (
+        hasApi ? (
+          <button
+            onClick={searched ? () => window.open(youtubeSearchUrl, '_blank') : searchVideos}
+            disabled={loading}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              width: '100%', padding: '8px 12px',
+              fontSize: 11, fontFamily: 'var(--font-mono)',
+              background: 'color-mix(in srgb, #FF0000 10%, transparent)',
+              color: '#FF4444',
+              border: '1px solid rgba(255,0,0,0.3)',
+              cursor: loading ? 'wait' : 'pointer', letterSpacing: 0.5,
+              opacity: loading ? 0.6 : 1,
+              boxSizing: 'border-box',
+            }}
+          >
+            <span style={{ fontSize: 14 }}>{'\u25B6'}</span>
+            {loading ? 'Recherche...' : searched ? 'Plus de tutos sur YouTube' : 'Tutos peinture YouTube'}
+          </button>
+        ) : (
+          <a
+            href={youtubeSearchUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              width: '100%', padding: '8px 12px',
+              fontSize: 11, fontFamily: 'var(--font-mono)',
+              background: 'color-mix(in srgb, #FF0000 10%, transparent)',
+              color: '#FF4444',
+              border: '1px solid rgba(255,0,0,0.3)',
+              cursor: 'pointer', letterSpacing: 0.5,
+              textDecoration: 'none', boxSizing: 'border-box',
+            }}
+          >
+            <span style={{ fontSize: 14 }}>{'\u25B6'}</span>
+            Tutos peinture YouTube
+          </a>
+        )
+      )}
     </div>
   )
+}
+
+function decodeHtml(html: string): string {
+  const txt = document.createElement('textarea')
+  txt.innerHTML = html
+  return txt.value
 }
