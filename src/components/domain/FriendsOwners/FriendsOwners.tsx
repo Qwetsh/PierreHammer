@@ -62,7 +62,7 @@ export function FriendsOwners({ datasheetId }: FriendsOwnersProps) {
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
         {friends.map((f) => {
-          const name = f.display_name || f.username || 'Anonyme'
+          const name = f.username || f.display_name || 'Anonyme'
           const initial = name.charAt(0).toUpperCase()
           return (
             <div
