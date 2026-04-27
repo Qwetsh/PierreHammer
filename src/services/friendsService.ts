@@ -111,6 +111,25 @@ export async function getPendingRequests(userId: string): Promise<Friendship[]> 
   }
 }
 
+export async function getSentRequests(userId: string): Promise<Friendship[]> {
+  if (!isSupabaseConfigured || !supabase) return []
+  try {
+    const { data, error } = await supabase
+      .from('ph_friendships')
+      .select('*, addressee:profiles!addressee_id(*)')
+      .eq('status', 'pending')
+      .eq('requester_id', userId)
+    if (error) {
+      console.error('getSentRequests error:', error.message)
+      return []
+    }
+    return data as Friendship[]
+  } catch (e) {
+    console.error('getSentRequests exception:', e)
+    return []
+  }
+}
+
 export async function removeFriend(friendshipId: string): Promise<boolean> {
   if (!isSupabaseConfigured || !supabase) return false
   try {

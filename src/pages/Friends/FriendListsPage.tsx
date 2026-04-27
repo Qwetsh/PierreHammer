@@ -7,6 +7,7 @@ import { calculateTotalPoints, countSquads } from '@/utils/pointsCalculator'
 import { getProfile } from '@/services/friendsService'
 import type { ArmyList } from '@/types/armyList.types'
 import type { Profile } from '@/services/friendsService'
+import { EmptyState } from '@/components/ui/EmptyState'
 
 export function FriendListsPage() {
   const { friendId } = useParams<{ friendId: string }>()
@@ -17,21 +18,30 @@ export function FriendListsPage() {
   const [lists, setLists] = useState<ArmyList[]>([])
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
 
   useFactionTheme(null)
 
   useEffect(() => {
     if (!friendId) return
     setLoading(true)
+    setNotFound(false)
     Promise.all([
       fetchPublicLists(friendId),
       getProfile(friendId),
     ]).then(([publicLists, friendProfile]) => {
+      if (!friendProfile) {
+        setNotFound(true)
+        setLoading(false)
+        return
+      }
       setLists(publicLists)
       setProfile(friendProfile)
-      // Load faction data for each list
       const factionIds = new Set(publicLists.map((l) => l.factionId))
       factionIds.forEach((id) => loadFaction(id))
+      setLoading(false)
+    }).catch(() => {
+      setNotFound(true)
       setLoading(false)
     })
   }, [friendId, loadFaction])
@@ -39,6 +49,24 @@ export function FriendListsPage() {
   const totalPoints = (list: ArmyList) => {
     const faction = loadedFactions[list.factionId]
     return calculateTotalPoints(list.units, faction?.datasheets)
+  }
+
+  if (notFound) {
+    return (
+      <div className="p-4">
+        <button
+          className="text-sm mb-4 bg-transparent border-none cursor-pointer"
+          style={{ color: 'var(--color-accent)' }}
+          onClick={() => navigate('/friends')}
+        >
+          ← Retour aux amis
+        </button>
+        <EmptyState
+          title="Utilisateur introuvable"
+          description="Ce joueur n'existe pas ou n'est plus disponible."
+        />
+      </div>
+    )
   }
 
   return (

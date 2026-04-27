@@ -32,6 +32,11 @@ export const useAuthStore = create<AuthState>()((set) => ({
       import('@/stores/collectionStore').then(({ useCollectionStore }) => {
         useCollectionStore.getState().syncOnLogin()
       })
+      import('@/stores/friendsStore').then(({ useFriendsStore }) => {
+        useFriendsStore.getState().loadProfile()
+        useFriendsStore.getState().loadFriends()
+        useFriendsStore.getState().loadPendingRequests()
+      })
       import('@/services/customImageSyncService').then(async ({ syncLocalToRemote, syncRemoteToLocal }) => {
         const { getCustomImageBlob, listCustomImageIds, hasCustomImage, saveCustomImageBlob } = await import('@/stores/customImageStore')
         const userId = session.user.id
