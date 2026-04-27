@@ -11,6 +11,7 @@ import { HudPanel, HudChip, HudSearch, HudSegmentedBar, HudTopBar, MTopBar } fro
 import type { PaintStatus } from '@/components/domain/PaintStatusBadge'
 import type { Datasheet } from '@/types/gameData.types'
 import { T } from '@/components/ui/TranslatableText'
+import { PaintingHelper } from '@/components/domain/PaintingHelper/PaintingHelper'
 
 interface DatasheetWithFaction extends Datasheet {
   factionSlug: string
@@ -431,6 +432,13 @@ export function CollectionPage() {
                     </div>
                   </div>
                 ))}
+                {editingItem && editingDatasheet && (
+                  <PaintingHelper
+                    factionId={editingItem.factionId}
+                    unitName={editingDatasheet.name}
+                    factionName={editingDatasheet.factionName}
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -631,6 +639,13 @@ export function CollectionPage() {
                     </div>
                   </div>
                 ))}
+                {editingItem && editingDatasheet && (
+                  <PaintingHelper
+                    factionId={editingItem.factionId}
+                    unitName={editingDatasheet.name}
+                    factionName={editingDatasheet.factionName}
+                  />
+                )}
               </div>
             </div>
           </div>
