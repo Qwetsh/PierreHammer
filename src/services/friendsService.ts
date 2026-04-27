@@ -20,19 +20,30 @@ export interface Friendship {
 export async function searchUsers(query: string): Promise<Profile[]> {
   if (!isSupabaseConfigured || !supabase || !query.trim()) return []
   try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, username, display_name, created_at')
-      .ilike('username', `%${query.trim()}%`)
-      .limit(20)
+    const { data, error } = await supabase.rpc('search_ph_users', {
+      p_query: query.trim(),
+      p_limit: 20,
+    })
     if (error) {
       console.error('searchUsers error:', error.message)
       return []
     }
-    return data as Profile[]
+    return (data as Profile[]) || []
   } catch (e) {
     console.error('searchUsers exception:', e)
     return []
+  }
+}
+
+export async function markPhRegistered(userId: string): Promise<void> {
+  if (!isSupabaseConfigured || !supabase) return
+  try {
+    await supabase
+      .from('profiles')
+      .update({ ph_registered: true } as Record<string, unknown>)
+      .eq('id', userId)
+  } catch {
+    // silent — non-critical
   }
 }
 

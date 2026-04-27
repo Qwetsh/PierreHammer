@@ -37,6 +37,9 @@ export const useAuthStore = create<AuthState>()((set) => ({
         useFriendsStore.getState().loadFriends()
         useFriendsStore.getState().loadPendingRequests()
       })
+      import('@/services/friendsService').then(({ markPhRegistered }) => {
+        markPhRegistered(session.user.id)
+      })
       import('@/services/customImageSyncService').then(async ({ syncLocalToRemote, syncRemoteToLocal }) => {
         const { getCustomImageBlob, listCustomImageIds, hasCustomImage, saveCustomImageBlob } = await import('@/stores/customImageStore')
         const userId = session.user.id
