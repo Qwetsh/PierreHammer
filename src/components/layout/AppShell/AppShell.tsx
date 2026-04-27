@@ -4,8 +4,14 @@ import { CalculatorModal } from '@/components/ui/CalculatorModal/CalculatorModal
 import { usePreferencesStore } from '@/stores/preferencesStore'
 
 const FAB_SIZE = 48
+const DOCKED_WIDTH = 6
+const DOCKED_HEIGHT = 56
 const EDGE_MARGIN = 8
+const DOCK_THRESHOLD = 24
 const STORAGE_KEY = 'pierrehammer-fab-pos'
+const STORAGE_KEY_DOCK = 'pierrehammer-fab-dock'
+
+type DockSide = 'left' | 'right' | null
 
 function getDefaultPos() {
   return {
@@ -31,8 +37,20 @@ function loadSavedPos(): { x: number; y: number } | null {
   return null
 }
 
+function loadSavedDock(): { side: DockSide; y: number } {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_DOCK)
+    if (!raw) return { side: null, y: 0 }
+    const parsed = JSON.parse(raw)
+    return { side: parsed.side || null, y: parsed.y || 0 }
+  } catch { /* ignore */ }
+  return { side: null, y: 0 }
+}
+
 function DraggableFab({ onClick }: { onClick: () => void }) {
   const [pos, setPos] = useState(() => loadSavedPos() || getDefaultPos())
+  const [docked, setDocked] = useState<DockSide>(() => loadSavedDock().side)
+  const [dockedY, setDockedY] = useState(() => loadSavedDock().y)
   const dragging = useRef(false)
   const hasMoved = useRef(false)
   const startTouch = useRef({ x: 0, y: 0 })
@@ -40,6 +58,8 @@ function DraggableFab({ onClick }: { onClick: () => void }) {
   const fabRef = useRef<HTMLButtonElement>(null)
   const onClickRef = useRef(onClick)
   onClickRef.current = onClick
+  const dockedRef = useRef(docked)
+  dockedRef.current = docked
 
   // Keep position in bounds on resize
   useEffect(() => {
@@ -48,7 +68,7 @@ function DraggableFab({ onClick }: { onClick: () => void }) {
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
-  // All drag + tap logic via native listeners (React synthetic events are unreliable in mobile emulation)
+  // All drag + tap logic via native listeners
   useEffect(() => {
     const el = fabRef.current
     if (!el) return
@@ -57,8 +77,19 @@ function DraggableFab({ onClick }: { onClick: () => void }) {
       dragging.current = true
       hasMoved.current = false
       startTouch.current = { x: clientX, y: clientY }
-      const rect = el.getBoundingClientRect()
-      startPos.current = { x: rect.left, y: rect.top }
+
+      // Undock on drag start
+      if (dockedRef.current) {
+        const undockX = dockedRef.current === 'left' ? EDGE_MARGIN : window.innerWidth - FAB_SIZE - EDGE_MARGIN
+        const rect = el.getBoundingClientRect()
+        startPos.current = { x: undockX, y: rect.top }
+        setDocked(null)
+        setPos({ x: undockX, y: rect.top })
+        localStorage.removeItem(STORAGE_KEY_DOCK)
+      } else {
+        const rect = el.getBoundingClientRect()
+        startPos.current = { x: rect.left, y: rect.top }
+      }
     }
 
     const moveDrag = (clientX: number, clientY: number) => {
@@ -75,6 +106,21 @@ function DraggableFab({ onClick }: { onClick: () => void }) {
       dragging.current = false
       if (hasMoved.current) {
         setPos((p) => {
+          // Check if near edge → dock
+          if (p.x <= DOCK_THRESHOLD) {
+            const dy = p.y + FAB_SIZE / 2 - DOCKED_HEIGHT / 2
+            setDocked('left')
+            setDockedY(dy)
+            localStorage.setItem(STORAGE_KEY_DOCK, JSON.stringify({ side: 'left', y: dy }))
+            return p
+          }
+          if (p.x >= window.innerWidth - FAB_SIZE - DOCK_THRESHOLD) {
+            const dy = p.y + FAB_SIZE / 2 - DOCKED_HEIGHT / 2
+            setDocked('right')
+            setDockedY(dy)
+            localStorage.setItem(STORAGE_KEY_DOCK, JSON.stringify({ side: 'right', y: dy }))
+            return p
+          }
           localStorage.setItem(STORAGE_KEY, JSON.stringify(p))
           return p
         })
@@ -92,7 +138,6 @@ function DraggableFab({ onClick }: { onClick: () => void }) {
       moveDrag(e.touches[0].clientX, e.touches[0].clientY)
     }
     const onTouchEnd = (e: TouchEvent) => {
-      // Prevent synthetic click from closing the modal backdrop instantly
       if (!hasMoved.current) e.preventDefault()
       endDrag()
     }
@@ -124,24 +169,39 @@ function DraggableFab({ onClick }: { onClick: () => void }) {
     }
   }, [])
 
+  const isDocked = docked !== null
+
   return (
     <button
       ref={fabRef}
-      className="fixed z-50 flex items-center justify-center rounded-full border-none cursor-grab active:cursor-grabbing select-none"
+      className="fixed z-50 flex items-center justify-center border-none cursor-grab active:cursor-grabbing select-none"
       style={{
-        left: pos.x,
-        top: pos.y,
-        width: FAB_SIZE,
-        height: FAB_SIZE,
+        left: isDocked ? (docked === 'left' ? 0 : undefined) : pos.x,
+        right: isDocked && docked === 'right' ? 0 : undefined,
+        top: isDocked ? dockedY : pos.y,
+        width: isDocked ? DOCKED_WIDTH : FAB_SIZE,
+        height: isDocked ? DOCKED_HEIGHT : FAB_SIZE,
+        borderRadius: isDocked ? (docked === 'left' ? '0 4px 4px 0' : '4px 0 0 4px') : '50%',
         backgroundColor: 'var(--color-accent)',
         color: '#ffffff',
-        opacity: 0.45,
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+        opacity: isDocked ? 0.35 : 0.45,
+        boxShadow: isDocked ? 'none' : '0 2px 8px rgba(0, 0, 0, 0.3)',
         touchAction: 'none',
+        overflow: 'hidden',
+        transition: 'width 0.3s cubic-bezier(0.4,0,0.2,1), height 0.3s cubic-bezier(0.4,0,0.2,1), border-radius 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease, box-shadow 0.3s ease',
       }}
       title="Calculateur"
     >
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }}>
+      <svg
+        width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+        style={{
+          pointerEvents: 'none',
+          opacity: isDocked ? 0 : 1,
+          transform: isDocked ? 'scale(0.3)' : 'scale(1)',
+          transition: 'opacity 0.2s ease, transform 0.25s cubic-bezier(0.4,0,0.2,1)',
+        }}
+      >
         <rect x="4" y="2" width="16" height="20" rx="2" />
         <line x1="8" y1="6" x2="16" y2="6" />
         <line x1="8" y1="10" x2="10" y2="10" />
