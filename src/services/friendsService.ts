@@ -89,7 +89,7 @@ export async function getFriends(userId: string): Promise<Friendship[]> {
   try {
     const { data, error } = await supabase
       .from('ph_friendships')
-      .select('*, requester:profiles!requester_id(*), addressee:profiles!addressee_id(*)')
+      .select('*, requester:profiles!ph_friendships_requester_id_fkey(id, username, display_name, created_at), addressee:profiles!ph_friendships_addressee_id_fkey(id, username, display_name, created_at)')
       .eq('status', 'accepted')
       .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`)
     if (error) {
@@ -108,7 +108,7 @@ export async function getPendingRequests(userId: string): Promise<Friendship[]> 
   try {
     const { data, error } = await supabase
       .from('ph_friendships')
-      .select('*, requester:profiles!requester_id(*)')
+      .select('*, requester:profiles!ph_friendships_requester_id_fkey(id, username, display_name, created_at)')
       .eq('status', 'pending')
       .eq('addressee_id', userId)
     if (error) {
@@ -127,7 +127,7 @@ export async function getSentRequests(userId: string): Promise<Friendship[]> {
   try {
     const { data, error } = await supabase
       .from('ph_friendships')
-      .select('*, addressee:profiles!addressee_id(*)')
+      .select('*, addressee:profiles!ph_friendships_addressee_id_fkey(id, username, display_name, created_at)')
       .eq('status', 'pending')
       .eq('requester_id', userId)
     if (error) {
