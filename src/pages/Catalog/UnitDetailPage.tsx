@@ -26,8 +26,8 @@ export function UnitDetailPage() {
 
   const collectionItem = useCollectionStore((s) => unitId ? s.items[unitId] : undefined)
   const addItem = useCollectionStore((s) => s.addItem)
-  const addInstance = useCollectionStore((s) => s.addInstance)
-  const removeInstance = useCollectionStore((s) => s.removeInstance)
+  const addSquad = useCollectionStore((s) => s.addSquad)
+  const removeSquad = useCollectionStore((s) => s.removeSquad)
 
   const allLists = useListsStore((s) => s.getAllLists)
   const addUnit = useListsStore((s) => s.addUnit)
@@ -79,10 +79,11 @@ export function UnitDetailPage() {
 
   const handleUpdateQuantity = (qty: number) => {
     if (!collectionItem) return
-    if (qty > ownedCount) {
-      addInstance(unitId)
-    } else if (qty < ownedCount && qty >= 0) {
-      removeInstance(unitId, ownedCount - 1)
+    const squadCount = collectionItem.squads.length
+    if (qty > squadCount) {
+      addSquad(unitId, 1)
+    } else if (qty < squadCount && qty >= 0) {
+      removeSquad(unitId, squadCount - 1)
     }
   }
 

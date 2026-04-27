@@ -666,7 +666,7 @@ function parseWeaponAbilities(s: string): string[] {
   return s.split(',').map(a => a.trim()).filter(Boolean)
 }
 
-function DesktopSectionHeader({ children, icon }: { children: string; icon?: string }) {
+function DesktopSectionHeader({ children, icon }: { children: React.ReactNode; icon?: string }) {
   return (
     <div style={{ fontSize: 10, letterSpacing: 1.5, textTransform: 'uppercase' as const, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)', padding: '14px 16px 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
       <span style={{ color: 'var(--color-accent)' }}>{icon || '▸'}</span>

@@ -87,7 +87,7 @@ function UnitRow({
   index: number
   indent: boolean
   faction: Faction | undefined
-  collectionItems: Record<string, { instances: PaintStatus[] }>
+  collectionItems: Record<string, { squads: PaintStatus[][] }>
   onEdit: (index: number) => void
   onRemove: (index: number) => void
   onAttach: (index: number) => void
