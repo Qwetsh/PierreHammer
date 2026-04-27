@@ -6,7 +6,7 @@ import { useGameDataStore } from '@/stores/gameDataStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useFriendsStore } from '@/stores/friendsStore'
 import { useGameSessionStore } from '@/stores/gameSessionStore'
-import { fetchPublicLists } from '@/services/listsSyncService'
+import { fetchFriendLists } from '@/services/listsSyncService'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { HudBtn, HudPointsCounter, MSection } from '@/components/ui/Hud'
 import { UnitSheet } from '@/components/domain/UnitSheet/UnitSheet'
@@ -74,6 +74,11 @@ export function GameModePage() {
   const opponentCasualties = useGameSessionStore((s) => s.opponentCasualties)
   const updateCasualty = useGameSessionStore((s) => s.updateCasualty)
   const resetCasualtyAction = useGameSessionStore((s) => s.resetCasualty)
+  const pendingInvite = useGameSessionStore((s) => s.pendingInvite)
+  const pendingInviteProfile = useGameSessionStore((s) => s.pendingInviteProfile)
+  const acceptInvite = useGameSessionStore((s) => s.acceptInvite)
+  const declineInvite = useGameSessionStore((s) => s.declineInvite)
+  const subscribeToInvites = useGameSessionStore((s) => s.subscribeToInvites)
 
   const [viewingUnit, setViewingUnit] = useState<{ listUnit: ListUnit; ds: Datasheet } | null>(null)
   const [activeTab, setActiveTab] = useState<'units' | 'stratagems' | 'opponent'>('units')
@@ -104,8 +109,9 @@ export function GameModePage() {
     if (isAuthenticated && user) {
       loadFriends()
       loadSession(user.id)
+      subscribeToInvites(user.id)
     }
-  }, [isAuthenticated, user, loadFriends, loadSession])
+  }, [isAuthenticated, user, loadFriends, loadSession, subscribeToInvites])
 
   if (!list || !listId) {
     return (
@@ -150,7 +156,7 @@ export function GameModePage() {
   const handleSelectFriend = async (friend: Profile) => {
     setSelectedFriend(friend)
     setLoadingFriendLists(true)
-    const lists = await fetchPublicLists(friend.id)
+    const lists = await fetchFriendLists(friend.id)
     setFriendLists(lists)
     setLoadingFriendLists(false)
   }
@@ -204,7 +210,8 @@ export function GameModePage() {
 
   const viewingDatasheet = viewingUnit?.ds ?? null
 
-  const hasSession = !!activeSession
+  const hasSession = !!activeSession && activeSession.status === 'active'
+  const isPending = !!activeSession && activeSession.status === 'pending'
   const hasStratagems = detachment && detachment.stratagems.length > 0
 
   // =============================================
@@ -625,7 +632,7 @@ export function GameModePage() {
                 color: 'var(--color-text)',
                 marginTop: 2,
               }}>
-                {hasSession && opponentProfile
+                {(hasSession || isPending) && opponentProfile
                   ? `Vous vs ${profileDisplayName(opponentProfile)}`
                   : list.name}
               </div>
@@ -655,9 +662,25 @@ export function GameModePage() {
                 {totalPoints}/{list.pointsLimit}
               </span>
             )}
-            {isAuthenticated && !hasSession && friends.length > 0 && list.remoteId && (
+            {isAuthenticated && !hasSession && !isPending && friends.length > 0 && list.remoteId && (
               <HudBtn variant="primary" onClick={() => setShowOpponentPicker(true)}>
                 Jouer contre...
+              </HudBtn>
+            )}
+            {isPending && opponentProfile && (
+              <span style={{
+                fontSize: 10,
+                fontFamily: 'var(--font-mono)',
+                color: 'var(--color-gold)',
+                letterSpacing: 0.5,
+                animation: 'pulse 2s infinite',
+              }}>
+                En attente de {profileDisplayName(opponentProfile)}...
+              </span>
+            )}
+            {isPending && (
+              <HudBtn variant="ghost" onClick={() => handleEndSession('abandoned')}>
+                Annuler l'invitation
               </HudBtn>
             )}
             {hasSession && (
@@ -697,6 +720,46 @@ export function GameModePage() {
           </div>
         )}
       </div>
+
+      {/* ========= INVITATION BANNER ========= */}
+      {pendingInvite && pendingInviteProfile && (
+        <div style={{
+          background: 'color-mix(in srgb, var(--color-accent) 15%, var(--color-bg))',
+          border: '1px solid var(--color-accent)',
+          borderLeft: '4px solid var(--color-accent)',
+          padding: isDesktop ? '14px 20px' : '12px 14px',
+          display: 'flex',
+          alignItems: isDesktop ? 'center' : 'flex-start',
+          flexDirection: isDesktop ? 'row' : 'column',
+          gap: isDesktop ? 16 : 10,
+        }}>
+          <div style={{ flex: 1 }}>
+            <div style={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: 'var(--color-text)',
+            }}>
+              {profileDisplayName(pendingInviteProfile)} vous invite a jouer !
+            </div>
+            <div style={{
+              fontSize: 10,
+              fontFamily: 'var(--font-mono)',
+              color: 'var(--color-text-muted)',
+              marginTop: 2,
+            }}>
+              Invitation de partie en temps reel
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <HudBtn variant="primary" onClick={() => user && acceptInvite(user.id)}>
+              Accepter
+            </HudBtn>
+            <HudBtn variant="ghost" onClick={() => declineInvite()}>
+              Refuser
+            </HudBtn>
+          </div>
+        </div>
+      )}
 
       {/* ========= BODY ========= */}
       {isDesktop ? (
@@ -866,7 +929,7 @@ export function GameModePage() {
               {loadingFriendLists ? (
                 <p style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Chargement...</p>
               ) : friendLists.length === 0 ? (
-                <p style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Aucune liste publique</p>
+                <p style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Aucune liste synchronisee</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {friendLists.map((fl) => (

@@ -86,6 +86,25 @@ export async function fetchPublicLists(userId: string): Promise<(ArmyList & { re
   }
 }
 
+export async function fetchFriendLists(userId: string): Promise<(ArmyList & { remoteId: string; isPublic: boolean })[]> {
+  if (!isSupabaseConfigured || !supabase) return []
+  try {
+    const { data, error } = await supabase
+      .from('army_lists')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+    if (error) {
+      console.error('fetchFriendLists error:', error.message)
+      return []
+    }
+    return (data as RemoteArmyList[]).map(toLocal)
+  } catch (e) {
+    console.error('fetchFriendLists exception:', e)
+    return []
+  }
+}
+
 export async function pushList(
   list: ArmyList,
   userId: string,

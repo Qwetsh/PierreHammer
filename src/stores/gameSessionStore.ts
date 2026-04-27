@@ -4,7 +4,7 @@ import type { GameSession } from '@/services/gameSessionService'
 import * as sessionService from '@/services/gameSessionService'
 import * as casualtyService from '@/services/casualtySyncService'
 import * as summaryService from '@/services/gameSummaryService'
-import { fetchPublicLists } from '@/services/listsSyncService'
+import { fetchFriendLists } from '@/services/listsSyncService'
 import { getProfile, type Profile } from '@/services/friendsService'
 import { useGameDataStore } from './gameDataStore'
 
@@ -20,7 +20,11 @@ interface GameSessionState {
   loading: boolean
   casualties: Record<string, CasualtyState>
   opponentCasualties: Record<string, CasualtyState>
+  pendingInvite: GameSession | null
+  pendingInviteProfile: Profile | null
   _unsubscribe: (() => void) | null
+  _unsubInvites: (() => void) | null
+  _unsubSession: (() => void) | null
 
   startSession: (
     player1Id: string,
@@ -34,9 +38,13 @@ interface GameSessionState {
   updateCasualty: (playerId: string, listUnitId: string, change: Partial<CasualtyState>) => void
   resetCasualty: (playerId: string, listUnitId: string) => void
   _applyCasualtyEvent: (record: casualtyService.CasualtyRecord, currentUserId: string) => void
+
+  subscribeToInvites: (userId: string) => void
+  acceptInvite: (userId: string) => Promise<boolean>
+  declineInvite: () => Promise<boolean>
+  dismissInvite: () => void
 }
 
-// Debounce map for casualty updates
 const debounceTimers: Record<string, ReturnType<typeof setTimeout>> = {}
 
 export const useGameSessionStore = create<GameSessionState>((set, get) => ({
@@ -46,7 +54,11 @@ export const useGameSessionStore = create<GameSessionState>((set, get) => ({
   loading: false,
   casualties: {},
   opponentCasualties: {},
+  pendingInvite: null,
+  pendingInviteProfile: null,
   _unsubscribe: null,
+  _unsubInvites: null,
+  _unsubSession: null,
 
   startSession: async (player1Id, player1ListId, player2Id, player2ListId) => {
     set({ loading: true })
@@ -57,25 +69,48 @@ export const useGameSessionStore = create<GameSessionState>((set, get) => ({
     }
 
     const profile = await getProfile(player2Id)
-    const lists = await fetchPublicLists(player2Id)
-    const list = lists.find((l) => l.remoteId === player2ListId) ?? null
 
-    if (list) {
-      useGameDataStore.getState().loadFaction(list.factionId)
-    }
-
-    // Subscribe to realtime casualties
-    const unsub = casualtyService.subscribeToCasualties(session.id, (payload) => {
-      get()._applyCasualtyEvent(payload.new, player1Id)
+    // Subscribe to session changes (waiting for opponent to accept)
+    const unsubSession = sessionService.subscribeToSessionChanges(session.id, async (payload) => {
+      const updated = payload.new
+      if (updated.status === 'active') {
+        // Opponent accepted — load their list and start casualty tracking
+        const lists = await fetchFriendLists(player2Id)
+        const list = lists.find((l) => l.remoteId === player2ListId) ?? null
+        if (list) {
+          useGameDataStore.getState().loadFaction(list.factionId)
+        }
+        const unsub = casualtyService.subscribeToCasualties(session.id, (p) => {
+          get()._applyCasualtyEvent(p.new, player1Id)
+        })
+        set({
+          activeSession: { ...session, status: 'active' },
+          opponentList: list,
+          casualties: {},
+          opponentCasualties: {},
+          _unsubscribe: unsub,
+          loading: false,
+        })
+      } else if (updated.status === 'declined') {
+        // Opponent declined
+        get()._unsubSession?.()
+        set({
+          activeSession: null,
+          opponentProfile: null,
+          opponentList: null,
+          _unsubSession: null,
+          loading: false,
+        })
+      }
     })
 
     set({
       activeSession: session,
       opponentProfile: profile,
-      opponentList: list,
+      opponentList: null,
       casualties: {},
       opponentCasualties: {},
-      _unsubscribe: unsub,
+      _unsubSession: unsubSession,
       loading: false,
     })
     return true
@@ -93,14 +128,70 @@ export const useGameSessionStore = create<GameSessionState>((set, get) => ({
     const opponentListId = session.player1_id === userId ? session.player2_list_id : session.player1_list_id
 
     const profile = await getProfile(opponentId)
-    const lists = await fetchPublicLists(opponentId)
+
+    // If pending and we're player2, show as invite
+    if (session.status === 'pending' && session.player2_id === userId) {
+      set({
+        pendingInvite: session,
+        pendingInviteProfile: profile,
+        activeSession: null,
+        opponentProfile: null,
+        opponentList: null,
+        loading: false,
+      })
+      return
+    }
+
+    // If pending and we're player1, we're waiting for opponent
+    if (session.status === 'pending' && session.player1_id === userId) {
+      const unsubSession = sessionService.subscribeToSessionChanges(session.id, async (payload) => {
+        const updated = payload.new
+        if (updated.status === 'active') {
+          const lists = await fetchFriendLists(opponentId)
+          const list = lists.find((l) => l.remoteId === opponentListId) ?? null
+          if (list) {
+            useGameDataStore.getState().loadFaction(list.factionId)
+          }
+          const unsub = casualtyService.subscribeToCasualties(session.id, (p) => {
+            get()._applyCasualtyEvent(p.new, userId)
+          })
+          set({
+            activeSession: { ...session, status: 'active' },
+            opponentList: list,
+            casualties: {},
+            opponentCasualties: {},
+            _unsubscribe: unsub,
+            loading: false,
+          })
+        } else if (updated.status === 'declined') {
+          get()._unsubSession?.()
+          set({
+            activeSession: null,
+            opponentProfile: null,
+            opponentList: null,
+            _unsubSession: null,
+            loading: false,
+          })
+        }
+      })
+      set({
+        activeSession: session,
+        opponentProfile: profile,
+        opponentList: null,
+        _unsubSession: unsubSession,
+        loading: false,
+      })
+      return
+    }
+
+    // Active session — load full data
+    const lists = await fetchFriendLists(opponentId)
     const list = lists.find((l) => l.remoteId === opponentListId) ?? null
 
     if (list) {
       useGameDataStore.getState().loadFaction(list.factionId)
     }
 
-    // Load existing casualties
     const records = await casualtyService.getCasualties(session.id)
     const cas: Record<string, CasualtyState> = {}
     const opCas: Record<string, CasualtyState> = {}
@@ -109,7 +200,6 @@ export const useGameSessionStore = create<GameSessionState>((set, get) => ({
       target[r.list_unit_id] = { modelsDestroyed: r.models_destroyed, woundsRemaining: r.wounds_remaining }
     }
 
-    // Subscribe to realtime
     const unsub = casualtyService.subscribeToCasualties(session.id, (payload) => {
       get()._applyCasualtyEvent(payload.new, userId)
     })
@@ -126,12 +216,12 @@ export const useGameSessionStore = create<GameSessionState>((set, get) => ({
   },
 
   endSession: async (status, summaryMeta) => {
-    const { activeSession, _unsubscribe, casualties, opponentCasualties } = get()
+    const { activeSession, _unsubscribe, _unsubSession, casualties, opponentCasualties } = get()
     if (!activeSession) return false
     _unsubscribe?.()
+    _unsubSession?.()
     const ok = await sessionService.endSession(activeSession.id, status)
     if (ok) {
-      // Create game summary
       summaryService.createSummary({
         sessionId: activeSession.id,
         player1Id: activeSession.player1_id,
@@ -146,22 +236,22 @@ export const useGameSessionStore = create<GameSessionState>((set, get) => ({
         player1TotalUnits: 0,
         player2TotalUnits: 0,
       }).catch((e) => console.error('Failed to create summary:', e))
-      set({ activeSession: null, opponentProfile: null, opponentList: null, casualties: {}, opponentCasualties: {}, _unsubscribe: null })
+      set({ activeSession: null, opponentProfile: null, opponentList: null, casualties: {}, opponentCasualties: {}, _unsubscribe: null, _unsubSession: null })
     }
     return ok
   },
 
   clearSession: () => {
-    const { _unsubscribe } = get()
+    const { _unsubscribe, _unsubSession } = get()
     _unsubscribe?.()
-    set({ activeSession: null, opponentProfile: null, opponentList: null, casualties: {}, opponentCasualties: {}, _unsubscribe: null, loading: false })
+    _unsubSession?.()
+    set({ activeSession: null, opponentProfile: null, opponentList: null, casualties: {}, opponentCasualties: {}, _unsubscribe: null, _unsubSession: null, loading: false })
   },
 
   updateCasualty: (playerId, listUnitId, change) => {
     const { activeSession, casualties, opponentCasualties } = get()
     if (!activeSession) return
 
-    // Determine if this is our casualty or opponent's
     const isOwn = playerId === activeSession.player1_id
     const source = isOwn ? casualties : opponentCasualties
     const key = isOwn ? 'casualties' : 'opponentCasualties'
@@ -171,7 +261,6 @@ export const useGameSessionStore = create<GameSessionState>((set, get) => ({
 
     set({ [key]: { ...source, [listUnitId]: updated } })
 
-    // Debounced sync to Supabase
     const timerKey = `${playerId}:${listUnitId}`
     if (debounceTimers[timerKey]) clearTimeout(debounceTimers[timerKey])
     debounceTimers[timerKey] = setTimeout(() => {
@@ -212,5 +301,42 @@ export const useGameSessionStore = create<GameSessionState>((set, get) => ({
         },
       },
     })
+  },
+
+  subscribeToInvites: (userId) => {
+    const { _unsubInvites } = get()
+    _unsubInvites?.()
+
+    const unsub = sessionService.subscribeToIncomingInvites(userId, async (session) => {
+      const profile = await getProfile(session.player1_id)
+      set({ pendingInvite: session, pendingInviteProfile: profile })
+    })
+    set({ _unsubInvites: unsub })
+  },
+
+  acceptInvite: async (userId) => {
+    const { pendingInvite } = get()
+    if (!pendingInvite) return false
+    const ok = await sessionService.acceptSession(pendingInvite.id)
+    if (!ok) return false
+
+    // Load session data
+    set({ pendingInvite: null, pendingInviteProfile: null })
+    await get().loadSession(userId)
+    return true
+  },
+
+  declineInvite: async () => {
+    const { pendingInvite } = get()
+    if (!pendingInvite) return false
+    const ok = await sessionService.declineSession(pendingInvite.id)
+    if (ok) {
+      set({ pendingInvite: null, pendingInviteProfile: null })
+    }
+    return ok
+  },
+
+  dismissInvite: () => {
+    set({ pendingInvite: null, pendingInviteProfile: null })
   },
 }))
