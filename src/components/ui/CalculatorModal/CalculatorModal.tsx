@@ -167,11 +167,11 @@ function DiceTab() {
 
   return (
     <div className="flex flex-col gap-3">
+      <ResultBox label="Reussites attendues" value={result} />
       <NumberInput label="Nombre de des" value={numDice} onChange={setNumDice} min={1} max={200} />
       <ThresholdSelect value={threshold} onChange={setThreshold} />
       <RerollSelect value={reroll} onChange={setReroll} />
       <NumberInput label="Modificateur" value={modifier} onChange={setModifier} min={-3} max={3} />
-      <ResultBox label="Reussites attendues" value={result} />
     </div>
   )
 }
@@ -185,6 +185,10 @@ function AverageTab() {
 
   return (
     <div className="flex flex-col gap-3">
+      <ResultBox
+        label={`Moyenne de ${numDice}D${sides}${flatBonus > 0 ? `+${flatBonus}` : ''}`}
+        value={result}
+      />
       <NumberInput label="Nombre de des" value={numDice} onChange={setNumDice} min={1} max={100} />
 
       <div className="flex flex-col gap-1">
@@ -210,10 +214,6 @@ function AverageTab() {
       </div>
 
       <NumberInput label="Bonus fixe (+)" value={flatBonus} onChange={setFlatBonus} min={0} max={50} />
-      <ResultBox
-        label={`Moyenne de ${numDice}D${sides}${flatBonus > 0 ? `+${flatBonus}` : ''}`}
-        value={result}
-      />
     </div>
   )
 }
@@ -229,6 +229,7 @@ function ChargeTab() {
 
   return (
     <div className="flex flex-col gap-3">
+      <ResultBox label="Chance de reussite" value={result} unit="%" />
       <NumberInput label="Distance (pouces)" value={distance} onChange={setDistance} min={1} max={24} />
       <NumberInput label="Bonus a la charge" value={bonus} onChange={setBonus} min={0} max={6} />
 
@@ -252,8 +253,6 @@ function ChargeTab() {
           ))}
         </div>
       </div>
-
-      <ResultBox label="Chance de reussite" value={result} unit="%" />
 
       <div className="rounded-xl overflow-hidden" style={{ backgroundColor: 'var(--color-surface)' }}>
         <p className="text-xs font-medium px-3 pt-2 pb-1" style={{ color: 'var(--color-text-muted)' }}>
