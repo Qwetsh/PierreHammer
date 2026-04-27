@@ -227,10 +227,8 @@ export function ListsPage() {
   const desktopEmptyCenter = (
     <div style={{ padding: '60px 28px', maxWidth: 500, margin: '0 auto' }}>
       <EmptyState
-        title="Selectionne une liste"
-        description="Choisis une liste dans la sidebar ou cree-en une nouvelle."
-        actionLabel="Creer une liste"
-        onAction={() => {}}
+        title="Sélectionne une liste"
+        description="Choisis une liste dans la sidebar ou crée-en une nouvelle."
       />
     </div>
   )
@@ -245,9 +243,7 @@ export function ListsPage() {
               <div style={{ padding: '60px 28px', maxWidth: 500, margin: '0 auto' }}>
                 <EmptyState
                   title="Pas encore de liste ?"
-                  description="Cree ta premiere liste d'armee pour preparer tes parties."
-                  actionLabel="Creer ma premiere liste"
-                  onAction={() => {}}
+                  description="Crée ta première liste d'armée pour préparer tes parties. Utilise le bouton « Nouvelle liste » dans la sidebar."
                 />
               </div>
             }
