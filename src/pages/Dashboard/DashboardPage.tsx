@@ -149,7 +149,7 @@ export function DashboardPage() {
     const isDev = import.meta.env.DEV
     const url = isDev
       ? '/api/warcom/feed.json'
-      : 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://warcomfeed.link/feed.json')
+      : 'https://corsproxy.io/?' + encodeURIComponent('https://warcomfeed.link/feed.json')
     fetch(url)
       .then((r) => r.json())
       .then((data) => {
