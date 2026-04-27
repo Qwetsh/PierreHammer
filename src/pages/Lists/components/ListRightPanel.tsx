@@ -236,27 +236,29 @@ export function ListRightPanel({
         overflow: 'hidden',
       }}
     >
-      {/* Stratagems — scrollable */}
-      {stratagems.length > 0 && (
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 16px 12px 14px' }}>
-          <MSection>Stratagemes ({stratagems.length})</MSection>
-          <div style={{ marginTop: 8 }}>
-            {stratagems.map((s) => (
-              <StratagemCard key={s.id} stratagem={s} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Enhancements — scrollable */}
-      {enhancements.length > 0 && (
-        <div style={{ flexShrink: 0, padding: '12px 16px 12px 14px', borderTop: '1px solid var(--color-border)' }}>
-          <MSection>Optimisations ({enhancements.length})</MSection>
-          <div style={{ marginTop: 8 }}>
-            {enhancements.map((e) => (
-              <EnhancementCard key={e.id} enhancement={e} />
-            ))}
-          </div>
+      {/* Stratagems + Enhancements — split 50/50, each scrollable */}
+      {(stratagems.length > 0 || enhancements.length > 0) && (
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          {stratagems.length > 0 && (
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 16px 12px 14px' }}>
+              <MSection>Stratagemes ({stratagems.length})</MSection>
+              <div style={{ marginTop: 8 }}>
+                {stratagems.map((s) => (
+                  <StratagemCard key={s.id} stratagem={s} />
+                ))}
+              </div>
+            </div>
+          )}
+          {enhancements.length > 0 && (
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 16px 12px 14px', borderTop: '1px solid var(--color-border)' }}>
+              <MSection>Optimisations ({enhancements.length})</MSection>
+              <div style={{ marginTop: 8 }}>
+                {enhancements.map((e) => (
+                  <EnhancementCard key={e.id} enhancement={e} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
