@@ -12,6 +12,29 @@ import { FactionPicker } from '@/components/domain/FactionPicker'
 import type { PointsLimit } from '@/types/armyList.types'
 import type { Detachment } from '@/types/gameData.types'
 
+function DisabledTooltip({ hint, children }: { hint: string | null; children: React.ReactNode }) {
+  if (!hint) return <>{children}</>
+  return (
+    <div className="disabled-tooltip-wrap" style={{ position: 'relative', display: 'inline-block' }}>
+      <div style={{ pointerEvents: 'none' }}>{children}</div>
+      <div className="disabled-tooltip-text" style={{
+        position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
+        marginBottom: 6, padding: '4px 10px', borderRadius: 6, whiteSpace: 'nowrap',
+        fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 500,
+        background: 'var(--color-surface-alt, var(--color-surface))',
+        color: 'var(--color-text-muted)',
+        border: '1px solid var(--color-border)',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+        opacity: 0, pointerEvents: 'none',
+        transition: 'opacity 0.15s ease',
+      }}>
+        {hint}
+      </div>
+      <style>{`.disabled-tooltip-wrap:hover .disabled-tooltip-text { opacity: 1 !important; }`}</style>
+    </div>
+  )
+}
+
 const pointsOptions: PointsLimit[] = [1000, 2000, 3000]
 
 export function ListsDesktopLayout({
@@ -348,13 +371,10 @@ export function ListsDesktopLayout({
 
                 {/* Action buttons */}
                 <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                  <HudBtn variant="primary" onClick={handleCreate} disabled={!name.trim() || !selectedFaction}>Créer</HudBtn>
+                  <DisabledTooltip hint={!name.trim() ? 'Donne un nom à ta liste' : !selectedFaction ? 'Choisis une faction' : null}>
+                    <HudBtn variant="primary" onClick={handleCreate} disabled={!name.trim() || !selectedFaction}>Créer</HudBtn>
+                  </DisabledTooltip>
                   <HudBtn variant="ghost" onClick={() => setShowForm(false)}>Annuler</HudBtn>
-                  {(!name.trim() || !selectedFaction) && (
-                    <span style={{ fontSize: 9, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)', fontStyle: 'italic' }}>
-                      {!name.trim() ? 'Donne un nom à ta liste' : 'Choisis une faction'}
-                    </span>
-                  )}
                 </div>
               </div>
             ) : center}
