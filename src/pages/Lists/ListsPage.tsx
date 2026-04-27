@@ -217,12 +217,9 @@ export function ListsPage() {
         </div>
       )}
       <div className="flex gap-2 mt-2">
-        <Button
-          variant="primary"
-          onClick={handleCreate}
-          disabled={!name.trim() || !selectedFaction}
-          title={!name.trim() ? 'Donne un nom à ta liste' : !selectedFaction ? 'Choisis une faction' : undefined}
-        >Créer</Button>
+        <span title={!name.trim() ? 'Donne un nom à ta liste' : !selectedFaction ? 'Choisis une faction' : undefined}>
+          <Button variant="primary" onClick={handleCreate} disabled={!name.trim() || !selectedFaction}>Créer</Button>
+        </span>
         <Button variant="ghost" onClick={() => setShowForm(false)}>Annuler</Button>
       </div>
     </div>

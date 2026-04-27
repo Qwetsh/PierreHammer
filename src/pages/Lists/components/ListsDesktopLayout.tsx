@@ -348,7 +348,9 @@ export function ListsDesktopLayout({
 
                 {/* Action buttons */}
                 <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                  <HudBtn variant="primary" onClick={handleCreate} disabled={!name.trim() || !selectedFaction} title={!name.trim() ? 'Donne un nom à ta liste' : !selectedFaction ? 'Choisis une faction' : undefined}>Créer</HudBtn>
+                  <span title={!name.trim() ? 'Donne un nom à ta liste' : !selectedFaction ? 'Choisis une faction' : undefined}>
+                    <HudBtn variant="primary" onClick={handleCreate} disabled={!name.trim() || !selectedFaction}>Créer</HudBtn>
+                  </span>
                   <HudBtn variant="ghost" onClick={() => setShowForm(false)}>Annuler</HudBtn>
                 </div>
               </div>
