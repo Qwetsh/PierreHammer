@@ -5,6 +5,7 @@ import { download } from './download.js'
 import { parseData } from './parse.js'
 import { generate } from './transform.js'
 import { validate } from './validate.js'
+import { fetchWithRetry } from './lib/fetch.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const LAST_UPDATE_FILE = join(__dirname, '..', '.last-update')
@@ -20,7 +21,7 @@ async function getLocalDate(): Promise<string | null> {
 }
 
 async function getRemoteDate(): Promise<string> {
-  const response = await fetch(REMOTE_URL)
+  const response = await fetchWithRetry(REMOTE_URL)
   if (!response.ok) {
     throw new Error(`Impossible de télécharger Last_update.csv: HTTP ${response.status}`)
   }
@@ -46,8 +47,7 @@ export async function checkUpdate(): Promise<void> {
     console.log(`  Date distante: ${remoteDate}`)
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
-    console.error(`❌ ${msg}`)
-    process.exitCode = 1
+    console.log(`⚠️ Wahapedia injoignable (${msg}). On réessaiera demain.`)
     return
   }
 
