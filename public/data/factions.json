@@ -1,5 +1,5 @@
 {
-  "lastUpdate": "2026-05-05 16:28:34",
+  "lastUpdate": "2026-05-09 23:42:21",
   "factions": [
     {
       "id": "AoI",
@@ -12,7 +12,7 @@
       "id": "AM",
       "name": "Astra Militarum",
       "slug": "astra-militarum",
-      "datasheetCount": 133,
+      "datasheetCount": 134,
       "imageUrl": "https://static.wikia.nocookie.net/warhammer40k/images/8/81/Primarca_Leman_Russ_2.jpg/revision/latest/scale-to-width-down/400?cb=20111205230352"
     },
     {
@@ -131,7 +131,7 @@
       "id": "TYR",
       "name": "Tyranids",
       "slug": "tyranids",
-      "datasheetCount": 56,
+      "datasheetCount": 57,
       "imageUrl": "https://static.wikia.nocookie.net/warhammer40k/images/3/36/Hive_Tyrant.jpg/revision/latest/scale-to-width-down/400?cb=20151005085613"
     },
     {
