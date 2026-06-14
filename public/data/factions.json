@@ -1,5 +1,5 @@
 {
-  "lastUpdate": "2026-05-09 23:42:21",
+  "lastUpdate": "2026-06-13 12:02:41",
   "factions": [
     {
       "id": "AoI",
@@ -19,7 +19,7 @@
       "id": "GC",
       "name": "Genestealer Cults",
       "slug": "genestealer-cults",
-      "datasheetCount": 138,
+      "datasheetCount": 139,
       "imageUrl": "https://static.wikia.nocookie.net/warhammer40k/images/2/2d/PatriarchMini.jpg/revision/latest/scale-to-width-down/400?cb=20190217232102"
     },
     {
